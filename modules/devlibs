@@ -1,2 +1,4 @@
 #!/bin/bash
-cmake ../llvm-project/amd/device-libs -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release
+cmake ../llvm-project/amd/device-libs -DCMAKE_INSTALL_PREFIX=../install \
+	-DCMAKE_PREFIX_PATH=../llvmbuild \
+	-DCMAKE_BUILD_TYPE=Release
