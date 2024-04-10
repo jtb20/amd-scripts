@@ -1,0 +1,11 @@
+#!/bin/bash
+cmake --fresh \
+       	-DLLVM_ENABLE_PROJECTS='clang;lld;clang-tools-extra' \
+	-DLLVM_TARGETS_TO_BUILD='X86;AMDGPU' \
+	-DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../install \
+	-DLLVM_BUILD_TOOLS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DLLVM_ENABLE_ZLIB=ON \
+	-DLLVM_INCLUDE_TESTS=ON -DCLANG_DEFAULT_LINKER=lld -DLLVM_PARALLEL_LINK_JOBS=8 \
+	-DLLVM_BUILD_LLVM_DYLIB=ON -DCLANG_ENABLE_AMDCLANG=ON \
+	-DLLVM_ENABLE_RUNTIMES='compiler-rt' ../llvm-project/llvm
+#cmake ../llvm-project/amd/hipcc -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release
+#cmake ../llvm-project/amd/device-libs -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release

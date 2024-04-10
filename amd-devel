@@ -1,0 +1,39 @@
+#!/bin/bash
+set -e
+
+echo "HIP_CLANG_PATH: $HIP_CLANG_PATH"
+echo "ROCM_PATH: $HIP_CLANG_PATH"
+echo "HIP_PATH: $HIP_CLANG_PATH"
+echo "LLVM_PATH: $HIP_CLANG_PATH"
+echo "PATH: $PATH"
+
+if false; then
+echo "**************"
+echo "* Build LLVM *"
+echo "**************"
+echo
+
+rm -rf llvmbuild
+mkdir llvmbuild
+pushd llvmbuild >& /dev/null
+../llvmbuild2.sh >& llvm-config.log
+
+make -j32 install >& llvm-build.log
+popd
+fi
+
+export PATH=`pwd`/install/bin:$PATH
+
+if true; then
+echo "***************************"
+echo "* Build composable_kernel *"
+echo "***************************"
+echo
+
+rm -rf composable_kernel-build
+mkdir -p composable_kernel-build
+pushd composable_kernel-build >& /dev/null
+../cmake-composable-kernels.sh >& ck-config.log
+make example_gemm_xdl_fp16_v3 >& ck-build.log
+popd
+fi

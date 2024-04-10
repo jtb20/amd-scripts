@@ -1,0 +1,15 @@
+#!/bin/bash
+cmake ../llvm-project/amd/comgr \
+	-DCMAKE_INSTALL_PREFIX=../install \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DBUILD_SHARED_LIBS=ON \
+	-DCMAKE_DISABLE_FIND_PACKAGE_hip=TRUE \
+	-DCMAKE_CTEST_ARGUMENTS="--exclude-regex;multithread_test" \
+	-DLLVM_LINK_LLVM_DYLIB=ON \
+	-DLLVM_ENABLE_LIBCXX=ON \
+	-DCLANG_LINK_CLANG_DYLIB=ON \
+	-DBUILD_TESTING=OFF \
+	-DLLVM_PATH=/home/julbrown/dockerx/install \
+	-DClang_PATH=/home/julbrown/dockerx/install \
+	-DHIP_PATH=/opt/rocm \
+	-DROCM_PATH=/opt/rocm
