@@ -1,0 +1,53 @@
+#!/bin/bash
+
+if [ ! "$SCRIPTDIR" ]; then
+  echo "Script dir not set"
+  exit 1
+fi
+
+print_composable_kernel_src() {
+  echo "composable_kernel"
+}
+
+clean_composable_kernel() {
+  clean_component composable_kernel
+}
+
+configure_composable_kernel() {
+  local BUILD="$(print_objdir composable_kernel)"
+  local SRC="$(print_srcdir composable_kernel)"
+  local HIPCC_COMPILE_FLAGS_APPEND
+
+  pushd "$BUILD" >& /dev/null
+  export HIPCC_COMPILE_FLAGS_APPEND="-mllvm -amdgpu-mfma-padding-ratio=100 -mllvm -verify-machineinstrs -mllvm -amdgpu-waitcnt-forcezero"
+  cmake --fresh \
+    -S "$SRC" -D CMAKE_PREFIX_PATH="$ROCM_PATH" \
+    -D CMAKE_CXX_COMPILER="$ROCM_PATH/bin/hipcc" \
+    -D CMAKE_CXX_FLAGS="-O3 -Wno-gnu-line-marker -save-temps=$PWD -v" \
+    -D CMAKE_BUILD_TYPE=RelWithDebug \
+    -D GPU_TARGETS=gfx942 >& "$LOGDIR/ck-config.log"
+  popd >& /dev/null
+}
+  
+build_composable_kernel() {
+  local BUILD="$(print_objdir composable_kernel)"
+  pushd "$BUILD" >& /dev/null
+  make example_gemm_xdl_fp16_v3 >& "$LOGDIR/ck-build.log"
+  popd >& /dev/null
+}
+
+install_composable_kernel() {
+  true
+}
+
+#cmake -S ../composable_kernel -D CMAKE_PREFIX_PATH=/opt/rocm \
+#  -D CMAKE_CXX_COMPILER=/opt/rocm/bin/hipcc \
+#  -D CMAKE_CXX_FLAGS="-O3 -Wno-gnu-line-marker -save-temps=$PWD -v" \
+#  -D CMAKE_BUILD_TYPE=Release \
+#  -D GPU_TARGETS=gfx90a
+
+# -mllvm -amdgpu-waitcnt-forcezero
+# -mllvm --enable-post-misched=0
+
+
+# gfx942

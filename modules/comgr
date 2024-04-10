@@ -1,11 +1,46 @@
 #!/bin/bash
-DIRNAME="$(dirname $0)"
-HERE="$(cd "$DIRNAME" && pwd)"
-cmake --log-level=DEBUG --debug-output \
-  -DCMAKE_INSTALL_PREFIX=$HERE/install \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_PREFIX_PATH="$HERE/llvmbuild;$HERE/devlibsbuild" \
-  -DCOMGR_BUILD_SHARED_LIBS=ON \
-  -DLLVM_DIR="$HERE/llvmbuild" \
-  -DClang_DIR="$HERE/llvmbuild" \
-  "$HERE/llvm-project/amd/comgr"
+
+if [ ! "$SCRIPTDIR" ]; then
+  echo "Script dir not set"
+  exit 1
+fi
+
+clean_comgr() {
+  clean_component comgr
+}
+
+print_comgr_src() {
+  local LLVMSRC="$(print_llvm_src)"
+  echo "$LLVMSRC/amd/comgr"
+}
+
+configure_comgr() {
+  local BUILD="$(print_objdir comgr)"
+  local LLVMBUILD="$(print_objdir llvm)"
+  local DEVLIBSBUILD="$(print_objdir device_libs)"
+  local SRC="$(print_srcdir comgr)"
+  pushd "$BUILD" >& /dev/null
+  cmake --log-level=DEBUG --debug-output \
+    -DCMAKE_INSTALL_PREFIX=$INSTALLDIR" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_PREFIX_PATH="$LLVMBUILD;$DEVLIBSBUILD" \
+    -DCOMGR_BUILD_SHARED_LIBS=ON \
+    -DLLVM_DIR="$LLVMBUILD" \
+    -DClang_DIR="$LLVMBUILD" \
+    "$SRC" >& "$LOGDIR/comgr-config.log"
+  popd >& /dev/null
+}
+
+build_comgr() {
+  local BUILD="$(print_objdir comgr)"
+  pushd "$BUILD" >& /dev/null
+  make -j32 >& comgr-build.log
+  popd >& /dev/null
+}
+
+install_comgr() {
+  local BUILD="$(print_objdir comgr)"
+  pushd "$BUILD" >& /dev/null
+  make -j32 install >& comgr-build.log
+  popd >& /dev/null
+}

@@ -1,13 +1,21 @@
 #!/bin/bash
 set -e
 
-SCRIPTDIR="$(dirname $0)"
-HERE="$(cd "$SCRIPTDIR" && pwd)"
+WORKDIR="$(pwd)"
+
+SCRIPTDIR="$WORKDIR/amd-scripts"
+SRCDIR="$WORKDIR/src"
+LOGDIR="$WORKDIR/logs"
+OBJDIR="$WORKDIR/obj"
+INSTALLDIR="$WORKDIR/install"
 
 TASKLIST=$*
 TASKARR=()
 
-LOGDIR="$HERE/logs"
+source "$WORKDIR/llvm"
+source "$WORKDIR/comgr"
+source "$WORKDIR/device_libs"
+source "$WORKDIR/composable_kernels"
 
 echo "HIP_CLANG_PATH: $HIP_CLANG_PATH"
 echo "ROCM_PATH: $ROCM_PATH"
@@ -94,96 +102,32 @@ standard_tasks() {
 standard_tasks llvm
 standard_tasks device_libs
 standard_tasks comgr
-standard_tasks composable_kernel
+#standard_tasks composable_kernel
 
-clean_llvm() {
-  rm -rf llvmbuild/*
-  mkdir -p llvmbuild
+print_srcdir() {
+  local COMPONENT=$1
+  local COMPONENT_SRC="$(eval print_${COMPONENT}_src)"
+  echo "$SRCDIR/$COMPONENT_SRC"
 }
 
-configure_llvm() {
-  pushd llvmbuild >& /dev/null
-  ../llvmbuild2.sh >& "$LOGDIR/llvm-config.log"
-  popd >& /dev/null
+print_objdir() {
+  local COMPONENT=$1
+  echo "$OBJDIR/$COMPONENT"
 }
 
-build_llvm() {
-  pushd llvmbuild >& /dev/null
-  make -j32 >& "$LOGDIR/llvm-build.log"
-  popd >& /dev/null
+print_installdir() {
+  local COMPONENT=$1
+  echo "$INSTALLDIR/$COMPONENT"
 }
 
-install_llvm() {
-  pushd llvmbuild >& /dev/null
-  make -j32 install >& "$LOGDIR/llvm-install.log"
-  popd >& /dev/null
-}
-
-clean_device_libs() {
-  rm -rf devlibsbuild/*
-  mkdir -p devlibsbuild
-}
-
-configure_device_libs() {
-  pushd devlibsbuild >& /dev/null
-  ../cmake-devlibs.sh >& "$LOGDIR/devlibs-config.log"
-  popd >& /dev/null
-}
-
-build_device_libs() {
-  pushd devlibsbuild >& /dev/null
-  make -j32 >& "$LOGDIR/devlibs-build.log"
-  popd >& /dev/null
-}
-
-install_device_libs() {
-  pushd devlibsbuild >& /dev/null
-  make -j32 install >& "$LOGDIR/devlibs-install.log"
-  popd >& /dev/null
-}
-
-clean_comgr() {
-  rm -rf comgrbuild/*
-  mkdir -p comgrbuild
-}
-
-configure_comgr() {
-  pushd comgrbuild >& /dev/null
-  ../cmake-comgr.sh >& "$LOGDIR/comgr-config.log"
-  popd >& /dev/null
-}
-
-build_comgr() {
-  pushd comgrbuild >& /dev/null
-  make -j32 >& comgr-build.log
-  popd >& /dev/null
-}
-
-install_comgr() {
-  pushd comgrbuild >& /dev/null
-  make -j32 install >& comgr-build.log
-  popd >& /dev/null
-}
-
-clean_composable_kernel() {
-  rm -rf composable_kernel-build/*
-  mkdir -p composable_kernel-build
-}
-
-configure_composable_kernel() {
-  pushd composable_kernel-build >& /dev/null
-  ../cmake-composable-kernels.sh >& "$LOGDIR/ck-config.log"
-  popd >& /dev/null
-}
-  
-build_composable_kernel() {
-  pushd composable_kernel-build >& /dev/null
-  make example_gemm_xdl_fp16_v3 >& "$LOGDIR/ck-build.log"
-  popd >& /dev/null
-}
-
-install_composable_kernel() {
-  true
+clean_component() {
+  local COMPONENT=$1
+  local OBJDIR="$(print_objdir "$COMPONENT")"
+  if [ -d "$OBJDIR" ]; then
+    rm -rf "$OBJDIR"/*
+  else
+    mkdir -p "$OBJDIR"
+  fi
 }
 
 do_tasks $TASKLIST

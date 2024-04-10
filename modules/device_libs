@@ -1,0 +1,40 @@
+#!/bin/bash
+
+if [ ! "$SCRIPTDIR" ]; then
+  echo "Script dir not set"
+  exit 1
+fi 
+
+clean_device_libs() {
+  clean_component device_libs
+}
+
+print_device_libs_src() {
+  local LLVMSRC="$(print_llvm_src)"
+  echo "$LLVMSRC/amd/device-libs"
+}
+
+configure_device_libs() {
+  local BUILD="$(print_objdir device_libs)"
+  local SRC="$(print_srcdir device_libs)"
+  local LLVMBUILD="$(print_objdir llvm)"
+  pushd "$BUILD" >& /dev/null
+  cmake "$SRC" -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
+		-DCMAKE_PREFIX_PATH="$LLVMBUILD" \
+		-DCMAKE_BUILD_TYPE=Release >& "$LOGDIR/devlibs-config.log"
+  popd >& /dev/null
+}
+
+build_device_libs() {
+  local BUILD="$(print_objdir device_libs)"
+  pushd "$BUILD" >& /dev/null
+  make -j32 >& "$LOGDIR/devlibs-build.log"
+  popd >& /dev/null
+}
+
+install_device_libs() {
+  local BUILD="$(print_objdir device_libs)"
+  pushd "$BUILD" >& /dev/null
+  make -j32 install >& "$LOGDIR/devlibs-install.log"
+  popd >& /dev/null
+}
