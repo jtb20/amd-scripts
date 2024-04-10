@@ -3,8 +3,8 @@ set -e
 
 WORKDIR="$(pwd)"
 
-SCRIPTDIR="$WORKDIR/amd-scripts"
 SRCDIR="$WORKDIR/src"
+SCRIPTDIR="$SRCDIR/amd-scripts"
 LOGDIR="$WORKDIR/logs"
 OBJDIR="$WORKDIR/obj"
 INSTALLDIR="$WORKDIR/install"
@@ -12,16 +12,23 @@ INSTALLDIR="$WORKDIR/install"
 TASKLIST=$*
 TASKARR=()
 
-source "$WORKDIR/llvm"
-source "$WORKDIR/comgr"
-source "$WORKDIR/device_libs"
-source "$WORKDIR/composable_kernels"
+source "$SCRIPTDIR/modules/llvm"
+source "$SCRIPTDIR/modules/comgr"
+source "$SCRIPTDIR/modules/device_libs"
+source "$SCRIPTDIR/modules/composable_kernels"
 
 echo "HIP_CLANG_PATH: $HIP_CLANG_PATH"
 echo "ROCM_PATH: $ROCM_PATH"
 echo "HIP_PATH: $HIP_PATH"
 echo "LLVM_PATH: $LLVM_PATH"
 echo "PATH: $PATH"
+
+maybe_mkdir() {
+  local WHERE=$1
+  if [ ! -d "$WHERE" ]; then
+    mkdir -p "$WHERE"
+  fi
+}
 
 print_tasks() {
   local i
@@ -129,5 +136,9 @@ clean_component() {
     mkdir -p "$OBJDIR"
   fi
 }
+
+maybe_mkdir "$LOGDIR"
+maybe_mkdir "$OBJDIR"
+maybe_mkdir "$INSTALLDIR"
 
 do_tasks $TASKLIST

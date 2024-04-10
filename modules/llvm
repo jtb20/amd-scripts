@@ -28,7 +28,7 @@ configure_llvm() {
 		-DLLVM_BUILD_LLVM_DYLIB=ON \
 		-DCLANG_ENABLE_AMDCLANG=ON \
 		-DLLVM_ENABLE_RUNTIMES=compiler-rt \
-		"$SRC/llvm-project/llvm"
+		"$SRC/llvm" >& "$LOGDIR"/llvm-config.log
 	# -DCLANG_DEFAULT_PIE_ON_LINUX
 	#cmake ../llvm-project/amd/hipcc -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release
 	#cmake ../llvm-project/amd/device-libs -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release

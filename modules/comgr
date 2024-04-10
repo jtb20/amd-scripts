@@ -21,7 +21,7 @@ configure_comgr() {
   local SRC="$(print_srcdir comgr)"
   pushd "$BUILD" >& /dev/null
   cmake --log-level=DEBUG --debug-output \
-    -DCMAKE_INSTALL_PREFIX=$INSTALLDIR" \
+    -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_PREFIX_PATH="$LLVMBUILD;$DEVLIBSBUILD" \
     -DCOMGR_BUILD_SHARED_LIBS=ON \
@@ -41,6 +41,6 @@ build_comgr() {
 install_comgr() {
   local BUILD="$(print_objdir comgr)"
   pushd "$BUILD" >& /dev/null
-  make -j32 install >& comgr-build.log
+  make -j32 install >& comgr-install.log
   popd >& /dev/null
 }
