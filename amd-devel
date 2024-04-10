@@ -1,39 +1,189 @@
 #!/bin/bash
 set -e
 
+SCRIPTDIR="$(dirname $0)"
+HERE="$(cd "$SCRIPTDIR" && pwd)"
+
+TASKLIST=$*
+TASKARR=()
+
+LOGDIR="$HERE/logs"
+
 echo "HIP_CLANG_PATH: $HIP_CLANG_PATH"
-echo "ROCM_PATH: $HIP_CLANG_PATH"
-echo "HIP_PATH: $HIP_CLANG_PATH"
-echo "LLVM_PATH: $HIP_CLANG_PATH"
+echo "ROCM_PATH: $ROCM_PATH"
+echo "HIP_PATH: $HIP_PATH"
+echo "LLVM_PATH: $LLVM_PATH"
 echo "PATH: $PATH"
 
-if false; then
-echo "**************"
-echo "* Build LLVM *"
-echo "**************"
-echo
+print_tasks() {
+  local i
+  local NUMTASKS="${#TASKARR[@]}"
+  echo "num tasks: $NUMTASKS"
+  for (( i = 0; i < NUMTASKS; i++ )); do
+    printf "%d: %s\n" "$i" "${TASKARR[i]}"
+  done
+}
 
-rm -rf llvmbuild
-mkdir llvmbuild
-pushd llvmbuild >& /dev/null
-../llvmbuild2.sh >& llvm-config.log
+do_task_number() {
+  local NUM=$1
+  local TASKFN="${TASKARR[$NUM]}"
+  printf "%d: %s\n" "$NUM" "$TASKFN"
+  eval "$TASKFN"
+}
 
-make -j32 install >& llvm-build.log
-popd
-fi
+do_tasks() {
+  local TASKS=$@
+  local START
+  local END
+  local TASK
+  local LASTTASK
+  if [ "$TASKS" ]; then
+    set $TASKS
+  else
+    LASTTASK=0
+    TASKS="continue"
+    set $TASKS
+  fi
+  while [ ${#@} -gt 0 ]; do
+    case "$1" in
+      *--*)
+	      START="${1%--*}"
+	      END="${1#*--}"
+	      if ! [ "$START" ] || ! [ "$END" ]; then
+		      echo "Missing start or end"
+		      exit 1
+	      fi
+	      for (( i = START; i <= END; i++ )); do
+	        do_task_number "$i"
+              done
+	      LASTTASK=$(( $END + 1 ))
+	      ;;
+      continue)
+	      FINAL="${#TASKARR[@]}"
+	      for (( i = LASTTASK; i < FINAL; i++ )); do
+	        do_task_number "$i"
+              done
+	      ;;
+      list)
+	      print_tasks
+	      exit 0
+	      ;;
+      *)
+              do_task_number "$1"
+	      LASTTASK=$(( $1 + 1 ))
+	      ;;
+      esac
+    shift 1
+  done
+  return 1
+}
 
-export PATH=`pwd`/install/bin:$PATH
+add_task() {
+  local NEWTASK=$1
+  TASKARR=("${TASKARR[@]}" "$NEWTASK")
+}
 
-if true; then
-echo "***************************"
-echo "* Build composable_kernel *"
-echo "***************************"
-echo
+standard_tasks() {
+  local COMPONENT=$1
+  add_task "clean_$COMPONENT"
+  add_task "configure_$COMPONENT"
+  add_task "build_$COMPONENT"
+  add_task "install_$COMPONENT"
+}
 
-rm -rf composable_kernel-build
-mkdir -p composable_kernel-build
-pushd composable_kernel-build >& /dev/null
-../cmake-composable-kernels.sh >& ck-config.log
-make example_gemm_xdl_fp16_v3 >& ck-build.log
-popd
-fi
+standard_tasks llvm
+standard_tasks device_libs
+standard_tasks comgr
+standard_tasks composable_kernel
+
+clean_llvm() {
+  rm -rf llvmbuild/*
+  mkdir -p llvmbuild
+}
+
+configure_llvm() {
+  pushd llvmbuild >& /dev/null
+  ../llvmbuild2.sh >& "$LOGDIR/llvm-config.log"
+  popd >& /dev/null
+}
+
+build_llvm() {
+  pushd llvmbuild >& /dev/null
+  make -j32 >& "$LOGDIR/llvm-build.log"
+  popd >& /dev/null
+}
+
+install_llvm() {
+  pushd llvmbuild >& /dev/null
+  make -j32 install >& "$LOGDIR/llvm-install.log"
+  popd >& /dev/null
+}
+
+clean_device_libs() {
+  rm -rf devlibsbuild/*
+  mkdir -p devlibsbuild
+}
+
+configure_device_libs() {
+  pushd devlibsbuild >& /dev/null
+  ../cmake-devlibs.sh >& "$LOGDIR/devlibs-config.log"
+  popd >& /dev/null
+}
+
+build_device_libs() {
+  pushd devlibsbuild >& /dev/null
+  make -j32 >& "$LOGDIR/devlibs-build.log"
+  popd >& /dev/null
+}
+
+install_device_libs() {
+  pushd devlibsbuild >& /dev/null
+  make -j32 install >& "$LOGDIR/devlibs-install.log"
+  popd >& /dev/null
+}
+
+clean_comgr() {
+  rm -rf comgrbuild/*
+  mkdir -p comgrbuild
+}
+
+configure_comgr() {
+  pushd comgrbuild >& /dev/null
+  ../cmake-comgr.sh >& "$LOGDIR/comgr-config.log"
+  popd >& /dev/null
+}
+
+build_comgr() {
+  pushd comgrbuild >& /dev/null
+  make -j32 >& comgr-build.log
+  popd >& /dev/null
+}
+
+install_comgr() {
+  pushd comgrbuild >& /dev/null
+  make -j32 install >& comgr-build.log
+  popd >& /dev/null
+}
+
+clean_composable_kernel() {
+  rm -rf composable_kernel-build/*
+  mkdir -p composable_kernel-build
+}
+
+configure_composable_kernel() {
+  pushd composable_kernel-build >& /dev/null
+  ../cmake-composable-kernels.sh >& "$LOGDIR/ck-config.log"
+  popd >& /dev/null
+}
+  
+build_composable_kernel() {
+  pushd composable_kernel-build >& /dev/null
+  make example_gemm_xdl_fp16_v3 >& "$LOGDIR/ck-build.log"
+  popd >& /dev/null
+}
+
+install_composable_kernel() {
+  true
+}
+
+do_tasks $TASKLIST
