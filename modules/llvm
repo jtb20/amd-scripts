@@ -1,51 +1,51 @@
-#!/bin/bash
+#!/usr/bin/env ysh
 # clang-tools-extra
 
-if [ ! "$SCRIPTDIR" ]; then
-  echo "Script dir not set"
-  exit 1
-fi
+#if [ ! "$SCRIPTDIR" ]; then
+  #echo "Script dir not set"
+  #exit 1
+#fi
 
-print_llvm_src() {
-  echo "llvm-project"
+func get_llvm_src() {
+  return ("llvm-project")
 }
 
-clean_llvm() {
+proc clean_llvm() {
   clean_component llvm
 }
 
-configure_llvm() {
-  local SRC="$(print_srcdir llvm)"
-  local BUILDDIR="$(print_objdir llvm)"
-  local BUILDTYPE=Release
-  pushd "$BUILDDIR" >& /dev/null
-
-	cmake --fresh -DLLVM_ENABLE_PROJECTS='clang;lld;clang-tools-extra' \
-			-DLLVM_TARGETS_TO_BUILD='X86;AMDGPU' \
-		-DCMAKE_BUILD_TYPE=$BUILDTYPE -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
-		-DLLVM_BUILD_TOOLS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DLLVM_ENABLE_ZLIB=ON \
-		-DLLVM_INCLUDE_TESTS=ON -DCLANG_DEFAULT_LINKER=lld -DLLVM_PARALLEL_LINK_JOBS=8 \
-		-DLLVM_BUILD_LLVM_DYLIB=ON \
-		-DCLANG_ENABLE_AMDCLANG=ON \
-		-DLLVM_ENABLE_RUNTIMES=compiler-rt \
-		"$SRC/llvm" >& "$LOGDIR"/llvm-config.log
+proc configure_llvm() {
+  var SRC=get_srcdir("llvm")
+  var BUILDDIR=get_objdir("llvm")
+  var BUILDTYPE="Release"
+  cd "$BUILDDIR" {
+    # --fresh
+    cmake -DLLVM_ENABLE_PROJECTS='clang;lld;clang-tools-extra' \
+        -DLLVM_TARGETS_TO_BUILD='X86;AMDGPU' \
+      -DCMAKE_BUILD_TYPE=$BUILDTYPE -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
+      -DLLVM_BUILD_TOOLS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DLLVM_ENABLE_ZLIB=ON \
+      -DLLVM_INCLUDE_TESTS=ON -DCLANG_DEFAULT_LINKER=lld -DLLVM_PARALLEL_LINK_JOBS=8 \
+      -DLLVM_BUILD_LLVM_DYLIB=ON \
+      -DCLANG_ENABLE_AMDCLANG=ON \
+      -DLLVM_ENABLE_RUNTIMES=compiler-rt \
+      "$SRC/llvm" > "$LOGDIR"/llvm-config.log
+  }
 	# -DCLANG_DEFAULT_PIE_ON_LINUX
 	#cmake ../llvm-project/amd/hipcc -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release
 	#cmake ../llvm-project/amd/device-libs -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release
-  popd >& /dev/null
 }
 
-build_llvm() {
-  local BUILDDIR="$(print_objdir llvm)"
-  pushd "$BUILDDIR" >& /dev/null
-  make -j32 >& "$LOGDIR/llvm-build.log"
-  popd >& /dev/null
+proc build_llvm() {
+  var BUILDDIR=get_objdir("llvm")
+  cd "$BUILDDIR" {
+    make -j32 > "$LOGDIR/llvm-build.log"
+  }
 }
 
-install_llvm() {
-  local BUILDDIR="$(print_objdir llvm)"
-  pushd "$BUILDDIR" >& /dev/null
-  make -j32 install >& "$LOGDIR/llvm-install.log"
-  popd >& /dev/null
+proc install_llvm() {
+  var BUILDDIR=get_objdir("llvm")
+  cd "$BUILDDIR" {
+    make -j32 install > "$LOGDIR/llvm-install.log"
+  }
 }
 

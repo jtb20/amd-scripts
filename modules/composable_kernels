@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env ysh
 
-if [ ! "$SCRIPTDIR" ]; then
-  echo "Script dir not set"
-  exit 1
-fi
+#if [ ! "$SCRIPTDIR" ]; then
+  #echo "Script dir not set"
+  #exit 1
+#fi
 
 print_composable_kernel_src() {
   echo "composable_kernel"

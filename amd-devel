@@ -1,109 +1,115 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env ysh
+#set -e
 
-WORKDIR="$(pwd)"
+source "$_this_dir/common"
 
-SRCDIR="$WORKDIR/src"
-SCRIPTDIR="$SRCDIR/amd-scripts"
-LOGDIR="$WORKDIR/logs"
-OBJDIR="$WORKDIR/obj"
-INSTALLDIR="$WORKDIR/install"
-
-TASKLIST=$*
-TASKARR=()
+var TASKLIST=ARGV
+var TASKARR=()
 
 source "$SCRIPTDIR/modules/llvm"
 source "$SCRIPTDIR/modules/comgr"
 source "$SCRIPTDIR/modules/device_libs"
 source "$SCRIPTDIR/modules/composable_kernels"
 
-echo "HIP_CLANG_PATH: $HIP_CLANG_PATH"
-echo "ROCM_PATH: $ROCM_PATH"
-echo "HIP_PATH: $HIP_PATH"
-echo "LLVM_PATH: $LLVM_PATH"
-echo "PATH: $PATH"
-
-maybe_mkdir() {
-  local WHERE=$1
-  if [ ! -d "$WHERE" ]; then
-    mkdir -p "$WHERE"
-  fi
+proc print_tasks {
+  for i, task in (TASKARR) {
+    printf u'%.3d: %s\n' "$i" "$task"
+  }
 }
 
-print_tasks() {
-  local i
-  local NUMTASKS="${#TASKARR[@]}"
-  echo "num tasks: $NUMTASKS"
-  for (( i = 0; i < NUMTASKS; i++ )); do
-    printf "%d: %s\n" "$i" "${TASKARR[i]}"
-  done
+proc do_task_number (; num) {
+  var taskfn = TASKARR[num]
+  printf u'%d: %s\n' "$num" "$taskfn"
+  eval "$taskfn"
 }
 
-do_task_number() {
-  local NUM=$1
-  local TASKFN="${TASKARR[$NUM]}"
-  printf "%d: %s\n" "$NUM" "$TASKFN"
-  eval "$TASKFN"
+proc do_tasks (; todo) {
+  #local TASKS=$@
+  #local START
+  #local END
+  #local TASK
+  #local LASTTASK
+  var task = -1
+  var nexttask = -1
+  var Range = / <capture digit+ as start : int> '--' <capture digit+ as end : int> /
+  if (len(todo) === 0) {
+    setvar todo = ("0", "continue")
+  }
+  for t in (todo) {
+    if (t ~ Range) {
+      var starttask = _group('start')
+      var endtask = _group('end')
+      for i in (starttask .. endtask+1) {
+        do_task_number (i)
+      }
+      setvar nexttask = endtask+1
+    } elif (t ~ /<capture digit+ as tasknum: int>/) {
+      setvar task = _group('tasknum')
+      do_task_number (task)
+      setvar nexttask = task+1
+    } elif (t === "continue") {
+      setvar task = nexttask
+      for i, task in (TASKARR[task:]) {
+        do_task_number (i)
+      }
+      setvar nexttask = len(TASKARR)
+    } elif (t === "list") {
+      print_tasks
+      exit 0
+    }
+  }
+}
+  
+#  if [ "$TASKS" ]; then
+#    set $TASKS
+#else
+#    LASTTASK=0
+    #TASKS="continue"
+    #set $TASKS
+#  fi
+#  while [ ${#@} -gt 0 ]; do
+#    case "$1" in
+#      *--*)
+#	      START="${1%--*}"
+#	      END="${1#*--}"
+#	      if ! [ "$START" ] || ! [ "$END" ]; then
+#		      echo "Missing start or end"
+#		      exit 1
+#	      fi
+#	      for (( i = START; i <= END; i++ )); do
+#	        do_task_number "$i"
+#              done
+#	      LASTTASK=$(( $END + 1 ))
+#	      ;;
+      #continue)
+	      #FINAL="${#TASKARR[@]}"
+	      #for (( i = LASTTASK; i < FINAL; i++ )); do
+	        #do_task_number "$i"
+              #done
+	      #;;
+      #list)
+	      #print_tasks
+	      #exit 0
+	      #;;
+      #*)
+              #do_task_number "$1"
+	      #LASTTASK=$(( $1 + 1 ))
+	      #;;
+      #esac
+    #shift 1
+  #done
+  #return 1
+#}
+
+proc add_task (name) {
+  append $name (TASKARR)
 }
 
-do_tasks() {
-  local TASKS=$@
-  local START
-  local END
-  local TASK
-  local LASTTASK
-  if [ "$TASKS" ]; then
-    set $TASKS
-  else
-    LASTTASK=0
-    TASKS="continue"
-    set $TASKS
-  fi
-  while [ ${#@} -gt 0 ]; do
-    case "$1" in
-      *--*)
-	      START="${1%--*}"
-	      END="${1#*--}"
-	      if ! [ "$START" ] || ! [ "$END" ]; then
-		      echo "Missing start or end"
-		      exit 1
-	      fi
-	      for (( i = START; i <= END; i++ )); do
-	        do_task_number "$i"
-              done
-	      LASTTASK=$(( $END + 1 ))
-	      ;;
-      continue)
-	      FINAL="${#TASKARR[@]}"
-	      for (( i = LASTTASK; i < FINAL; i++ )); do
-	        do_task_number "$i"
-              done
-	      ;;
-      list)
-	      print_tasks
-	      exit 0
-	      ;;
-      *)
-              do_task_number "$1"
-	      LASTTASK=$(( $1 + 1 ))
-	      ;;
-      esac
-    shift 1
-  done
-  return 1
-}
-
-add_task() {
-  local NEWTASK=$1
-  TASKARR=("${TASKARR[@]}" "$NEWTASK")
-}
-
-standard_tasks() {
-  local COMPONENT=$1
-  add_task "clean_$COMPONENT"
-  add_task "configure_$COMPONENT"
-  add_task "build_$COMPONENT"
-  add_task "install_$COMPONENT"
+proc standard_tasks (component) {
+  add_task "clean_$component"
+  add_task "configure_$component"
+  add_task "build_$component"
+  add_task "install_$component"
 }
 
 standard_tasks llvm
@@ -111,34 +117,32 @@ standard_tasks device_libs
 standard_tasks comgr
 #standard_tasks composable_kernel
 
-print_srcdir() {
-  local COMPONENT=$1
-  local COMPONENT_SRC="$(eval print_${COMPONENT}_src)"
-  echo "$SRCDIR/$COMPONENT_SRC"
+func get_srcdir (component) {
+  # It seems like evalExpr "..." might be better here somehow, but it doesn't
+  # seem to work like that (yet?)
+  eval "var COMPONENT_SRC = get_${component}_src()"
+  return ("$SRCDIR/$COMPONENT_SRC")
 }
 
-print_objdir() {
-  local COMPONENT=$1
-  echo "$OBJDIR/$COMPONENT"
+func get_objdir (component) {
+  return ("$OBJDIR/$component")
 }
 
-print_installdir() {
-  local COMPONENT=$1
-  echo "$INSTALLDIR/$COMPONENT"
+func get_installdir (component) {
+  return ("$INSTALLDIR/$component")
 }
 
-clean_component() {
-  local COMPONENT=$1
-  local OBJDIR="$(print_objdir "$COMPONENT")"
-  if [ -d "$OBJDIR" ]; then
-    rm -rf "$OBJDIR"/*
-  else
-    mkdir -p "$OBJDIR"
-  fi
+proc clean_component (component) {
+  var OBJDIR = get_objdir(component)
+  if test --dir $OBJDIR {
+    rm -rf $OBJDIR/*
+  } else {
+    mkdir -p $OBJDIR
+  }
 }
 
-maybe_mkdir "$LOGDIR"
-maybe_mkdir "$OBJDIR"
-maybe_mkdir "$INSTALLDIR"
+maybe_mkdir $LOGDIR
+maybe_mkdir $OBJDIR
+maybe_mkdir $INSTALLDIR
 
-do_tasks $TASKLIST
+do_tasks (TASKLIST)
