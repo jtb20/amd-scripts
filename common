@@ -1,0 +1,21 @@
+var WORKDIR="$(pwd)"
+
+var SRCDIR="$WORKDIR/src"
+var SCRIPTDIR="$_this_dir"
+var LOGDIR="$WORKDIR/logs"
+var OBJDIR="$WORKDIR/obj"
+var INSTALLDIR="$WORKDIR/install"
+
+proc show_vars {
+  write "HIP_CLANG_PATH: $HIP_CLANG_PATH"
+  write "ROCM_PATH: $ROCM_PATH"
+  write "HIP_PATH: $HIP_PATH"
+  write "LLVM_PATH: $LLVM_PATH"
+  write "PATH: $PATH"
+}
+
+proc maybe_mkdir (where) {
+  if ! test --dir $where {
+    mkdir -p $where
+  }
+}

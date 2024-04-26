@@ -1,0 +1,32 @@
+#!/usr/bin/env ysh
+
+include $_this_dir/common
+
+proc git_checkout (;; destdir, url, branch) {
+    maybe_mkdir $destdir
+    cd $destdir {
+        var current = $(git branch --show-current)
+        if (current === branch) {
+            write "Already checked out $url @ $branch"
+            return 1
+        } elif (current !== "") {
+            write "Wrong branch '$current' checked out here, wanted '$branch'"
+            return 1
+        } else {
+            git clone --branch $branch $url
+        }
+    }
+}
+
+proc unpack_tar (;; destdir, tarfile, strip) {
+    maybe_mkdir $destdir
+    cd $destdir {
+        tar fxpv --strip-components=$strip $tarfile
+    }
+}
+
+proc fetch_tar (;; url, tmpdir) {
+    cd $tmpdir {
+        curl -O $url
+    }
+}
