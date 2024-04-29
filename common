@@ -5,6 +5,7 @@ var SCRIPTDIR="$_this_dir"
 var LOGDIR="$WORKDIR/logs"
 var OBJDIR="$WORKDIR/obj"
 var INSTALLDIR="$WORKDIR/install"
+var ARCHIVEDIR="$WORKDIR/archives"
 
 proc show_vars {
   write "HIP_CLANG_PATH: $HIP_CLANG_PATH"
@@ -17,5 +18,17 @@ proc show_vars {
 proc maybe_mkdir (where) {
   if ! test --dir $where {
     mkdir -p $where
+  }
+}
+
+func dir_empty (where) {
+  cd $where {
+    # shopt "dotglob" appears to be unimplemented. This'll do.
+    var files=glob("*")++glob(".*")
+    if (len(files) === 2) {
+      return (true)
+    } else {
+      return (false)
+    }
   }
 }

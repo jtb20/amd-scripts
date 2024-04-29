@@ -1,20 +1,38 @@
 #!/usr/bin/env ysh
 
-include $_this_dir/common
+source $_this_dir/common
 
-proc git_checkout (;; destdir, url, branch) {
-    maybe_mkdir $destdir
-    cd $destdir {
-        var current = $(git branch --show-current)
-        if (current === branch) {
-            write "Already checked out $url @ $branch"
-            return 1
-        } elif (current !== "") {
-            write "Wrong branch '$current' checked out here, wanted '$branch'"
-            return 1
-        } else {
-            git clone --branch $branch $url
+proc git_checkout (;; srcdir, destname, url, branch) {
+    if test --dir $srcdir/$destname {
+        cd $srcdir/$destname {
+            try {
+                var remote = $(git remote show)
+                var rem_url = $(git remote get-url $remote)
+                var current = $(git branch --show-current)
+                if (rem_url !== url) {
+                    write "Remote url '$rem_url' is not '$url'"
+                    return 1
+                } elif (current === branch) {
+                    write "Already checked out $url @ $branch"
+                    return 1
+                } elif (current !== "") {
+                    write "Wrong branch '$current' checked out here, wanted '$branch'"
+                    return 1
+                } else {
+                    write "Something other than '$branch' checked out"
+                    return 1
+                }
+            }
+            if (_status === 0) {
+                if (current === branch) {
+                    write "Already checked out $url @ $branch"
+                    return 1
+                } 
+            }
         }
+    }
+    cd "$srcdir" {
+        git clone --branch $branch $url $destname
     }
 }
 
@@ -25,8 +43,47 @@ proc unpack_tar (;; destdir, tarfile, strip) {
     }
 }
 
-proc fetch_tar (;; url, tmpdir) {
+proc fetch_tar (;; url, tmpdir, md5_expected) {
     cd $tmpdir {
-        curl -O $url
+        var filename = split(url,"/")[-1]
+        try {
+            if test --exists $filename {
+                var md5 = $(md5sum $filename)=>split()[0]
+                if (md5 === md5_expected) {
+                    write "using existing download for $filename"
+                    return 0
+                }
+            }
+        }
+        if (_status === 0) {
+            return 0
+        } else {
+            write "md5sum failed for $filename"
+            return 1
+        }
+        try curl -O $url
+        if (_status !== 0) {
+            write "download failed for $url"
+            return 1
+        }
+        try {
+            setvar md5 = $(md5sum $filename)=>split()[0]
+            if (md5 === md5_expected) {
+                write "md5 matches for $filename"
+            } else {
+                write "md5 mismatch for $filename: expected $md5_expected, got $md5"
+                return 1
+            }
+        }
+        if (_status !== 0) {
+            write "couldn't md5sum download"
+            return 1
+        }
     }
 }
+
+maybe_mkdir $ARCHIVEDIR
+
+fetch_tar (url="https://gcc.gnu.org/pub/gcc/infrastructure/gmp-6.2.1.tar.bz2",
+           tmpdir=ARCHIVEDIR,
+           md5_expected="28971fc21cf028042d4897f02fd355ea")
