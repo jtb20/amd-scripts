@@ -1,42 +1,44 @@
 #!/usr/bin/env ysh
 #set -e
 
-source "$_this_dir/common"
+source --builtin args.ysh
+source $_this_dir/common
 
 var TASKLIST=ARGV
 var TASKARR=()
-
-source "$SCRIPTDIR/modules/llvm"
-source "$SCRIPTDIR/modules/comgr"
-source "$SCRIPTDIR/modules/device_libs"
-source "$SCRIPTDIR/modules/composable_kernels"
+var CurrentLogFile
 
 proc print_tasks {
+  if (len(TASKARR) === 0) {
+    error "No tasks!"
+  }
   for i, task in (TASKARR) {
-    printf u'%.3d: %s\n' "$i" "$task"
+    printf u'%.3d: %s\n' $[i+1] $task
   }
 }
 
 proc do_task_number (; num) {
-  var taskfn = TASKARR[num]
-  printf u'%d: %s\n' "$num" "$taskfn"
-  eval "$taskfn"
+  var taskidx = num-1
+  var taskfn = TASKARR[taskidx]
+  var logname=$(printf u'%.3d-%s.log' $num $taskfn)
+  var numtasks = len(TASKARR)
+  setglobal CurrentLogFile="$LOGDIR/$logname"
+  printf u'[%s] [%.3d/%.3d]: start %s\n' $(time_now) $num $numtasks $taskfn
+  eval "$taskfn" >> $CurrentLogFile
+  printf u'[%s] [%.3d/%.3d]: finish %s\n' $(time_now) $num $numtasks $taskfn
 }
 
 proc do_tasks (; todo) {
-  #local TASKS=$@
-  #local START
-  #local END
-  #local TASK
-  #local LASTTASK
   var task = -1
   var nexttask = -1
   var Range = / <capture digit+ as start : int> '--' <capture digit+ as end : int> /
   if (len(todo) === 0) {
-    setvar todo = ("0", "continue")
+    setvar todo = ("1", "continue")
   }
   for t in (todo) {
-    if (t ~ Range) {
+    if (nexttask > len(TASKARR)) {
+      :
+    } elif (t ~ Range) {
       var starttask = _group('start')
       var endtask = _group('end')
       for i in (starttask .. endtask+1) {
@@ -48,79 +50,19 @@ proc do_tasks (; todo) {
       do_task_number (task)
       setvar nexttask = task+1
     } elif (t === "continue") {
-      setvar task = nexttask
-      for i, task in (TASKARR[task:]) {
+      for i in (nexttask .. len(TASKARR)+1) {
         do_task_number (i)
       }
-      setvar nexttask = len(TASKARR)
+      setvar nexttask = len(TASKARR)+1
     } elif (t === "list") {
       print_tasks
       exit 0
     }
   }
 }
-  
-#  if [ "$TASKS" ]; then
-#    set $TASKS
-#else
-#    LASTTASK=0
-    #TASKS="continue"
-    #set $TASKS
-#  fi
-#  while [ ${#@} -gt 0 ]; do
-#    case "$1" in
-#      *--*)
-#	      START="${1%--*}"
-#	      END="${1#*--}"
-#	      if ! [ "$START" ] || ! [ "$END" ]; then
-#		      echo "Missing start or end"
-#		      exit 1
-#	      fi
-#	      for (( i = START; i <= END; i++ )); do
-#	        do_task_number "$i"
-#              done
-#	      LASTTASK=$(( $END + 1 ))
-#	      ;;
-      #continue)
-	      #FINAL="${#TASKARR[@]}"
-	      #for (( i = LASTTASK; i < FINAL; i++ )); do
-	        #do_task_number "$i"
-              #done
-	      #;;
-      #list)
-	      #print_tasks
-	      #exit 0
-	      #;;
-      #*)
-              #do_task_number "$1"
-	      #LASTTASK=$(( $1 + 1 ))
-	      #;;
-      #esac
-    #shift 1
-  #done
-  #return 1
-#}
-
-proc add_task (name) {
-  append $name (TASKARR)
-}
-
-proc standard_tasks (component) {
-  add_task "clean_$component"
-  add_task "configure_$component"
-  add_task "build_$component"
-  add_task "install_$component"
-}
-
-standard_tasks llvm
-standard_tasks device_libs
-standard_tasks comgr
-#standard_tasks composable_kernel
 
 func get_srcdir (component) {
-  # It seems like evalExpr "..." might be better here somehow, but it doesn't
-  # seem to work like that (yet?)
-  eval "var COMPONENT_SRC = get_${component}_src()"
+  var COMPONENT_SRC = lookup_func("get_${component}_src")()
   return ("$SRCDIR/$COMPONENT_SRC")
 }
 
@@ -144,5 +86,11 @@ proc clean_component (component) {
 maybe_mkdir $LOGDIR
 maybe_mkdir $OBJDIR
 maybe_mkdir $INSTALLDIR
+
+parse_args (ARGV)
+
+load_config
+
+elaborate_tasks
 
 do_tasks (TASKLIST)

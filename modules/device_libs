@@ -38,3 +38,11 @@ install_device_libs() {
   make -j32 install >& "$LOGDIR/devlibs-install.log"
   popd >& /dev/null
 }
+
+func device_libs_dependencies() {
+  return (:| llvm |)
+}
+
+proc device_libs_tasks() {
+  standard_tasks device_libs
+}

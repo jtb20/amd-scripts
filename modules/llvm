@@ -49,3 +49,10 @@ proc install_llvm() {
   }
 }
 
+func llvm_dependencies() {
+  return ([])
+}
+
+proc llvm_tasks() {
+  standard_tasks llvm
+}

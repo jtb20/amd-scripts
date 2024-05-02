@@ -1,5 +1,6 @@
 #!/usr/bin/env ysh
 
+source --builtin args.ysh
 source $_this_dir/common
 
 proc git_checkout (;; srcdir, destname, url, branch) {
@@ -10,23 +11,18 @@ proc git_checkout (;; srcdir, destname, url, branch) {
                 var rem_url = $(git remote get-url $remote)
                 var current = $(git branch --show-current)
                 if (rem_url !== url) {
-                    write "Remote url '$rem_url' is not '$url'"
-                    return 1
+                    error "Remote url '$rem_url' is not '$url'"
                 } elif (current === branch) {
-                    write "Already checked out $url @ $branch"
-                    return 1
+                    error "Already checked out $url @ $branch"
                 } elif (current !== "") {
-                    write "Wrong branch '$current' checked out here, wanted '$branch'"
-                    return 1
+                    error "Wrong branch '$current' checked out here, wanted '$branch'"
                 } else {
-                    write "Something other than '$branch' checked out"
-                    return 1
+                    error "Something other than '$branch' checked out"
                 }
             }
             if (_status === 0) {
                 if (current === branch) {
-                    write "Already checked out $url @ $branch"
-                    return 1
+                    error "Already checked out $url @ $branch"
                 } 
             }
         }
@@ -36,10 +32,22 @@ proc git_checkout (;; srcdir, destname, url, branch) {
     }
 }
 
-proc unpack_tar (;; destdir, tarfile, strip) {
-    maybe_mkdir $destdir
-    cd $destdir {
+proc unpack_tar (;; srcdir, destname, tarfile, strip) {
+    var unpack_dir = "$srcdir/$destname"
+    maybe_mkdir $unpack_dir
+    cd $unpack_dir {
         tar fxpv --strip-components=$strip $tarfile
+    }
+}
+
+proc do_md5sum(filename) {
+    try {
+        var md5 = $(md5sum $filename)=>split()[0]
+    }
+    if (_status === 0) {
+       write -- $md5
+    } else {
+       error "md5sum failed for $filename"
     }
 }
 
@@ -48,42 +56,63 @@ proc fetch_tar (;; url, tmpdir, md5_expected) {
         var filename = split(url,"/")[-1]
         try {
             if test --exists $filename {
-                var md5 = $(md5sum $filename)=>split()[0]
+                var md5 = $(do_md5sum $filename)
                 if (md5 === md5_expected) {
                     write "using existing download for $filename"
-                    return 0
+                } else {
+                    error "md5 mismatch for $filename: expected $md5_expected, got $md5"
                 }
             }
         }
         if (_status === 0) {
             return 0
-        } else {
-            write "md5sum failed for $filename"
-            return 1
         }
         try curl -O $url
         if (_status !== 0) {
-            write "download failed for $url"
-            return 1
+            error "download failed for $url"
         }
         try {
-            setvar md5 = $(md5sum $filename)=>split()[0]
+            setvar md5 = $(do_md5sum $filename)
             if (md5 === md5_expected) {
                 write "md5 matches for $filename"
             } else {
-                write "md5 mismatch for $filename: expected $md5_expected, got $md5"
-                return 1
+                error "md5 mismatch for $filename: expected $md5_expected, got $md5"
             }
         }
-        if (_status !== 0) {
-            write "couldn't md5sum download"
-            return 1
-        }
+        return $_status
     }
 }
 
+proc do_downloads (; comps) {
+  var download_comps = Components if len(comps) === 0 else comps
+  for comp in (download_comps) {
+    case (Sources[comp].type) {
+      "git" {
+        write "$comp: check out url: $[Sources[comp].url]"
+      }
+
+      "archive" {
+        write "$comp: download archive: $[Sources[comp].url]"
+      }
+
+      "subcomponent" {
+        write "$comp: subcomponent of $[Sources[comp].parent]"
+      }
+
+      * {
+        error "$comp: Unknown source type '$[Sources[comp].type]'!"
+      }
+    }
+  }
+}
+
+parse_args (ARGV)
+
+load_config
+
 maybe_mkdir $ARCHIVEDIR
 
-fetch_tar (url="https://gcc.gnu.org/pub/gcc/infrastructure/gmp-6.2.1.tar.bz2",
-           tmpdir=ARCHIVEDIR,
-           md5_expected="28971fc21cf028042d4897f02fd355ea")
+do_downloads (TASKLIST)
+#fetch_tar (url="https://gcc.gnu.org/pub/gcc/infrastructure/gmp-6.2.1.tar.bz2",
+#           tmpdir=ARCHIVEDIR,
+#           md5_expected="28971fc21cf028042d4897f02fd355ea")

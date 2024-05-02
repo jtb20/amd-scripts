@@ -16,7 +16,7 @@ var gmp_src = {
 }
 
 var mpfr_src = {
-  "$gcc_infra/mpfr-4.1.0.tar.bz2",
+  "url" : "$gcc_infra/mpfr-4.1.0.tar.bz2",
   "type" : "archive",
   "version" : "4.1.0",
   "version_name" : "4.1.0",
@@ -24,7 +24,7 @@ var mpfr_src = {
 }
 
 var mpc_src = {
-  "$gcc_infra/mpc-1.2.1.tar.gz",
+  "url" : "$gcc_infra/mpc-1.2.1.tar.gz",
   "type" : "archive",
   "version" : "1.2.1",
   "version_name" : "1.2.1",
@@ -32,15 +32,15 @@ var mpc_src = {
 }
 
 var isl_src = {
-  "$gcc_infra/isl-0.24.tar.bz2",
+  "url" : "$gcc_infra/isl-0.24.tar.bz2",
   "type" : "archive",
   "version" : "0.24",
   "version_name" : "0.24",
   "md5" : ""
 }
 
-add_sources("gcc", gcc_src)
-add_sources("gmp", gmp_src)
-add_sources("mpfr", mpfr_src)
-add_sources("mpc", mpc_src)
-add_sources("isl", isl_src)
+add_sources ("gcc", gcc_src)
+add_sources ("gmp", gmp_src)
+add_sources ("mpfr", mpfr_src)
+add_sources ("mpc", mpc_src)
+add_sources ("isl", isl_src)

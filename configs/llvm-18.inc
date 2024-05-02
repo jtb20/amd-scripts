@@ -5,4 +5,4 @@ var llvm_src = {
   "version_name" : "18"
 }
 
-add_sources("llvm", llvm_src)
+add_sources ("llvm", llvm_src)

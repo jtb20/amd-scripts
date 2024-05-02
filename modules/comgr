@@ -44,3 +44,11 @@ install_comgr() {
   make -j32 install >& comgr-install.log
   popd >& /dev/null
 }
+
+func comgr_dependencies() {
+  return (:| llvm device_libs |)
+}
+
+proc comgr_tasks {
+  standard_tasks comgr
+}

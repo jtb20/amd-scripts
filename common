@@ -6,6 +6,11 @@ var LOGDIR="$WORKDIR/logs"
 var OBJDIR="$WORKDIR/obj"
 var INSTALLDIR="$WORKDIR/install"
 var ARCHIVEDIR="$WORKDIR/archives"
+var CONFIGDIR="$SCRIPTDIR/configs"
+
+var ActiveCfg
+var Sources={}
+var Components=[]
 
 proc show_vars {
   write "HIP_CLANG_PATH: $HIP_CLANG_PATH"
@@ -25,10 +30,98 @@ func dir_empty (where) {
   cd $where {
     # shopt "dotglob" appears to be unimplemented. This'll do.
     var files=glob("*")++glob(".*")
-    if (len(files) === 2) {
-      return (true)
-    } else {
-      return (false)
+    return (len(files) === 2)
+  }
+}
+
+func lookup_func(name) {
+  try {
+    # It seems like evalExpr "..." might be better here somehow, but it doesn't
+    # seem to work like that (yet?)
+    eval "var fn = $name" 2> /dev/null
+  }
+  if (_status === 0 and type(fn) === "Func") {
+    return (fn)
+  } else {
+    error "Not a function: $name"
+  }
+}
+
+proc time_now {
+  date +"%H:%M:%S"
+}
+
+func in_list(item, inlist) {
+  return (inlist=>indexOf(item) >= 0)
+}
+
+proc parse_args(; argv) {
+  var spec
+  var tasks
+  parser (&spec) {
+    arg cfg (help='Build configuration file')
+    rest tasks
+  }
+  var args = parseArgs (spec, argv)
+  setglobal ActiveCfg = args.cfg
+  setglobal TASKLIST = args.tasks
+}
+
+proc add_sources(; component, opts) {
+  if (component in Sources) {
+    error "Attempt to add component $component twice"
+  }
+  setglobal Sources[component] = opts
+}
+
+proc add_components(...components) {
+  for comp in (components) {
+    if (not in_list (comp, Components)) {
+      var deps = lookup_func("${comp}_dependencies")()
+      add_components @deps
+      append $comp (Components)
     }
   }
 }
+
+proc add_task (name) {
+  append $name (TASKARR)
+}
+
+proc add_tasks (component, ...tasks) {
+  for task in (tasks) {
+    add_task "${task}_${component}"
+  }
+}
+
+proc standard_tasks (component) {
+  add_tasks $component clean configure build install
+}
+
+proc load_config {
+  if test --exists "$CONFIGDIR/$ActiveCfg" {
+    source $CONFIGDIR/$ActiveCfg
+  } elif (ActiveCfg !== null) {
+    error "No such config: $ActiveCfg"
+  }
+}
+
+proc elaborate_tasks {
+  var ordered_comp
+  for comp in (Components) {
+    var deps = lookup_func("${comp}_dependencies")()
+    for dep in (deps) {
+      write -- "$dep $comp"
+    }
+  } | tsort | while read ordered_comp {
+    var add_task_fn = "${ordered_comp}_tasks"
+    eval "$add_task_fn"
+  }
+}
+
+# Loading these on demand is a bit awkward. Never mind, just load them all
+# here.
+source "$SCRIPTDIR/modules/llvm"
+source "$SCRIPTDIR/modules/comgr"
+source "$SCRIPTDIR/modules/device_libs"
+source "$SCRIPTDIR/modules/composable_kernels"
