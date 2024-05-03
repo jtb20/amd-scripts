@@ -1,48 +1,44 @@
 #!/usr/bin/env ysh
 
-#if [ ! "$SCRIPTDIR" ]; then
-  #echo "Script dir not set"
-  #exit 1
-#fi
-
-clean_comgr() {
+proc clean_comgr() {
   clean_component comgr
 }
 
-print_comgr_src() {
-  local LLVMSRC="$(print_llvm_src)"
-  echo "$LLVMSRC/amd/comgr"
+func get_comgr_src() {
+  var LLVM_Src = get_llvm_src()
+  var Relative = Sources.comgr.subdir
+  return ("$LLVM_Src/$Relative")
 }
 
-configure_comgr() {
-  local BUILD="$(print_objdir comgr)"
-  local LLVMBUILD="$(print_objdir llvm)"
-  local DEVLIBSBUILD="$(print_objdir device_libs)"
-  local SRC="$(print_srcdir comgr)"
-  pushd "$BUILD" >& /dev/null
-  cmake --log-level=DEBUG --debug-output \
-    -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_PREFIX_PATH="$LLVMBUILD;$DEVLIBSBUILD" \
-    -DCOMGR_BUILD_SHARED_LIBS=ON \
-    -DLLVM_DIR="$LLVMBUILD" \
-    -DClang_DIR="$LLVMBUILD" \
-    "$SRC" >& "$LOGDIR/comgr-config.log"
-  popd >& /dev/null
+proc configure_comgr() {
+  var Build = get_objdir("comgr")
+  var LLVM_Build = get_objdir("llvm")
+  var DevLibs_Build = get_objdir("device_libs")
+  var Src= get_srcdir("comgr")
+  cd $Build {
+    cmake --log-level=DEBUG --debug-output \
+      -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_PREFIX_PATH="$LLVM_Build;$DevLibs_Build" \
+      -DCOMGR_BUILD_SHARED_LIBS=ON \
+      -DLLVM_DIR=$LLVM_Build \
+      -DClang_DIR=$LLVM_Build \
+      $Src
+  }
 }
 
-build_comgr() {
-  local BUILD="$(print_objdir comgr)"
-  pushd "$BUILD" >& /dev/null
-  make -j32 >& comgr-build.log
-  popd >& /dev/null
+proc build_comgr() {
+  var Build = get_objdir("comgr")
+  cd $Build {
+    make -j32
+  }
 }
 
-install_comgr() {
-  local BUILD="$(print_objdir comgr)"
-  pushd "$BUILD" >& /dev/null
-  make -j32 install >& comgr-install.log
-  popd >& /dev/null
+proc install_comgr() {
+  var Build = get_objdir("comgr")
+  cd $Build {
+    make -j32 install
+  }
 }
 
 func comgr_dependencies() {

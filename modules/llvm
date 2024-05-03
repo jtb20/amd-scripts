@@ -1,13 +1,9 @@
 #!/usr/bin/env ysh
 # clang-tools-extra
 
-#if [ ! "$SCRIPTDIR" ]; then
-  #echo "Script dir not set"
-  #exit 1
-#fi
-
 func get_llvm_src() {
-  return ("llvm-project")
+  var version_name=Sources.llvm.version_name
+  return ("llvm-project-$version_name")
 }
 
 proc clean_llvm() {
@@ -15,20 +11,20 @@ proc clean_llvm() {
 }
 
 proc configure_llvm() {
-  var SRC=get_srcdir("llvm")
-  var BUILDDIR=get_objdir("llvm")
-  var BUILDTYPE="Release"
-  cd "$BUILDDIR" {
+  var Src = get_srcdir("llvm")
+  var BuildDir = get_objdir("llvm")
+  var BuildType = "Release"
+  cd $BuildDir {
     # --fresh
     cmake -DLLVM_ENABLE_PROJECTS='clang;lld;clang-tools-extra' \
         -DLLVM_TARGETS_TO_BUILD='X86;AMDGPU' \
-      -DCMAKE_BUILD_TYPE=$BUILDTYPE -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
+      -DCMAKE_BUILD_TYPE=$BuildType -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
       -DLLVM_BUILD_TOOLS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DLLVM_ENABLE_ZLIB=ON \
       -DLLVM_INCLUDE_TESTS=ON -DCLANG_DEFAULT_LINKER=lld -DLLVM_PARALLEL_LINK_JOBS=8 \
       -DLLVM_BUILD_LLVM_DYLIB=ON \
       -DCLANG_ENABLE_AMDCLANG=ON \
       -DLLVM_ENABLE_RUNTIMES=compiler-rt \
-      "$SRC/llvm" > "$LOGDIR"/llvm-config.log
+      "$Src/llvm"
   }
 	# -DCLANG_DEFAULT_PIE_ON_LINUX
 	#cmake ../llvm-project/amd/hipcc -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release
@@ -36,16 +32,16 @@ proc configure_llvm() {
 }
 
 proc build_llvm() {
-  var BUILDDIR=get_objdir("llvm")
-  cd "$BUILDDIR" {
-    make -j32 > "$LOGDIR/llvm-build.log"
+  var BuildDir = get_objdir("llvm")
+  cd $BuildDir {
+    make -j32
   }
 }
 
 proc install_llvm() {
-  var BUILDDIR=get_objdir("llvm")
-  cd "$BUILDDIR" {
-    make -j32 install > "$LOGDIR/llvm-install.log"
+  var BuildDir = get_objdir("llvm")
+  cd $BuildDir {
+    make -j32 install
   }
 }
 

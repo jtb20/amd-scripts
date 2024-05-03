@@ -1,42 +1,38 @@
 #!/usr/bin/env ysh
 
-#if [ ! "$SCRIPTDIR" ]; then
-  #echo "Script dir not set"
-  #exit 1
-#fi 
-
-clean_device_libs() {
+proc clean_device_libs() {
   clean_component device_libs
 }
 
-print_device_libs_src() {
-  local LLVMSRC="$(print_llvm_src)"
-  echo "$LLVMSRC/amd/device-libs"
+func get_device_libs_src() {
+  var LLVM_Src = get_llvm_src()
+  var Relative = Sources.device_libs.subdir
+  return ("$LLVM_Src/$Relative")
 }
 
-configure_device_libs() {
-  local BUILD="$(print_objdir device_libs)"
-  local SRC="$(print_srcdir device_libs)"
-  local LLVMBUILD="$(print_objdir llvm)"
-  pushd "$BUILD" >& /dev/null
-  cmake "$SRC" -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
-		-DCMAKE_PREFIX_PATH="$LLVMBUILD" \
-		-DCMAKE_BUILD_TYPE=Release >& "$LOGDIR/devlibs-config.log"
-  popd >& /dev/null
+proc configure_device_libs() {
+  var Build = get_objdir("device_libs")
+  var Src = get_srcdir("device_libs")
+  var LLVM_Build = get_objdir("llvm")
+  cd $Build {
+    cmake "$Src" -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_PREFIX_PATH=$LLVM_Build \
+      -DCMAKE_BUILD_TYPE=Release
+  }
 }
 
-build_device_libs() {
-  local BUILD="$(print_objdir device_libs)"
-  pushd "$BUILD" >& /dev/null
-  make -j32 >& "$LOGDIR/devlibs-build.log"
-  popd >& /dev/null
+proc build_device_libs() {
+  var Build = get_objdir("device_libs")
+  cd $Build {
+    make -j32
+  }
 }
 
-install_device_libs() {
-  local BUILD="$(print_objdir device_libs)"
-  pushd "$BUILD" >& /dev/null
-  make -j32 install >& "$LOGDIR/devlibs-install.log"
-  popd >& /dev/null
+proc install_device_libs() {
+  var Build = get_objdir("device_libs")
+  cd $Build {
+    make -j32 install
+  }
 }
 
 func device_libs_dependencies() {

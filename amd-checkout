@@ -4,31 +4,39 @@ source --builtin args.ysh
 source $_this_dir/common
 
 proc git_checkout (;; srcdir, destname, url, branch) {
-    if test --dir $srcdir/$destname {
-        cd $srcdir/$destname {
+    if test --dir "$srcdir/$destname" {
+        cd "$srcdir/$destname" {
             try {
                 var remote = $(git remote show)
                 var rem_url = $(git remote get-url $remote)
                 var current = $(git branch --show-current)
                 if (rem_url !== url) {
                     error "Remote url '$rem_url' is not '$url'"
-                } elif (current === branch) {
-                    error "Already checked out $url @ $branch"
-                } elif (current !== "") {
+                } elif (current !== branch) {
                     error "Wrong branch '$current' checked out here, wanted '$branch'"
                 } else {
-                    error "Something other than '$branch' checked out"
+                    write "Already checked out $url @ $branch"
+                    var modifications = $(git status --porcelain)
+                    if (modifications !== "") {
+                        error "Local modifications in '$srcdir/$destname'"
+                    }
+                    var localcommits = $(git log origin/$branch..HEAD)
+                    if (localcommits !== "") {
+                        error "Local commits in '$srcdir/$destname'"
+                    }
                 }
             }
             if (_status === 0) {
-                if (current === branch) {
-                    error "Already checked out $url @ $branch"
-                } 
+                write "Attempting 'git pull --rebase'..."
+                git pull --rebase
+            } else {
+                write "Couldn't update: $[_error.message]"
             }
+        } 
+    } else {
+        cd $srcdir {
+            git clone --branch $branch $url $destname
         }
-    }
-    cd "$srcdir" {
-        git clone --branch $branch $url $destname
     }
 }
 
@@ -51,9 +59,13 @@ proc do_md5sum(filename) {
     }
 }
 
+func filename_from_url(url) {
+    return (split(url,"/")[-1])
+}
+
 proc fetch_tar (;; url, tmpdir, md5_expected) {
     cd $tmpdir {
-        var filename = split(url,"/")[-1]
+        var filename = filename_from_url(url)
         try {
             if test --exists $filename {
                 var md5 = $(do_md5sum $filename)
@@ -85,14 +97,27 @@ proc fetch_tar (;; url, tmpdir, md5_expected) {
 
 proc do_downloads (; comps) {
   var download_comps = Components if len(comps) === 0 else comps
+  var dirname_in_srcdir
   for comp in (download_comps) {
+    setvar dirname_in_srcdir = get_srcdir_rel(comp)
     case (Sources[comp].type) {
       "git" {
         write "$comp: check out url: $[Sources[comp].url]"
+        git_checkout (srcdir=SRCDIR,
+                      destname=dirname_in_srcdir,
+                      url=Sources[comp].url,
+                      branch=Sources[comp].version)
       }
 
       "archive" {
         write "$comp: download archive: $[Sources[comp].url]"
+        fetch_tar (url=Sources[comp].url,
+                   tmpdir=TMPDIR,
+                   md5_expected=Sources[comp].md5)
+        unpack_tar (srcdir=SRCDIR,
+                    destname=dirname_in_srcdir,
+                    tarfile=filename_from_url(Sources[comp].url),
+                    strip=1)
       }
 
       "subcomponent" {

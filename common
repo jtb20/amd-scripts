@@ -98,6 +98,33 @@ proc standard_tasks (component) {
   add_tasks $component clean configure build install
 }
 
+func get_srcdir_rel (component) {
+  var component_src = lookup_func("get_${component}_src")()
+  return (component_src)
+}
+
+func get_srcdir (component) {
+  var component_src = lookup_func("get_${component}_src")()
+  return ("$SRCDIR/$component_src")
+}
+
+func get_version_name (component) {
+  if (Sources[component].type === "subcomponent") {
+    return (get_version_name (Sources[component].parent))
+  } else {
+    return (Sources[component].version_name)
+  }
+}
+
+func get_objdir (component) {
+  var version_name = get_version_name (component)
+  return ("$OBJDIR/$component-$version_name")
+}
+
+func get_installdir (component) {
+  return ("$INSTALLDIR/$component")
+}
+
 proc load_config {
   if test --exists "$CONFIGDIR/$ActiveCfg" {
     source $CONFIGDIR/$ActiveCfg

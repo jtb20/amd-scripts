@@ -61,19 +61,6 @@ proc do_tasks (; todo) {
   }
 }
 
-func get_srcdir (component) {
-  var COMPONENT_SRC = lookup_func("get_${component}_src")()
-  return ("$SRCDIR/$COMPONENT_SRC")
-}
-
-func get_objdir (component) {
-  return ("$OBJDIR/$component")
-}
-
-func get_installdir (component) {
-  return ("$INSTALLDIR/$component")
-}
-
 proc clean_component (component) {
   var OBJDIR = get_objdir(component)
   if test --dir $OBJDIR {
