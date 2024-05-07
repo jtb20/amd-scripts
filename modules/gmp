@@ -1,0 +1,29 @@
+#!/usr/bin/env ysh
+
+proc clean_gmp() {
+  clean_component gmp
+}
+
+func get_gmp_src() {
+  return (get_standard_src("gmp"))
+}
+
+proc configure_gmp() {
+  standard_configure gmp
+}
+
+proc build_gmp() {
+  standard_build gmp
+}
+
+proc install_gmp() {
+  standard_install gmp
+}
+
+func gmp_dependencies() {
+  return ([])
+}
+
+proc gmp_tasks() {
+  standard_tasks gmp
+}

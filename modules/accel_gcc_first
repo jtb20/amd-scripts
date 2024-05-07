@@ -1,0 +1,56 @@
+#!/usr/bin/env ysh
+
+proc clean_accel_gcc_first() {
+  clean_component accel_gcc_first
+}
+
+func get_accel_gcc_first_src() {
+  return (get_standard_src("accel_gcc_first"))
+}
+
+proc llvm_symlinks_accel_gcc_first() {
+  var Target = ConfigureOpts.accel_gcc_first.target
+  if (Target === "amdgcn-amdhsa") {
+    maybe_mkdir $INSTALLDIR/$Target/bin
+    cd $INSTALLDIR/$Target/bin {
+      if ! test --symlink as {
+        ln -s $INSTALLDIR/bin/llvm-mc as
+        ln -s $INSTALLDIR/bin/ld.lld ld
+      }
+    }
+    cd $INSTALLDIR/bin {
+      if ! test --symlink ${Target}-ar {
+        ln -s $INSTALLDIR/bin/llvm-ar ${Target}-ar
+        ln -s $INSTALLDIR/bin/llvm-nm ${Target}-nm
+        ln -s $INSTALLDIR/bin/llvm-ranlib ${Target}-ranlib
+      }
+    }
+  }
+}
+
+proc configure_accel_gcc_first() {
+  standard_configure accel_gcc_first
+}
+
+proc build_accel_gcc_first() {
+  standard_build accel_gcc_first
+}
+
+proc install_accel_gcc_first() {
+  standard_install accel_gcc_first
+}
+
+func accel_gcc_first_dependencies() {
+  return (:| isl mpc mpfr gmp llvm |)
+}
+
+proc accel_gcc_first_tasks() {
+  add_tasks accel_gcc_first llvm_symlinks
+  standard_tasks accel_gcc_first
+}
+
+proc default_configure_opts_accel_gcc_first() {
+  set_configure_opts ("accel_gcc_first", :| --with-mpfr=$INSTALLDIR
+                                            --with-gmp=$INSTALLDIR
+                                            --with-mpc=$INSTALLDIR |)
+}

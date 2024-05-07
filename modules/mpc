@@ -1,0 +1,29 @@
+#!/usr/bin/env ysh
+
+proc clean_mpc() {
+  clean_component mpc
+}
+
+func get_mpc_src() {
+  return (get_standard_src("mpc"))
+}
+
+proc configure_mpc() {
+  standard_configure mpc
+}
+
+proc build_mpc() {
+  standard_build mpc
+}
+
+proc install_mpc() {
+  standard_install mpc
+}
+
+func mpc_dependencies() {
+  return ([])
+}
+
+proc mpc_tasks() {
+  standard_tasks mpc
+}

@@ -1,0 +1,35 @@
+#!/usr/bin/env ysh
+
+proc clean_gcc() {
+  clean_component gcc
+}
+
+func get_gcc_src() {
+  return (get_standard_src("gcc"))
+}
+
+proc configure_gcc() {
+  standard_configure gcc
+}
+
+proc build_gcc() {
+  standard_build gcc
+}
+
+proc install_gcc() {
+  standard_install gcc
+}
+
+func gcc_dependencies() {
+  return (:| binutils isl mpc mpfr gmp accel_gcc |)
+}
+
+proc gcc_tasks() {
+  standard_tasks gcc
+}
+
+proc default_configure_opts_gcc() {
+  set_configure_opts ("gcc", :| --with-mpfr=$INSTALLDIR
+                                --with-gmp=$INSTALLDIR
+                                --with-mpc=$INSTALLDIR |)
+}

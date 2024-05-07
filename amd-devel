@@ -24,7 +24,19 @@ proc do_task_number (; num) {
   var numtasks = len(TASKARR)
   setglobal CurrentLogFile="$LOGDIR/$logname"
   printf u'[%s] [%.3d/%.3d]: start %s\n' $(time_now) $num $numtasks $taskfn
-  eval "$taskfn" >> $CurrentLogFile
+  try {
+    eval "$taskfn" >> $CurrentLogFile 2>&1
+  }
+  if (_status !== 0) {
+    write "Task '$taskfn' failed. Current log file is $CurrentLogFile"
+    write "Last 20 lines:"
+    tail -n 20 $CurrentLogFile
+    if ("message" in _error) {
+      error "$[_error.message]"
+    } else {
+      exit 1
+    }
+  }
   printf u'[%s] [%.3d/%.3d]: finish %s\n' $(time_now) $num $numtasks $taskfn
 }
 

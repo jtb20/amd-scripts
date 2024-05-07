@@ -1,0 +1,35 @@
+#!/usr/bin/env ysh
+
+proc clean_accel_gcc() {
+  clean_component accel_gcc
+}
+
+func get_accel_gcc_src() {
+  return (get_standard_src("accel_gcc"))
+}
+
+proc configure_accel_gcc() {
+  standard_configure accel_gcc
+}
+
+proc build_accel_gcc() {
+  standard_build accel_gcc
+}
+
+proc install_accel_gcc() {
+  standard_install accel_gcc
+}
+
+func accel_gcc_dependencies() {
+  return (:| accel_gcc_first accel_newlib isl mpc mpfr gmp llvm |)
+}
+
+proc accel_gcc_tasks() {
+  standard_tasks accel_gcc
+}
+
+proc default_configure_opts_accel_gcc() {
+  set_configure_opts ("accel_gcc", :| --with-mpfr=$INSTALLDIR
+                                      --with-gmp=$INSTALLDIR
+                                      --with-mpc=$INSTALLDIR |)
+}

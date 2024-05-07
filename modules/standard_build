@@ -1,0 +1,47 @@
+#!/usr/bin/env ysh
+
+func get_standard_src(comp) {
+  if (Sources[comp].type === "subcomponent") {
+    return (get_standard_src(Sources[comp].parent))
+  } else {
+    var version_name = Sources[comp].version_name
+    return ("${comp}-${version_name}")
+  }
+}
+
+proc standard_configure(comp) {
+  var Build = get_objdir(comp)
+  var Src = get_srcdir(comp)
+  cd $Build {
+    var cfg_opts=:| --prefix=$INSTALLDIR |
+    if (comp in ConfigureOpts) {
+      if ("cfg" in ConfigureOpts[comp]) {
+        setvar cfg_opts = cfg_opts ++ ConfigureOpts[comp].cfg
+      }
+      if ("target" in ConfigureOpts[comp]) {
+        call cfg_opts->append("--target=$[ConfigureOpts[comp].target]")
+      }
+      if ("host" in ConfigureOpts[comp]) {
+        call cfg_opts->append("--host=$[ConfigureOpts[comp].host]")
+      }
+      if ("build" in ConfigureOpts[comp]) {
+        call cfg_opts->append("--build=$[ConfigureOpts[comp].build]")
+      }
+    }
+    $Src/configure @cfg_opts
+  }
+}
+
+proc standard_build(comp) {
+  var Build = get_objdir(comp)
+  cd $Build {
+    make -j32
+  }
+}
+
+proc standard_install(comp) {
+  var Build = get_objdir(comp)
+  cd $Build {
+    make -j32 install
+  }
+}

@@ -1,0 +1,36 @@
+#!/usr/bin/env ysh
+
+proc clean_llvm_mos_sdk() {
+  clean_component llvm_mos_sdk
+}
+
+func get_llvm_mos_sdk_src() {
+  return (get_standard_src("llvm_mos_sdk"))
+}
+
+proc configure_llvm_mos_sdk() {
+  var Src = get_srcdir("llvm_mos_sdk")
+  var BuildDir = get_objdir("llvm_mos_sdk")
+  var BuildType = "Release"
+  var Cfg=ConfigureOpts["llvm_mos_sdk"]
+  cd $BuildDir {
+    cmake -DCMAKE_BUILD_TYPE=$BuildType -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+          @[Cfg.cfg] $Src
+  }
+}
+
+proc build_llvm_mos_sdk() {
+  standard_build llvm_mos_sdk
+}
+
+proc install_llvm_mos_sdk() {
+  standard_install llvm_mos_sdk
+}
+
+func llvm_mos_sdk_dependencies() {
+  return (:| llvm |)
+}
+
+proc llvm_mos_sdk_tasks() {
+  standard_tasks llvm_mos_sdk
+}

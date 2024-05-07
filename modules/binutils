@@ -1,0 +1,29 @@
+#!/usr/bin/env ysh
+
+proc clean_binutils() {
+  clean_component binutils
+}
+
+func get_binutils_src() {
+  return (get_standard_src("binutils"))
+}
+
+proc configure_binutils() {
+  standard_configure binutils
+}
+
+proc build_binutils() {
+  standard_build binutils
+}
+
+proc install_binutils() {
+  standard_install binutils
+}
+
+func binutils_dependencies() {
+  return ([])
+}
+
+proc binutils_tasks() {
+  standard_tasks binutils
+}

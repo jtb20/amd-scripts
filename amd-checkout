@@ -146,6 +146,7 @@ parse_args (ARGV)
 load_config
 
 maybe_mkdir $ARCHIVEDIR
+maybe_mkdir $SRCDIR
 
 do_downloads (TASKLIST)
 #fetch_tar (url="https://gcc.gnu.org/pub/gcc/infrastructure/gmp-6.2.1.tar.bz2",

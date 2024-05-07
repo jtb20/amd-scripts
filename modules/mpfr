@@ -1,0 +1,29 @@
+#!/usr/bin/env ysh
+
+proc clean_mpfr() {
+  clean_component mpfr
+}
+
+func get_mpfr_src() {
+  return (get_standard_src("mpfr"))
+}
+
+proc configure_mpfr() {
+  standard_configure mpfr
+}
+
+proc build_mpfr() {
+  standard_build mpfr
+}
+
+proc install_mpfr() {
+  standard_install mpfr
+}
+
+func mpfr_dependencies() {
+  return ([])
+}
+
+proc mpfr_tasks() {
+  standard_tasks mpfr
+}

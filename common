@@ -127,11 +127,33 @@ func get_installdir (component) {
 }
 
 proc set_configure_opts(; comp, opts) {
-  setglobal ConfigureOpts[comp] = opts
+  if (comp not in ConfigureOpts) {
+    setglobal ConfigureOpts[comp] = {}
+  }
+  setglobal ConfigureOpts[comp].cfg = opts
+}
+
+proc set_configure_key(; comp, key, opts) {
+  if (comp not in ConfigureOpts) {
+    setglobal ConfigureOpts[comp] = {}
+  }
+  setglobal ConfigureOpts[comp][key] = opts
+}
+
+proc set_target(; comp, tgt) {
+  set_configure_key (comp, "target", tgt)
+}
+
+proc set_host(; comp, tgt) {
+  set_configure_key (comp, "host", tgt)
+}
+
+proc set_build(; comp, tgt) {
+  set_configure_key (comp, "build", tgt)
 }
 
 proc append_configure_opts(; comp, opts) {
-  setglobal ConfigureOpts[comp] = ConfigureOpts[comp] ++ opts
+  setglobal ConfigureOpts[comp].cfg = ConfigureOpts[comp].cfg ++ opts
 }
 
 proc load_config {
@@ -171,3 +193,4 @@ source "$SCRIPTDIR/modules/accel_gcc"
 source "$SCRIPTDIR/modules/accel_gcc_first"
 source "$SCRIPTDIR/modules/accel_newlib"
 source "$SCRIPTDIR/modules/binutils"
+source "$SCRIPTDIR/modules/llvm_mos_sdk"

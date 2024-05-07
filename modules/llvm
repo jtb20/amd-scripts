@@ -14,17 +14,13 @@ proc configure_llvm() {
   var Src = get_srcdir("llvm")
   var BuildDir = get_objdir("llvm")
   var BuildType = "Release"
+  var Cfg=ConfigureOpts["llvm"]
   cd $BuildDir {
-    # --fresh
-    cmake -DLLVM_ENABLE_PROJECTS='clang;lld;clang-tools-extra' \
-        -DLLVM_TARGETS_TO_BUILD='X86;AMDGPU' \
-      -DCMAKE_BUILD_TYPE=$BuildType -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
-      -DLLVM_BUILD_TOOLS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DLLVM_ENABLE_ZLIB=ON \
-      -DLLVM_INCLUDE_TESTS=ON -DCLANG_DEFAULT_LINKER=lld -DLLVM_PARALLEL_LINK_JOBS=8 \
-      -DLLVM_BUILD_LLVM_DYLIB=ON \
-      -DCLANG_ENABLE_AMDCLANG=ON \
-      -DLLVM_ENABLE_RUNTIMES=compiler-rt \
-      "$Src/llvm"
+    cmake -DLLVM_ENABLE_PROJECTS=$[join(Cfg.projects, ';')] \
+          -DLLVM_TARGETS_TO_BUILD=$[join(Cfg.targets, ';')] \
+          -DCMAKE_BUILD_TYPE=$BuildType -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+          @[Cfg.cfg] -DLLVM_ENABLE_RUNTIMES=$[join(Cfg.runtimes, ';')] \
+          $Src/llvm
   }
 	# -DCLANG_DEFAULT_PIE_ON_LINUX
 	#cmake ../llvm-project/amd/hipcc -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_BUILD_TYPE=Release
@@ -45,26 +41,19 @@ proc install_llvm() {
   }
 }
 
-proc symlink_wrappers_llvm() {
-  if (in_list("accel_gcc", Components)) {
-    var Target="amdgcn-amdhsa"
-    cd $INSTALLDIR/bin {
-      if ! test --symlink ${Target}-as {
-        ln -s llvm-ar ${Target}-ar
-        ln -s llvm-mc ${Target}-as
-        ln -s ld.lld ${Target}-ld
-        ln -s llvm-nm ${Target}-nm
-        ln -s llvm-ranlib ${Target}-ranlib
-      }
-    }
-  }
-}
-
 func llvm_dependencies() {
   return ([])
 }
 
 proc llvm_tasks() {
   standard_tasks llvm
-  add_tasks llvm symlink_wrappers
+}
+
+proc default_configure_opts_llvm() {
+  set_configure_opts ("llvm", :| -DLLVM_BUILD_TOOLS=ON
+                                 -DLLVM_ENABLE_Z3_SOLVER=OFF
+                                 -DLLVM_ENABLE_ZLIB=ON
+                                 -DLLVM_INCLUDE_TESTS=ON
+                                 -DCLANG_DEFAULT_LINKER=lld
+                                 -DLLVM_PARALLEL_LINK_JOBS=8 |)
 }

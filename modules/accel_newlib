@@ -1,0 +1,33 @@
+#!/usr/bin/env ysh
+
+proc clean_accel_newlib() {
+  clean_component accel_newlib
+}
+
+func get_accel_newlib_src() {
+  return (get_standard_src("accel_newlib"))
+}
+
+proc configure_accel_newlib() {
+  standard_configure accel_newlib
+}
+
+proc build_accel_newlib() {
+  standard_build accel_newlib
+}
+
+proc install_accel_newlib() {
+  standard_install accel_newlib
+}
+
+func accel_newlib_dependencies() {
+  return (:| accel_gcc_first |)
+}
+
+proc accel_newlib_tasks() {
+  standard_tasks accel_newlib
+}
+
+proc default_configure_opts_accel_newlib() {
+  set_configure_opts ("accel_newlib", [])
+}

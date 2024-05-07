@@ -1,0 +1,29 @@
+#!/usr/bin/env ysh
+
+proc clean_isl() {
+  clean_component isl
+}
+
+func get_isl_src() {
+  return (get_standard_src("isl"))
+}
+
+proc configure_isl() {
+  standard_configure isl
+}
+
+proc build_isl() {
+  standard_build isl
+}
+
+proc install_isl() {
+  standard_install isl
+}
+
+func isl_dependencies() {
+  return ([])
+}
+
+proc isl_tasks() {
+  standard_tasks isl
+}
