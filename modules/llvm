@@ -45,10 +45,26 @@ proc install_llvm() {
   }
 }
 
+proc symlink_wrappers_llvm() {
+  if (in_list("accel_gcc", Components)) {
+    var Target="amdgcn-amdhsa"
+    cd $INSTALLDIR/bin {
+      if ! test --symlink ${Target}-as {
+        ln -s llvm-ar ${Target}-ar
+        ln -s llvm-mc ${Target}-as
+        ln -s ld.lld ${Target}-ld
+        ln -s llvm-nm ${Target}-nm
+        ln -s llvm-ranlib ${Target}-ranlib
+      }
+    }
+  }
+}
+
 func llvm_dependencies() {
   return ([])
 }
 
 proc llvm_tasks() {
   standard_tasks llvm
+  add_tasks llvm symlink_wrappers
 }

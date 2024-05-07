@@ -3,96 +3,104 @@
 source --builtin args.ysh
 source $_this_dir/common
 
-proc git_checkout (;; srcdir, destname, url, branch) {
-    if test --dir "$srcdir/$destname" {
-        cd "$srcdir/$destname" {
-            try {
-                var remote = $(git remote show)
-                var rem_url = $(git remote get-url $remote)
-                var current = $(git branch --show-current)
-                if (rem_url !== url) {
-                    error "Remote url '$rem_url' is not '$url'"
-                } elif (current !== branch) {
-                    error "Wrong branch '$current' checked out here, wanted '$branch'"
-                } else {
-                    write "Already checked out $url @ $branch"
-                    var modifications = $(git status --porcelain)
-                    if (modifications !== "") {
-                        error "Local modifications in '$srcdir/$destname'"
-                    }
-                    var localcommits = $(git log origin/$branch..HEAD)
-                    if (localcommits !== "") {
-                        error "Local commits in '$srcdir/$destname'"
-                    }
-                }
-            }
-            if (_status === 0) {
-                write "Attempting 'git pull --rebase'..."
-                git pull --rebase
-            } else {
-                write "Couldn't update: $[_error.message]"
-            }
-        } 
-    } else {
-        cd $srcdir {
-            git clone --branch $branch $url $destname
+proc git_checkout (;; srcdir, destname, url, branch, shallow) {
+  if test --dir "$srcdir/$destname" {
+    cd "$srcdir/$destname" {
+      try {
+        var remote = $(git remote show)
+        var rem_url = $(git remote get-url $remote)
+        var current = $(git branch --show-current)
+        if (rem_url !== url) {
+          error "Remote url '$rem_url' is not '$url'"
+        } elif (current !== branch) {
+          error "Wrong branch '$current' checked out here, wanted '$branch'"
+        } else {
+          write "Already checked out $url @ $branch"
+          var modifications = $(git status --porcelain)
+          if (modifications !== "") {
+            error "Local modifications in '$srcdir/$destname'"
+          }
+          var localcommits = $(git log origin/$branch..HEAD)
+          if (localcommits !== "") {
+            error "Local commits in '$srcdir/$destname'"
+          }
         }
+      }
+      if (_status === 0) {
+        write "Attempting 'git pull --rebase'..."
+        git pull --rebase
+      } else {
+        write "Couldn't update: $[_error.message]"
+      }
+    } 
+  } else {
+    cd $srcdir {
+      var shallow_opt = :| --depth 1 | if shallow else ()
+      git clone @shallow_opt --branch $branch $url $destname
     }
+  }
 }
 
 proc unpack_tar (;; srcdir, destname, tarfile, strip) {
-    var unpack_dir = "$srcdir/$destname"
-    maybe_mkdir $unpack_dir
-    cd $unpack_dir {
-        tar fxpv --strip-components=$strip $tarfile
-    }
+  var unpack_dir = "$srcdir/$destname"
+  maybe_mkdir $unpack_dir
+  cd $unpack_dir {
+    tar -x --strip-components=$strip -f $tarfile
+  }
 }
 
 proc do_md5sum(filename) {
-    try {
-        var md5 = $(md5sum $filename)=>split()[0]
-    }
-    if (_status === 0) {
-       write -- $md5
-    } else {
-       error "md5sum failed for $filename"
-    }
+  try {
+    var md5 = $(md5sum $filename)=>split()[0]
+  }
+  if (_status === 0) {
+    write -- $md5
+  } else {
+    error "md5sum failed for $filename"
+  }
 }
 
 func filename_from_url(url) {
-    return (split(url,"/")[-1])
+  return (split(url,"/")[-1])
 }
 
 proc fetch_tar (;; url, tmpdir, md5_expected) {
-    cd $tmpdir {
-        var filename = filename_from_url(url)
-        try {
-            if test --exists $filename {
-                var md5 = $(do_md5sum $filename)
-                if (md5 === md5_expected) {
-                    write "using existing download for $filename"
-                } else {
-                    error "md5 mismatch for $filename: expected $md5_expected, got $md5"
-                }
-            }
+  cd $tmpdir {
+    var filename = filename_from_url(url)
+    try {
+      if test --exists $filename {
+        var md5 = $(do_md5sum $filename)
+        if (md5 === md5_expected) {
+          write "using existing download for $filename"
+        } else {
+          error "md5 mismatch for $filename: expected $md5_expected, got $md5"
         }
-        if (_status === 0) {
-            return 0
-        }
-        try curl -O $url
-        if (_status !== 0) {
-            error "download failed for $url"
-        }
-        try {
-            setvar md5 = $(do_md5sum $filename)
-            if (md5 === md5_expected) {
-                write "md5 matches for $filename"
-            } else {
-                error "md5 mismatch for $filename: expected $md5_expected, got $md5"
-            }
-        }
-        return $_status
+      } else {
+        false
+      }
     }
+    if (_status === 0) {
+      return 0
+    }
+    try {
+      curl -O $url
+    }
+    if (_status !== 0) {
+      error "download failed for $url"
+    }
+    try {
+      setvar md5 = $(do_md5sum $filename)
+      if (md5 === md5_expected) {
+        write "md5 matches for $filename"
+      } else {
+        error "md5 mismatch for $filename: expected $md5_expected, got $md5"
+      }
+    }
+    return $_status
+  }
+  if (_status !== 0) {
+    error "Download failed for $url"
+  }
 }
 
 proc do_downloads (; comps) {
@@ -106,17 +114,19 @@ proc do_downloads (; comps) {
         git_checkout (srcdir=SRCDIR,
                       destname=dirname_in_srcdir,
                       url=Sources[comp].url,
-                      branch=Sources[comp].version)
+                      branch=Sources[comp].version,
+                      shallow=Sources[comp].shallow_clone)
       }
 
       "archive" {
         write "$comp: download archive: $[Sources[comp].url]"
         fetch_tar (url=Sources[comp].url,
-                   tmpdir=TMPDIR,
+                   tmpdir=ARCHIVEDIR,
                    md5_expected=Sources[comp].md5)
+        var tarfile_name = "$ARCHIVEDIR/$[filename_from_url(Sources[comp].url)]"
         unpack_tar (srcdir=SRCDIR,
                     destname=dirname_in_srcdir,
-                    tarfile=filename_from_url(Sources[comp].url),
+                    tarfile=tarfile_name,
                     strip=1)
       }
 
@@ -139,5 +149,5 @@ maybe_mkdir $ARCHIVEDIR
 
 do_downloads (TASKLIST)
 #fetch_tar (url="https://gcc.gnu.org/pub/gcc/infrastructure/gmp-6.2.1.tar.bz2",
-#           tmpdir=ARCHIVEDIR,
-#           md5_expected="28971fc21cf028042d4897f02fd355ea")
+#       tmpdir=ARCHIVEDIR,
+#       md5_expected="28971fc21cf028042d4897f02fd355ea")

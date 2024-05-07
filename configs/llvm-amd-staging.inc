@@ -2,7 +2,8 @@ var llvm_src = {
   "url" : "ssh://gerritgit/lightning/ec/llvm-project",
   "type" : "git",
   "version" : "amd-staging",
-  "version_name" : "amd-staging"
+  "version_name" : "amd-staging",
+  "shallow_clone" : false
 }
 
 var comgr_src = {

@@ -11,6 +11,7 @@ var CONFIGDIR="$SCRIPTDIR/configs"
 var ActiveCfg
 var Sources={}
 var Components=[]
+var ConfigureOpts={}
 
 proc show_vars {
   write "HIP_CLANG_PATH: $HIP_CLANG_PATH"
@@ -125,6 +126,14 @@ func get_installdir (component) {
   return ("$INSTALLDIR/$component")
 }
 
+proc set_configure_opts(; comp, opts) {
+  setglobal ConfigureOpts[comp] = opts
+}
+
+proc append_configure_opts(; comp, opts) {
+  setglobal ConfigureOpts[comp] = ConfigureOpts[comp] ++ opts
+}
+
 proc load_config {
   if test --exists "$CONFIGDIR/$ActiveCfg" {
     source $CONFIGDIR/$ActiveCfg
@@ -152,3 +161,13 @@ source "$SCRIPTDIR/modules/llvm"
 source "$SCRIPTDIR/modules/comgr"
 source "$SCRIPTDIR/modules/device_libs"
 source "$SCRIPTDIR/modules/composable_kernels"
+source "$SCRIPTDIR/modules/standard_build"
+source "$SCRIPTDIR/modules/mpc"
+source "$SCRIPTDIR/modules/mpfr"
+source "$SCRIPTDIR/modules/gmp"
+source "$SCRIPTDIR/modules/isl"
+source "$SCRIPTDIR/modules/gcc"
+source "$SCRIPTDIR/modules/accel_gcc"
+source "$SCRIPTDIR/modules/accel_gcc_first"
+source "$SCRIPTDIR/modules/accel_newlib"
+source "$SCRIPTDIR/modules/binutils"

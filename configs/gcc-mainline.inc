@@ -1,8 +1,9 @@
 var gcc_src = {
   "url" : "git://gcc.gnu.org/git/gcc",
   "type" : "git",
-  "version" : "master"
-  "version_name" : "mainline"
+  "version" : "master",
+  "version_name" : "mainline",
+  "shallow_clone" : false
 }
 
 var gcc_infra="https://gcc.gnu.org/pub/gcc/infrastructure"
@@ -20,7 +21,7 @@ var mpfr_src = {
   "type" : "archive",
   "version" : "4.1.0",
   "version_name" : "4.1.0",
-  "md5" : ""
+  "md5" : "44b892bc5a45bafb4294d134e13aad1d"
 }
 
 var mpc_src = {
@@ -28,7 +29,7 @@ var mpc_src = {
   "type" : "archive",
   "version" : "1.2.1",
   "version_name" : "1.2.1",
-  "md5" : ""
+  "md5" : "9f16c976c25bb0f76b50be749cd7a3a8"
 }
 
 var isl_src = {
@@ -36,7 +37,7 @@ var isl_src = {
   "type" : "archive",
   "version" : "0.24",
   "version_name" : "0.24",
-  "md5" : ""
+  "md5" : "dd2f7b78e118c25bd96134a52aae7f4d"
 }
 
 add_sources ("gcc", gcc_src)
