@@ -12,6 +12,9 @@ var ActiveCfg
 var Sources={}
 var Components=[]
 var ConfigureOpts={}
+var DefaultBuildOpts={}
+var BuildOpts={}
+const DefaultParallelism=32
 
 proc show_vars {
   write "HIP_CLANG_PATH: $HIP_CLANG_PATH"
@@ -156,6 +159,29 @@ proc append_configure_opts(; comp, opts) {
   setglobal ConfigureOpts[comp].cfg = ConfigureOpts[comp].cfg ++ opts
 }
 
+proc set_build_key(; comp, key, value) {
+  if (comp not in BuildOpts) {
+    setglobal BuildOpts[comp] = {}
+  }
+  setglobal BuildOpts[comp][key] = value
+}
+
+proc set_build_tool(; comp, tool) {
+  set_build_key (comp, "tool", tool)
+}
+
+proc set_build_ccache(; comp, use_ccache) {
+  set_build_key (comp, "ccache", use_ccache)
+}
+
+proc set_build_type(; comp, build_type) {
+  set_build_key (comp, "build_type", build_type)
+}
+
+proc set_build_parallelism(; comp, procs) {
+  set_build_key (comp, "parallelism", procs)
+}
+
 proc load_config {
   if test --exists "$CONFIGDIR/$ActiveCfg" {
     source $CONFIGDIR/$ActiveCfg
@@ -177,8 +203,71 @@ proc elaborate_tasks {
   }
 }
 
+var DefaultBuildOpts = {
+  "tool" : "Ninja",
+  "ccache" : true,
+  "build_type" : "Release"
+  "parallelism" : null
+}
+
+func get_tool_opt(comp, option) {
+  if (comp in BuildOpts and option in BuildOpts[comp]) {
+    return (BuildOpts[comp][option])
+  } else {
+    return (DefaultBuildOpts[option])
+  }
+}
+
+func get_build_tool(comp) {
+  return (get_tool_opt (comp, "tool"))
+}
+
+func get_build_ccache(comp) {
+  return (get_tool_opt (comp, "ccache"))
+}
+
+func get_build_type(comp) {
+  return (get_tool_opt (comp, "build_type"))
+}
+
+func get_build_parallelism(comp) {
+  return (get_tool_opt (comp, "parallelism"))
+}
+
+func cmake_ccache_option(comp) {
+  if (get_build_ccache(comp)) {
+    try {
+      var ccache_bin = $(which ccache)
+    }
+    if (_status === 0) {
+      return (:| -DCMAKE_C_COMPILER_LAUNCHER=$ccache_bin
+                 -DCMAKE_CXX_COMPILER_LAUNCHER=$ccache_bin |)
+    } else {
+      error "No ccache binary in PATH"
+    }
+  } else {
+    return ([])
+  }
+}
+
+func autotools_ccache_option(comp) {
+  if (get_build_ccache(comp)) {
+    try {
+      var ccache_bin = $(which ccache)
+    }
+    if (_status === 0) {
+      return (:| CC="$ccache_bin gcc" CXX="$ccache_bin g++" |)
+    } else {
+      error "No ccache binary in PATH"
+    }
+  } else {
+    return ([])
+  }
+}
+
 # Loading these on demand is a bit awkward. Never mind, just load them all
 # here.
+source "$SCRIPTDIR/modules/cmake_build"
 source "$SCRIPTDIR/modules/llvm"
 source "$SCRIPTDIR/modules/comgr"
 source "$SCRIPTDIR/modules/device_libs"

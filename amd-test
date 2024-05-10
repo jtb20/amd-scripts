@@ -1,0 +1,24 @@
+#!/usr/bin/env ysh
+
+source --builtin args.ysh
+source $_this_dir/common
+
+proc do_tests (; testlist) {
+  for testsuite in (testlist) {
+    write "Running $testsuite testsuite"
+    try {
+      eval "test_$testsuite ([])"
+    }
+    if (_status === 0) {
+      write "Success."
+    } else {
+      write "Failure."
+    }
+  }
+}
+
+parse_args (ARGV)
+
+load_config
+
+do_tests (TASKLIST)

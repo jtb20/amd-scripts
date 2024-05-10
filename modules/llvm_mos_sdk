@@ -11,11 +11,12 @@ func get_llvm_mos_sdk_src() {
 proc configure_llvm_mos_sdk() {
   var Src = get_srcdir("llvm_mos_sdk")
   var BuildDir = get_objdir("llvm_mos_sdk")
-  var BuildType = "Release"
+  var Tool = get_build_tool("llvm_mos_sdk")
+  var BuildType = get_build_type("llvm_mos_sdk")
   var Cfg=ConfigureOpts["llvm_mos_sdk"]
   cd $BuildDir {
-    cmake -DCMAKE_BUILD_TYPE=$BuildType -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-          @[Cfg.cfg] $Src
+    cmake -G $Tool -DCMAKE_BUILD_TYPE=$BuildType \
+          -DCMAKE_INSTALL_PREFIX=$INSTALLDIR @[Cfg.cfg] $Src
   }
 }
 

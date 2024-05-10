@@ -33,3 +33,27 @@ proc default_configure_opts_gcc() {
                                 --with-gmp=$INSTALLDIR
                                 --with-mpc=$INSTALLDIR |)
 }
+
+proc write_dejagnu_site_file {
+  var content="""
+load_generic_config "unix"
+process_multilib_options ""
+set_board_info cflags "-foffload-options=-mcpu=gfx90a"
+"""
+  write -- $content > site.exp
+}
+
+proc test_gcc() {
+  var Build = get_objdir ("gcc")
+}
+
+proc test_libgomp(; options) {
+  var Build = get_objdir ("gcc")
+  var Target = ConfigureOpts.gcc.target
+  cd $Build/$Target/libgomp {
+    #write_dejagnu_site_file
+    var pass_opts = :| --target_board=unix/-foffload-options=-march=gfx90a | \
+                    ++ options
+    make -k check RUNTESTFLAGS="$[join(pass_opts, ' ')]"
+  }
+}

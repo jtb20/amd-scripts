@@ -27,6 +27,9 @@ proc standard_configure(comp) {
       if ("build" in ConfigureOpts[comp]) {
         call cfg_opts->append("--build=$[ConfigureOpts[comp].build]")
       }
+      if (get_build_ccache(comp)) {
+        setvar cfg_opts = cfg_opts ++ autotools_ccache_option(comp)
+      }
     }
     $Src/configure @cfg_opts
   }
@@ -34,14 +37,20 @@ proc standard_configure(comp) {
 
 proc standard_build(comp) {
   var Build = get_objdir(comp)
+  var Parallelism = get_build_parallelism(comp)
+  var Parallelism_opt = :| -j${Parallelism} | if (Parallelism) else \
+                        :| -j${DefaultParallelism} |
   cd $Build {
-    make -j32
+    make @Parallelism_opt
   }
 }
 
 proc standard_install(comp) {
   var Build = get_objdir(comp)
+  var Parallelism = get_build_parallelism(comp)
+  var Parallelism_opt = :| -j${Parallelism} | if (Parallelism) else \
+                        :| -j${DefaultParallelism} |
   cd $Build {
-    make -j32 install
+    make @Parallelism_opt install
   }
 }

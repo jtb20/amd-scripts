@@ -1,0 +1,95 @@
+#!/bin/bash
+
+set -x
+set -e
+
+DOWNLOAD="${DOWNLOAD:-$HOME/downloads}"
+PREFIX="${PREFIX:-$HOME/prefix}"
+BUILD="${BUILD:-$HOME/build-oil}"
+
+DOWNLOAD="$(readlink -f "$DOWNLOAD")"
+PREFIX="$(readlink -f "$PREFIX")"
+BUILD="$(readlink -f "$BUILD")"
+
+OIL_TARBALL="oils-for-unix-0.21.0.tar.gz"
+OIL_URL="https://www.oilshell.org/download/$TARBALL"
+
+READLINE_TARBALL="readline-8.2.tar.gz"
+READLINE_URL="ftp://ftp.gnu.org/gnu/readline/$READLINE_TARBALL"
+
+if ! [ "$DOWNLOAD" ] || ! [ "$PREFIX" ] || ! [ "$BUILD" ]; then
+  echo "Empty DOWNLOAD/PREFIX/BUILD, please fix."
+fi
+
+
+mkdir -p "$DOWNLOAD"
+
+check_sys_readline() {
+  local BUILD="$1"
+  pushd "$BUILD" >& /dev/null
+  cat > dummy.c << EOF
+int main(void) { return 0; }
+EOF
+  if gcc dummy.c -lreadline -o dummy; then
+    echo "system"
+  else
+    echo "ours"
+  fi
+  popd >& /dev/null
+}
+
+download() {
+  local DOWNLOAD="$1"
+  local URL="$2"
+  local TARBALL="$3"
+  if [ ! -e "$DOWNLOAD/$TARBALL" ]; then
+    if type wget; then
+      pushd "$DOWNLOAD"
+      wget "$URL"
+      popd
+    elif type curl; then
+      pushd "$DOWNLOAD"
+      curl -O "$URL"
+      popd
+    else
+      echo "No wget or curl!"
+      exit 1
+    fi
+  fi
+}
+
+WHICH_READLINE="$(check_sys_readline "$BUILD")"
+
+echo "Using readline: $WHICH_READLINE"
+
+download "$DOWNLOAD" "$OIL_URL" "$OIL_TARBALL"
+if [ "$WHICH_READLINE" = "ours" ]; then
+  download "$DOWNLOAD" "$READLINE_URL" "$READLINE_TARBALL"
+fi
+
+mkdir -p "$BUILD"
+
+pushd "$BUILD"
+
+if [ "$WHICH_READLINE" = "ours" ]; then
+  tar fxz "$DOWNLOAD/$READLINE_TARBALL"
+  pushd "$(basename "$READLINE_TARBALL" .tar.gz)"
+  ./configure --prefix="$PREFIX"
+  make -j8
+  make -j8 install
+  popd
+fi
+
+tar fxz "$DOWNLOAD/$OIL_TARBALL"
+pushd "$(basename "$OIL_TARBALL" .tar.gz)"
+if [ "$WHICH_READLINE" = "ours" ]; then
+  ./configure --prefix="$PREFIX" --readline="$PREFIX"
+else
+  ./configure --prefix="$PREFIX" --with-readline
+fi
+_build/oils.sh
+./install
+popd
+popd
+
+echo 'All done!'

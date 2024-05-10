@@ -13,10 +13,13 @@ proc clean_llvm() {
 proc configure_llvm() {
   var Src = get_srcdir("llvm")
   var BuildDir = get_objdir("llvm")
-  var BuildType = "Release"
-  var Cfg=ConfigureOpts["llvm"]
+  var BuildType = get_build_type("llvm")
+  var Cfg = ConfigureOpts["llvm"]
+  var Tool = get_build_tool("llvm")
+  var CCache_opt = cmake_ccache_option("llvm")
   cd $BuildDir {
-    cmake -DLLVM_ENABLE_PROJECTS=$[join(Cfg.projects, ';')] \
+    cmake -G $Tool @CCache_opt \
+          -DLLVM_ENABLE_PROJECTS=$[join(Cfg.projects, ';')] \
           -DLLVM_TARGETS_TO_BUILD=$[join(Cfg.targets, ';')] \
           -DCMAKE_BUILD_TYPE=$BuildType -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
           @[Cfg.cfg] -DLLVM_ENABLE_RUNTIMES=$[join(Cfg.runtimes, ';')] \
@@ -28,17 +31,11 @@ proc configure_llvm() {
 }
 
 proc build_llvm() {
-  var BuildDir = get_objdir("llvm")
-  cd $BuildDir {
-    make -j32
-  }
+  cmake_build llvm
 }
 
 proc install_llvm() {
-  var BuildDir = get_objdir("llvm")
-  cd $BuildDir {
-    make -j32 install
-  }
+  cmake_install llvm
 }
 
 func llvm_dependencies() {

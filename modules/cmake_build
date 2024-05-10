@@ -1,0 +1,33 @@
+proc cmake_build(comp) {
+  var BuildDir = get_objdir(comp)
+  var Tool = get_build_tool(comp)
+  var Parallelism = get_build_parallelism(comp)
+  var Parallelism_opt
+  cd $BuildDir {
+    if (Tool === "Ninja") {
+      setvar Parallelism_opt = :| -j${Parallelism} | if (Parallelism) else ()
+      ninja @Parallelism_opt
+    } else {
+      setvar Parallelism_opt = :| -j${Parallelism} | if (Parallelism) else \
+                               :| -j${DefaultParallelism} |
+      make @Parallelism_opt
+    }
+  }
+}
+
+proc cmake_install(comp) {
+  var BuildDir = get_objdir("llvm")
+  var Tool = get_build_tool("llvm")
+  var Parallelism = get_build_parallelism("llvm")
+  var Parallelism_opt
+  cd $BuildDir {
+    if (Tool === "Ninja") {
+      setvar Parallelism_opt = :| -j${Parallelism} | if (Parallelism) else ()
+      ninja @Parallelism_opt install
+    } else {
+      setvar Parallelism_opt = :| -j${Parallelism} | if (Parallelism) else \
+                               :| -j${DefaultParallelism} |
+      make @Parallelism_opt install
+    }
+  }
+}
