@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -x
 set -e
 
 DOWNLOAD="${DOWNLOAD:-$HOME/downloads}"
@@ -12,7 +11,7 @@ PREFIX="$(readlink -f "$PREFIX")"
 BUILD="$(readlink -f "$BUILD")"
 
 OIL_TARBALL="oils-for-unix-0.21.0.tar.gz"
-OIL_URL="https://www.oilshell.org/download/$TARBALL"
+OIL_URL="https://www.oilshell.org/download/$OIL_TARBALL"
 
 READLINE_TARBALL="readline-8.2.tar.gz"
 READLINE_URL="ftp://ftp.gnu.org/gnu/readline/$READLINE_TARBALL"
@@ -23,6 +22,8 @@ fi
 
 
 mkdir -p "$DOWNLOAD"
+mkdir -p "$PREFIX"
+mkdir -p "$BUILD"
 
 check_sys_readline() {
   local BUILD="$1"
@@ -91,5 +92,9 @@ _build/oils.sh
 ./install
 popd
 popd
+
+echo "-- please add $PREFIX/bin to your PATH:"
+echo "echo 'PATH=\"$PREFIX/bin:\$PATH\"' >> ~/.bashrc"
+echo "echo 'export PATH' >> ~/.bashrc"
 
 echo 'All done!'
