@@ -1,0 +1,33 @@
+#!/usr/bin/env ysh
+
+proc clean_rocm_cmake() {
+  clean_component rocm_cmake
+}
+
+func get_rocm_cmake_src() {
+  return (get_standard_src ("rocm_cmake"))
+}
+
+proc configure_rocm_cmake() {
+  var Build = get_objdir("rocm_cmake")
+  var BuildType = get_build_type("rocm_cmake")
+  var Src = get_srcdir("rocm_cmake")
+  var Tool = get_build_tool("rocm_cmake")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      $Src
+  }
+}
+
+proc install_rocm_cmake() {
+  cmake_install rocm_cmake
+}
+
+func rocm_cmake_dependencies() {
+  return (:| llvm |)
+}
+
+proc rocm_cmake_tasks {
+  add_tasks rocm_cmake clean configure install
+}

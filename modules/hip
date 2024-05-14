@@ -1,0 +1,14 @@
+#!/usr/bin/env ysh
+
+func get_hip_src() {
+  return (get_standard_src ("hip"))
+}
+
+func hip_dependencies() {
+  return ([])
+}
+
+proc hip_tasks {
+  # No tasks!
+  true
+}

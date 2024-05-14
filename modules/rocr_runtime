@@ -1,0 +1,41 @@
+#!/usr/bin/env ysh
+
+proc clean_rocr_runtime() {
+  clean_component rocr_runtime
+}
+
+func get_rocr_runtime_src() {
+  return (get_standard_src ("rocr_runtime"))
+}
+
+proc configure_rocr_runtime() {
+  var Build = get_objdir("rocr_runtime")
+  var BuildType = get_build_type("rocr_runtime")
+  var Src = get_srcdir("rocr_runtime")
+  var Tool = get_build_tool("rocr_runtime")
+  cd $Build {
+    # PATH=$INSTALLDIR/bin:$[sanitize_path (PATH)]
+    cmake -G $Tool \
+      -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DIMAGE_SUPPORT=OFF \
+      $Src/src
+  }
+}
+
+proc build_rocr_runtime() {
+  cmake_build rocr_runtime
+}
+
+proc install_rocr_runtime() {
+  cmake_install rocr_runtime
+}
+
+func rocr_runtime_dependencies() {
+  return (:| roct_thunk_interface |)
+}
+
+proc rocr_runtime_tasks {
+  standard_tasks rocr_runtime
+}

@@ -1,0 +1,42 @@
+#!/usr/bin/env ysh
+
+proc clean_hipcc() {
+  clean_component hipcc
+}
+
+func get_hipcc_src() {
+  var LLVM_Src = get_llvm_src()
+  var Relative = Sources.hipcc.subdir
+  return ("$LLVM_Src/$Relative")
+}
+
+proc configure_hipcc() {
+  var Build = get_objdir("hipcc")
+  var HipCCBuild = get_objdir("hipcc")
+  var BuildType = get_build_type("hipcc")
+  var Src = get_srcdir("hipcc")
+  var Tool = get_build_tool("hipcc")
+  cd $Build {
+    # PATH=$INSTALLDIR/bin:$[sanitize_path (PATH)]
+    cmake -G $Tool \
+      -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      $Src
+  }
+}
+
+proc build_hipcc() {
+  cmake_build hipcc
+}
+
+proc install_hipcc() {
+  cmake_install hipcc
+}
+
+func hipcc_dependencies() {
+  return ([])
+}
+
+proc hipcc_tasks {
+  standard_tasks hipcc
+}

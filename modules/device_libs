@@ -13,30 +13,27 @@ func get_device_libs_src() {
 proc configure_device_libs() {
   var Build = get_objdir("device_libs")
   var Src = get_srcdir("device_libs")
+  var BuildType = get_build_type("device_libs")
   var LLVM_Build = get_objdir("llvm")
+  var Tool = get_build_tool("device_libs")
   cd $Build {
-    cmake "$Src" -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_PREFIX_PATH=$LLVM_Build \
-      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      $Src
   }
 }
 
 proc build_device_libs() {
-  var Build = get_objdir("device_libs")
-  cd $Build {
-    make -j32
-  }
+  cmake_build device_libs
 }
 
 proc install_device_libs() {
-  var Build = get_objdir("device_libs")
-  cd $Build {
-    make -j32 install
-  }
+  cmake_install device_libs
 }
 
 func device_libs_dependencies() {
-  return (:| llvm |)
+  return (:| rocm_cmake llvm |)
 }
 
 proc device_libs_tasks() {

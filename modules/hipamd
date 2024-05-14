@@ -1,0 +1,47 @@
+#!/usr/bin/env ysh
+
+proc clean_hipamd() {
+  clean_component hipamd
+}
+
+func get_hipamd_src() {
+  return (get_standard_src ("hipamd"))
+}
+
+proc configure_hipamd() {
+  var Build = get_objdir("hipamd")
+  var HipCCBuild = get_objdir("hipcc")
+  var HipSrc = get_srcdir("hip")
+  var BuildType = get_build_type("hipamd")
+  var Src = get_srcdir("hipamd")
+  var Tool = get_build_tool("hipamd")
+  cd $Build {
+    LLVM_DIR=$INSTALLDIR cmake -G $Tool \
+      -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DHIP_COMMON_DIR=$HipSrc \
+      -DHIP_PLATFORM=amd \
+      -DHIP_COMPILER=clang \
+      -DCMAKE_HIP_ARCHITECTURES=OFF \
+      -DCLR_BUILD_HIP=ON \
+      -DCLR_BUILD_OCL=ON \
+      -DHIPCC_BIN_DIR=$HipCCBuild \
+      $Src
+  }
+}
+
+proc build_hipamd() {
+  cmake_build hipamd
+}
+
+proc install_hipamd() {
+  cmake_install hipamd
+}
+
+func hipamd_dependencies() {
+  return (:| roct_thunk_interface rocr_runtime comgr hipcc hip |)
+}
+
+proc hipamd_tasks {
+  standard_tasks hipamd
+}

@@ -1,0 +1,39 @@
+#!/usr/bin/env ysh
+
+proc clean_roct_thunk_interface() {
+  clean_component roct_thunk_interface
+}
+
+func get_roct_thunk_interface_src() {
+  return (get_standard_src ("roct_thunk_interface"))
+}
+
+proc configure_roct_thunk_interface() {
+  var Build = get_objdir("roct_thunk_interface")
+  var BuildType = get_build_type("roct_thunk_interface")
+  var Src = get_srcdir("roct_thunk_interface")
+  var Tool = get_build_tool("roct_thunk_interface")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR/lib/cmake \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_INSTALL_LIBDIR=$INSTALLDIR/lib \
+      $Src
+  }
+}
+
+proc build_roct_thunk_interface() {
+  cmake_build roct_thunk_interface
+}
+
+proc install_roct_thunk_interface() {
+  cmake_install roct_thunk_interface
+}
+
+func roct_thunk_interface_dependencies() {
+  return (:| llvm rocm_cmake |)
+}
+
+proc roct_thunk_interface_tasks {
+  standard_tasks roct_thunk_interface
+}

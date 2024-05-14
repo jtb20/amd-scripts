@@ -14,11 +14,12 @@ proc configure_comgr() {
   var Build = get_objdir("comgr")
   var LLVM_Build = get_objdir("llvm")
   var DevLibs_Build = get_objdir("device_libs")
-  var Src= get_srcdir("comgr")
+  var BuildType = get_build_type("comgr")
+  var Src = get_srcdir("comgr")
+  var Tool = get_build_tool("comgr")
   cd $Build {
-    cmake --log-level=DEBUG --debug-output \
-      -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-      -DCMAKE_BUILD_TYPE=Release \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
       -DCMAKE_PREFIX_PATH="$LLVM_Build;$DevLibs_Build" \
       -DCOMGR_BUILD_SHARED_LIBS=ON \
       -DLLVM_DIR=$LLVM_Build \
@@ -28,17 +29,11 @@ proc configure_comgr() {
 }
 
 proc build_comgr() {
-  var Build = get_objdir("comgr")
-  cd $Build {
-    make -j32
-  }
+  cmake_build comgr
 }
 
 proc install_comgr() {
-  var Build = get_objdir("comgr")
-  cd $Build {
-    make -j32 install
-  }
+  cmake_install comgr
 }
 
 func comgr_dependencies() {
