@@ -9,15 +9,15 @@ func get_accel_gcc_src() {
 }
 
 proc configure_accel_gcc() {
-  standard_configure accel_gcc
+  PATH=$INSTALLDIR/bin:$PATH standard_configure accel_gcc
 }
 
 proc build_accel_gcc() {
-  standard_build accel_gcc
+  PATH=$INSTALLDIR/bin:$PATH standard_build accel_gcc
 }
 
 proc install_accel_gcc() {
-  standard_install accel_gcc
+  PATH=$INSTALLDIR/bin:$PATH standard_install accel_gcc
 }
 
 func accel_gcc_dependencies() {
