@@ -9,7 +9,7 @@ func get_accel_newlib_src() {
 }
 
 proc configure_accel_newlib() {
-  standard_configure accel_newlib
+  PATH=$INSTALLDIR/bin:$PATH standard_configure accel_newlib
 }
 
 proc build_accel_newlib() {
