@@ -33,11 +33,12 @@ proc configure_accel_gcc_first() {
 }
 
 proc build_accel_gcc_first() {
-  standard_build accel_gcc_first
+  # This one wants access to ${OFFLOAD_TARGET}-ar, etc.
+  PATH=$INSTALLDIR/bin standard_build accel_gcc_first
 }
 
 proc install_accel_gcc_first() {
-  standard_install accel_gcc_first
+  PATH=$INSTALLDIR/bin standard_install accel_gcc_first
 }
 
 func accel_gcc_first_dependencies() {
