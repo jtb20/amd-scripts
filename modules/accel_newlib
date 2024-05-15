@@ -13,11 +13,11 @@ proc configure_accel_newlib() {
 }
 
 proc build_accel_newlib() {
-  standard_build accel_newlib
+  PATH=$INSTALLDIR/bin:$PATH standard_build accel_newlib
 }
 
 proc install_accel_newlib() {
-  standard_install accel_newlib
+  PATH=$INSTALLDIR/bin:$PATH standard_install accel_newlib
 }
 
 func accel_newlib_dependencies() {
