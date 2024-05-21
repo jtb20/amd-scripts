@@ -16,6 +16,33 @@ proc aomp_tasks {
   true
 }
 
+### EXAMPLES ###
+
+func get_examples_src() {
+  var AOMP_Src = get_aomp_src()
+  var Relative = Sources.examples.subdir
+  return ("$AOMP_Src/$Relative")
+}
+
+proc test_aomp_examples {
+  var Source = get_srcdir ("examples")
+  var Obj = get_objdir ("examples")
+  rm -rf $Obj
+  copy_dir $Source $Obj
+  cd $Obj {
+    shvar AOMP=$INSTALLDIR \
+          LLVM_INSTALL_DIR=$INSTALLDIR \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          LIST="fortran hip openmp" {
+      export AOMP
+      export LLVM_INSTALL_DIR
+      export LD_LIBRARY_PATH
+      export LIST
+      ./check_examples.sh
+    }
+  }
+}
+
 ### SMOKE ###
 
 func get_smoke_src() {

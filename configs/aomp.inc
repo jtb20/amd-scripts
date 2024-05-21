@@ -31,3 +31,11 @@ var llnl_src = {
 }
 
 add_sources ("llnl", llnl_src)
+
+var examples_src = {
+  "type" : "subcomponent",
+  "parent" : "aomp",
+  "subdir" : "examples"
+}
+
+add_sources ("examples", examples_src)
