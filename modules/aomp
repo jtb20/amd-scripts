@@ -118,13 +118,63 @@ proc test_aomp_hip_openmp {
   var Obj = get_objdir ("hip_openmp")
   rm -rf $Obj
   copy_dir $Source $Obj/hip-openmp
-  ln -s $AOMP_Src/test/Makefile.defs $Obj
+  ln -sf $AOMP_Src/test/Makefile.defs $Obj
   cd $Obj/hip-openmp {
     shvar AOMP=$INSTALLDIR \
           LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
       export AOMP
       export LD_LIBRARY_PATH
       ./check_hip-openmp.sh
+    }
+  }
+}
+
+### USM ###
+
+func get_usm_src() {
+  var AOMP_Src = get_aomp_src()
+  var Relative = Sources.usm.subdir
+  return ("$AOMP_Src/$Relative")
+}
+
+proc test_aomp_usm {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Source = get_srcdir ("usm")
+  var Obj = get_objdir ("usm")
+  rm -rf $Obj
+  copy_dir $Source $Obj/usm
+  ln -sf $AOMP_Src/test/Makefile.defs $Obj
+  cd $Obj/usm {
+    shvar AOMP=$INSTALLDIR \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+      export AOMP
+      export LD_LIBRARY_PATH
+      ./check_usm.sh
+    }
+  }
+}
+
+### OMP5 ###
+
+func get_omp5_src() {
+  var AOMP_Src = get_aomp_src()
+  var Relative = Sources.omp5.subdir
+  return ("$AOMP_Src/$Relative")
+}
+
+proc test_aomp_omp5 {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Source = get_srcdir ("omp5")
+  var Obj = get_objdir ("omp5")
+  rm -rf $Obj
+  copy_dir $Source $Obj/omp5
+  ln -sf $AOMP_Src/test/Makefile.defs $Obj
+  cd $Obj/omp5 {
+    shvar AOMP=$INSTALLDIR \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+      export AOMP
+      export LD_LIBRARY_PATH
+      ./check_omp5.sh
     }
   }
 }
@@ -207,6 +257,47 @@ proc test_aomp_llnl {
       export LD_LIBRARY_PATH
 
       ./check_LLNL.sh log $Obj
+    }
+  }
+}
+
+### OPENMPAPPS ###
+
+func get_openmpapps_src() {
+  return (get_standard_src ("openmpapps"))
+}
+
+func openmpapps_dependencies() {
+  return ([])
+}
+
+proc openmpapps_tasks {
+  # No tasks!
+  true
+}
+
+proc test_aomp_openmpapps {
+  var Source = get_srcdir ("openmpapps")
+  var Obj = get_objdir ("openmpapps")
+  var GPUs = get_amd_gpus ()
+  copy_dir $Source $Obj
+  cd $Obj {
+    shvar AOMP=$INSTALLDIR \
+          AOMP_GPU=$[GPUs[0]] \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+      export AOMP
+      export AOMP_GPU
+      export LD_LIBRARY_PATH
+
+      # This one has a malformed shebang line... and can fail.  Catch that then.
+      try {
+        bash ./check_openmpapps.sh
+      }
+      if (_status === 0) {
+        write "Success."
+      } else {
+        write "Failure."
+      }
     }
   }
 }

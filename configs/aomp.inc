@@ -47,3 +47,19 @@ var hip_openmp_src = {
 }
 
 add_sources ("hip_openmp", hip_openmp_src)
+
+var usm_src = {
+  "type" : "subcomponent",
+  "parent" : "aomp",
+  "subdir" : "test/usm"
+}
+
+add_sources ("usm", usm_src)
+
+var omp5_src = {
+  "type" : "subcomponent",
+  "parent" : "aomp",
+  "subdir" : "test/omp5"
+}
+
+add_sources ("omp5", omp5_src)
