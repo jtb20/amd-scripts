@@ -54,3 +54,38 @@ proc default_configure_opts_llvm() {
                                  -DCLANG_DEFAULT_LINKER=lld
                                  -DLLVM_PARALLEL_LINK_JOBS=8 |)
 }
+
+proc run_lit {
+  var args = ARGV
+  var BuildDir = get_objdir("llvm")
+  var Lit = "$BuildDir/bin/llvm-lit"
+  $Lit -s --no-progress-bar @ARGV
+}
+
+proc test_llvm_llvm () {
+  var BuildDir = get_objdir("llvm")
+  cd $BuildDir/test {
+    run_lit -o llvm-results.json .
+  }
+}
+
+proc test_llvm_clang () {
+  var BuildDir = get_objdir("llvm")
+  cd $BuildDir/tools/clang/test {
+    run_lit -o clang-results.json .
+  }
+}
+
+proc test_llvm_clang_tools_extra () {
+  var BuildDir = get_objdir("llvm")
+  cd $BuildDir/tools/clang/tools/extra/test {
+    run_lit -o clang-tools-extra-results.json .
+  }
+}
+
+proc test_llvm_lld () {
+  var BuildDir = get_objdir("llvm")
+  cd $BuildDir/tools/lld/test {
+    run_lit -o lld-results.json .
+  }
+}

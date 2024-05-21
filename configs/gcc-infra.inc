@@ -1,7 +1,7 @@
-var gcc_infra_="https://gcc.gnu.org/pub/gcc/infrastructure"
+var gcc_infra="https://gcc.gnu.org/pub/gcc/infrastructure"
 
 var gmp_src = {
-  "url" : "$gcc_infra_/gmp-6.2.1.tar.bz2",
+  "url" : "$gcc_infra/gmp-6.2.1.tar.bz2",
   "type" : "archive",
   "version" : "6.2.1",
   "version_name" : "6.2.1",
@@ -9,7 +9,7 @@ var gmp_src = {
 }
 
 var mpfr_src = {
-  "url" : "$gcc_infra_/mpfr-4.1.0.tar.bz2",
+  "url" : "$gcc_infra/mpfr-4.1.0.tar.bz2",
   "type" : "archive",
   "version" : "4.1.0",
   "version_name" : "4.1.0",
@@ -17,7 +17,7 @@ var mpfr_src = {
 }
 
 var mpc_src = {
-  "url" : "$gcc_infra_/mpc-1.2.1.tar.gz",
+  "url" : "$gcc_infra/mpc-1.2.1.tar.gz",
   "type" : "archive",
   "version" : "1.2.1",
   "version_name" : "1.2.1",
@@ -25,7 +25,7 @@ var mpc_src = {
 }
 
 var isl_src = {
-  "url" : "$gcc_infra_/isl-0.24.tar.bz2",
+  "url" : "$gcc_infra/isl-0.24.tar.bz2",
   "type" : "archive",
   "version" : "0.24",
   "version_name" : "0.24",

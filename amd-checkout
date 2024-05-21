@@ -1,5 +1,7 @@
 #!/usr/bin/env ysh
 
+const ScriptName = "amd-checkout"
+
 source --builtin args.ysh
 source $_this_dir/common
 

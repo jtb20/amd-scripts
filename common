@@ -11,10 +11,14 @@ var CONFIGDIR="$SCRIPTDIR/configs"
 var ActiveCfg
 var Sources={}
 var Components=[]
+var Testsuites={}
 var ConfigureOpts={}
 var DefaultBuildOpts={}
 var BuildOpts={}
 const DefaultParallelism=32
+var GithubUsername=""
+var TASKLIST=[]
+var TASKARR=()
 
 proc show_vars {
   write "HIP_CLANG_PATH: $HIP_CLANG_PATH"
@@ -36,6 +40,18 @@ func dir_empty (where) {
     var files=glob("*")++glob(".*")
     return (len(files) === 2)
   }
+}
+
+proc copy_dir (Src, Dest) {
+  write "Copying directory $Src to $Dest..."
+  if test --dir $Dest {
+    rm -rf -- $Dest
+  }
+  if test --exists $Dest {
+    error "$Dest exists and is not a directory, stopping"
+  }
+  mkdir -p $(dirname $Dest)
+  cp -a $Src $Dest
 }
 
 func lookup_func(name) {
@@ -62,13 +78,47 @@ func in_list(item, inlist) {
 proc parse_args(; argv) {
   var spec
   var tasks
-  parser (&spec) {
-    arg cfg (help='Build configuration file')
-    rest tasks
+  var argc = len(argv)
+  var opt = 0
+  var positional = 0
+  var args = {}
+  var cfg
+  while (opt < argc) {
+    case (argv[opt]) {
+      --ghuser {
+        setvar opt += 1
+        setglobal GithubUsername = argv[opt]
+      }
+
+      -* {
+        error "Unknown option: $opt"
+      }
+
+      * {
+        if (positional === 0) {
+          setglobal ActiveCfg = argv[opt]
+          setvar positional += 1
+        } else {
+          setglobal TASKLIST = argv[opt:]
+          setvar opt = argc
+        }
+      }
+    }
+    setvar opt += 1
   }
-  var args = parseArgs (spec, argv)
-  setglobal ActiveCfg = args.cfg
-  setglobal TASKLIST = args.tasks
+  # This is a nice ysh feature, but it's not fully baked yet...
+  #parser (&spec) {
+  #  flag -u --ghuser ('str', default="", help="GitHub username")
+  #  arg cfg (help='Build configuration file')
+  #  rest tasks
+  #}
+  #var args = parseArgs (spec, argv)
+  #setglobal ActiveCfg = args.cfg
+  #setglobal TASKLIST = args.tasks
+  #setglobal GithubUsername = args.ghuser
+  if (ActiveCfg === null) {
+    error "Please specify a config file (from configs/*.cfg)"
+  }
 }
 
 proc add_sources(; component, opts) {
@@ -100,6 +150,15 @@ proc add_tasks (component, ...tasks) {
 
 proc standard_tasks (component) {
   add_tasks $component clean configure build install
+}
+
+proc add_testsuites (component, ...testsuites) {
+  for testsuite in (testsuites) {
+    if (component not in Testsuites) {
+      setglobal Testsuites[component] = []
+    }
+    append $testsuite (Testsuites[component])
+  }
 }
 
 func get_srcdir_rel (component) {
@@ -190,16 +249,35 @@ proc load_config {
   }
 }
 
-proc elaborate_tasks {
+proc elaborate_tasks() {
   var ordered_comp
-  for comp in (Components) {
-    var deps = lookup_func("${comp}_dependencies")()
-    for dep in (deps) {
-      write -- "$dep $comp"
-    }
-  } | tsort | while read ordered_comp {
-    var add_task_fn = "${ordered_comp}_tasks"
+  var add_task_fn
+  if (len(Components) === 1) {
+    # If we only have one component, nothing depends on it and it doesn't
+    # depend on anything, so we end up with an empty task list.  So we
+    # need this special case.
+    var comp = Components[0]
+    setvar add_task_fn = "${comp}_tasks"
     eval "$add_task_fn"
+  } else {
+    for comp in (Components) {
+      var deps = lookup_func("${comp}_dependencies")()
+      for dep in (deps) {
+        write -- "$dep $comp"
+      }
+    } | tsort | while read ordered_comp {
+      setvar add_task_fn = "${ordered_comp}_tasks"
+      eval "$add_task_fn"
+    }
+  }
+}
+
+proc elaborate_tests() {
+  for comp in (Testsuites) {
+    for testsuite in (Testsuites[comp]) {
+      var testsuite_nodash = testsuite->replace('-', '_')
+      add_task test_${comp}_${testsuite_nodash}
+    }
   }
 }
 
@@ -265,6 +343,94 @@ func autotools_ccache_option(comp) {
   }
 }
 
+proc print_tasks {
+  if (len(TASKARR) === 0) {
+    error "No tasks!"
+  }
+  for i, task in (TASKARR) {
+    printf u'%.3d: %s\n' $[i+1] $task
+  }
+}
+
+func sanitize_path(path) {
+  var parts=split(path, ':')
+  var new_parts=[]
+  for part in (parts) {
+    if (part !~ "/homebrew/") {
+      call new_parts->append(part)
+    }
+  }
+  return (join(new_parts, ':'))
+}
+
+proc do_task_number (; num) {
+  var taskidx = num-1
+  var taskfn = TASKARR[taskidx]
+  var logname=$(printf u'%.3d-%s.log' $num $taskfn)
+  var numtasks = len(TASKARR)
+  setglobal CurrentLogFile="$LOGDIR/$logname"
+  printf u'[%s] [%.3d/%.3d]: start %s\n' $(time_now) $num $numtasks $taskfn
+  try {
+    PATH=$[sanitize_path (PATH)] eval "$taskfn" >> $CurrentLogFile 2>&1
+  }
+  if (_status !== 0) {
+    write "Task '$taskfn' failed. Current log file is $CurrentLogFile"
+    write "Last 20 lines:"
+    tail -n 20 $CurrentLogFile
+    if ("message" in _error) {
+      error "$[_error.message]"
+    } else {
+      exit 1
+    }
+  }
+  printf u'[%s] [%.3d/%.3d]: finish %s\n' $(time_now) $num $numtasks $taskfn
+}
+
+proc do_tasks (; todo) {
+  var task = -1
+  var nexttask = -1
+  var Range = / <capture digit+ as start : int> '--' <capture digit+ as end : int> /
+  if (len(todo) === 0) {
+    setvar todo = ("1", "continue")
+  }
+  for t in (todo) {
+    if (nexttask > len(TASKARR)) {
+      :
+    } elif (t ~ Range) {
+      var starttask = _group('start')
+      var endtask = _group('end')
+      for i in (starttask .. endtask+1) {
+        do_task_number (i)
+      }
+      setvar nexttask = endtask+1
+    } elif (t ~ /<capture digit+ as tasknum: int>/) {
+      setvar task = _group('tasknum')
+      do_task_number (task)
+      setvar nexttask = task+1
+    } elif (t === "continue") {
+      for i in (nexttask .. len(TASKARR)+1) {
+        do_task_number (i)
+      }
+      setvar nexttask = len(TASKARR)+1
+    } elif (t === "list") {
+      print_tasks
+      exit 0
+    }
+  }
+}
+
+func get_amd_gpus() {
+  var LocalGPUs = []
+  rocm_agent_enumerator 2> /dev/null | read --all (&GPUs)
+  var List = GPUs=>split()
+  for GPU in (List) {
+    if (GPU !== "gfx000") {
+      call LocalGPUs->append(GPU)
+    }
+  }
+  return (LocalGPUs)
+}
+
 # Loading these on demand is a bit awkward. Never mind, just load them all
 # here.
 source "$SCRIPTDIR/modules/cmake_build"
@@ -289,3 +455,4 @@ source "$SCRIPTDIR/modules/rocr_runtime"
 source "$SCRIPTDIR/modules/hipamd"
 source "$SCRIPTDIR/modules/hipcc"
 source "$SCRIPTDIR/modules/hip"
+source "$SCRIPTDIR/modules/aomp"

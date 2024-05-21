@@ -1,13 +1,33 @@
 #!/usr/bin/env ysh
 
+const ScriptName = "amd-test"
+
 source --builtin args.ysh
 source $_this_dir/common
+
+proc get_test_options() {
+  true
+}
+
+proc run_test(; testname_parts, options) {
+  var testname = testname_parts->join('_')
+  setvar testname = testname->replace('-', '_')
+  eval "test_$testname ([])"
+}
 
 proc do_tests (; testlist) {
   for testsuite in (testlist) {
     write "Running $testsuite testsuite"
+    var testname_parts = testsuite->split('/')
+    var testname
     try {
-      eval "test_$testsuite ([])"
+      if (len(testname_parts) > 1) {
+        run_test (testname_parts, [])
+      } else {
+        for testcomp in (testname_parts[0]) {
+          run_test (testname_parts, [])
+        }
+      }
     }
     if (_status === 0) {
       write "Success."
@@ -21,4 +41,6 @@ parse_args (ARGV)
 
 load_config
 
-do_tests (TASKLIST)
+elaborate_tests
+
+do_tasks (TASKLIST)

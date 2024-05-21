@@ -43,11 +43,11 @@ set_board_info cflags "-foffload-options=-mcpu=gfx90a"
   write -- $content > site.exp
 }
 
-proc test_gcc() {
+proc test_gcc_gcc() {
   var Build = get_objdir ("gcc")
 }
 
-proc test_libgomp(; options) {
+proc test_gcc_libgomp(; options) {
   var Build = get_objdir ("gcc")
   var Target = ConfigureOpts.gcc.target
   cd $Build/$Target/libgomp {
@@ -55,5 +55,7 @@ proc test_libgomp(; options) {
     var pass_opts = :| --target_board=unix/-foffload-options=-march=gfx90a | \
                     ++ options
     make -k check RUNTESTFLAGS="$[join(pass_opts, ' ')]"
+    # Is this better?
+    # eval "make -k check RUNTESTFLAGS=\"@pass_opts\""
   }
 }

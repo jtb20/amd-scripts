@@ -1,88 +1,12 @@
 #!/usr/bin/env ysh
 #set -e
 
+const ScriptName = "amd-devel"
+
 source --builtin args.ysh
 source $_this_dir/common
 
-var TASKLIST=ARGV
-var TASKARR=()
 var CurrentLogFile
-
-proc print_tasks {
-  if (len(TASKARR) === 0) {
-    error "No tasks!"
-  }
-  for i, task in (TASKARR) {
-    printf u'%.3d: %s\n' $[i+1] $task
-  }
-}
-
-func sanitize_path(path) {
-  var parts=split(path, ':')
-  var new_parts=[]
-  for part in (parts) {
-    if (part !~ "/homebrew/") {
-      call new_parts->append(part)
-    }
-  }
-  return (join(new_parts, ':'))
-}
-
-proc do_task_number (; num) {
-  var taskidx = num-1
-  var taskfn = TASKARR[taskidx]
-  var logname=$(printf u'%.3d-%s.log' $num $taskfn)
-  var numtasks = len(TASKARR)
-  setglobal CurrentLogFile="$LOGDIR/$logname"
-  printf u'[%s] [%.3d/%.3d]: start %s\n' $(time_now) $num $numtasks $taskfn
-  try {
-    PATH=$[sanitize_path (PATH)] eval "$taskfn" >> $CurrentLogFile 2>&1
-  }
-  if (_status !== 0) {
-    write "Task '$taskfn' failed. Current log file is $CurrentLogFile"
-    write "Last 20 lines:"
-    tail -n 20 $CurrentLogFile
-    if ("message" in _error) {
-      error "$[_error.message]"
-    } else {
-      exit 1
-    }
-  }
-  printf u'[%s] [%.3d/%.3d]: finish %s\n' $(time_now) $num $numtasks $taskfn
-}
-
-proc do_tasks (; todo) {
-  var task = -1
-  var nexttask = -1
-  var Range = / <capture digit+ as start : int> '--' <capture digit+ as end : int> /
-  if (len(todo) === 0) {
-    setvar todo = ("1", "continue")
-  }
-  for t in (todo) {
-    if (nexttask > len(TASKARR)) {
-      :
-    } elif (t ~ Range) {
-      var starttask = _group('start')
-      var endtask = _group('end')
-      for i in (starttask .. endtask+1) {
-        do_task_number (i)
-      }
-      setvar nexttask = endtask+1
-    } elif (t ~ /<capture digit+ as tasknum: int>/) {
-      setvar task = _group('tasknum')
-      do_task_number (task)
-      setvar nexttask = task+1
-    } elif (t === "continue") {
-      for i in (nexttask .. len(TASKARR)+1) {
-        do_task_number (i)
-      }
-      setvar nexttask = len(TASKARR)+1
-    } elif (t === "list") {
-      print_tasks
-      exit 0
-    }
-  }
-}
 
 proc clean_component (component) {
   var OBJDIR = get_objdir(component)
