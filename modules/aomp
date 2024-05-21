@@ -104,6 +104,31 @@ proc test_aomp_smokefails {
   }
 }
 
+### HIP-OPENMP ###
+
+func get_hip_openmp_src() {
+  var AOMP_Src = get_aomp_src()
+  var Relative = Sources.hip_openmp.subdir
+  return ("$AOMP_Src/$Relative")
+}
+
+proc test_aomp_hip_openmp {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Source = get_srcdir ("hip_openmp")
+  var Obj = get_objdir ("hip_openmp")
+  rm -rf $Obj
+  copy_dir $Source $Obj/hip-openmp
+  ln -s $AOMP_Src/test/Makefile.defs $Obj
+  cd $Obj/hip-openmp {
+    shvar AOMP=$INSTALLDIR \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+      export AOMP
+      export LD_LIBRARY_PATH
+      ./check_hip-openmp.sh
+    }
+  }
+}
+
 ### SOLLVE_VV ###
 
 func get_sollve_vv_src() {

@@ -39,3 +39,11 @@ var examples_src = {
 }
 
 add_sources ("examples", examples_src)
+
+var hip_openmp_src = {
+  "type" : "subcomponent",
+  "parent" : "aomp",
+  "subdir" : "test/hip-openmp"
+}
+
+add_sources ("hip_openmp", hip_openmp_src)
