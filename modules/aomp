@@ -116,12 +116,8 @@ proc test_aomp_sollve_vv {
       export PATH
       export LD_LIBRARY_PATH
 
-      pp cell AOMP
-
       ./run_sollve.sh
     }
-    # I think the export flag will have been removed here, but it might not be?
-    pp cell AOMP
   }
 }
 
