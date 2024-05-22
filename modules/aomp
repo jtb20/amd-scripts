@@ -55,7 +55,7 @@ proc test_aomp_smoke {
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("smoke")
   var Obj = get_objdir ("smoke")
-  # These tests write into their "source" directory.  Copy to obj dir and
+  # These tests write into their source directory.  Copy to obj dir and
   # run from there.
   rm -rf $Obj
   copy_dir $Source $Obj/test/smoke
@@ -63,9 +63,11 @@ proc test_aomp_smoke {
   ln -sf $AOMP_Src/test/Makefile.defs $Obj/test
   cd $Obj/test/smoke {
     shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          AOMP_PARALLEL_SMOKE=1 {
       export AOMP
       export LD_LIBRARY_PATH
+      export AOMP_PARALLEL_SMOKE
       CLEANUP=0 ./check_smoke.sh
       ./check_smoke.sh gatherdata
     }
@@ -84,13 +86,14 @@ proc test_aomp_smokefails {
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("smokefails")
   var Obj = get_objdir ("smokefails")
-  # These tests write into their "source" directory.  Copy to obj dir and
+  # These tests write into their source directory.  Copy to obj dir and
   # run from there.
   rm -rf $Obj
   copy_dir $Source $Obj/test/smoke-fails
   ln -sf $AOMP_Src/bin $Obj/bin
   ln -sf $AOMP_Src/test/Makefile.defs $Obj/test
-  # The smoke-fails dir links to this file in the smoke dir... fix that up
+  # The smoke-fails dir links to Makefile.rules in the smoke dir...
+  # fix that up.
   mkdir -p $Obj/test/smoke
   ln -sf $AOMP_Src/test/smoke/Makefile.rules $Obj/test/smoke
   cd $Obj/test/smoke-fails {

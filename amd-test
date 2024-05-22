@@ -39,7 +39,7 @@ proc do_tests (; testlist) {
 
 parse_args (ARGV)
 
-load_config
+eval (load_config)
 
 elaborate_tests
 

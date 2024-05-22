@@ -21,7 +21,7 @@ proc install_gcc() {
 }
 
 func gcc_dependencies() {
-  return (:| binutils isl mpc mpfr gmp accel_gcc |)
+  return (:| binutils isl mpc mpfr gmp |)
 }
 
 proc gcc_tasks() {

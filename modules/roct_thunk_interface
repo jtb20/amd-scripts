@@ -31,7 +31,7 @@ proc install_roct_thunk_interface() {
 }
 
 func roct_thunk_interface_dependencies() {
-  return (:| llvm rocm_cmake |)
+  return (:| rocm_cmake |)
 }
 
 proc roct_thunk_interface_tasks {

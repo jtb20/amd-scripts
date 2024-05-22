@@ -1,0 +1,47 @@
+#!/usr/bin/env ysh
+
+proc clean_openmp() {
+  clean_component openmp
+}
+
+func get_openmp_src() {
+  var LLVM_Src = get_llvm_src()
+  var Relative = Sources.openmp.subdir
+  return ("$LLVM_Src/$Relative")
+}
+
+proc configure_openmp() {
+  var Build = get_objdir("openmp")
+  var LLVM_Build = get_objdir("llvm")
+  var BuildType = get_build_type("openmp")
+  var Src = get_srcdir("openmp")
+  var Tool = get_build_tool("openmp")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DOPENMP_ENABLE_LIBOMPTARGET=1 \
+      -DOPENMP_TEST_C_COMPILER=$INSTALLDIR/bin/clang \
+      -DOPENMP_TEST_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
+      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DLIBOMPTARGET_ENABLE_DEBUG=ON \
+      -DLLVM_DIR=$LLVM_Build
+      $Src
+  }
+}
+
+proc build_openmp() {
+  cmake_build openmp
+}
+
+proc install_openmp() {
+  cmake_install openmp
+}
+
+func openmp_dependencies() {
+  return (:| offload |)
+}
+
+proc openmp_tasks {
+  standard_tasks openmp
+}

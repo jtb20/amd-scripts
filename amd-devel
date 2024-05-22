@@ -23,7 +23,7 @@ maybe_mkdir $INSTALLDIR
 
 parse_args (ARGV)
 
-load_config
+eval (load_config)
 
 elaborate_tasks
 

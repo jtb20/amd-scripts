@@ -1,0 +1,37 @@
+#!/usr/bin/env ysh
+
+proc clean_rocsmilib() {
+  clean_component rocsmilib
+}
+
+func get_rocsmilib_src() {
+  return (get_standard_src("rocsmilib"))
+}
+
+proc configure_rocsmilib() {
+  var Build = get_objdir("rocsmilib")
+  var Src = get_srcdir("rocsmilib")
+  var Tool = get_build_tool("rocsmilib")
+  var BuildType = get_build_type("rocsmilib")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      $Src
+  }
+}
+
+proc build_rocsmilib() {
+  cmake_build rocsmilib
+}
+
+proc install_rocsmilib() {
+  cmake_install rocsmilib
+}
+
+func rocsmilib_dependencies() {
+  return ([])
+}
+
+proc rocsmilib_tasks() {
+  standard_tasks rocsmilib
+}

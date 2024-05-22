@@ -1,0 +1,47 @@
+#!/usr/bin/env ysh
+
+proc clean_hwloc() {
+  clean_component hwloc
+}
+
+func get_hwloc_src() {
+  return (get_standard_src("hwloc"))
+}
+
+proc autogen_hwloc() {
+  var Src = get_srcdir ("hwloc")
+  cd $Src {
+    ./autogen.sh
+  }
+}
+
+proc configure_hwloc() {
+  standard_configure hwloc
+}
+
+proc build_hwloc() {
+  standard_build hwloc
+}
+
+proc install_hwloc() {
+  standard_install hwloc
+}
+
+func hwloc_dependencies() {
+  return (:| rocsmilib |)
+}
+
+proc hwloc_tasks() {
+  add_tasks hwloc clean autogen configure build install
+}
+
+proc default_configure_opts_hwloc() {
+  var SMILib = get_objdir ("rocsmilib")
+  set_configure_opts ("hwloc", :| --with-pic=yes
+                                  --enable-static=yes
+                                  --enable-shared=no
+                                  --disable-io
+                                  --disable-libudev
+                                  --disable-libxml2
+                                  --with-rocm=$SMILib |)
+}

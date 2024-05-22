@@ -52,6 +52,10 @@ append_configure_opts ("accel_gcc", :| --with-sysroot=/opt/amd
 
 set_target ("binutils", "x86_64-linux-gnu")
 
+func gcc_conditional_deps() {
+  return (:| accel_gcc |)
+}
+
 # These default functions could be called automatically from somewhere...
 default_configure_opts_gcc
 set_target ("gcc", "x86_64-linux-gnu")

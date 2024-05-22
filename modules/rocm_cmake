@@ -25,7 +25,7 @@ proc install_rocm_cmake() {
 }
 
 func rocm_cmake_dependencies() {
-  return (:| llvm |)
+  return ([])
 }
 
 proc rocm_cmake_tasks {

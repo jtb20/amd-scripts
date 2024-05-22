@@ -145,7 +145,7 @@ proc do_downloads (; comps) {
 
 parse_args (ARGV)
 
-load_config
+eval (load_config)
 
 maybe_mkdir $ARCHIVEDIR
 maybe_mkdir $SRCDIR
