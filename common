@@ -6,6 +6,7 @@ var LOGDIR="$WORKDIR/logs"
 var OBJDIR="$WORKDIR/obj"
 var INSTALLDIR="$WORKDIR/install"
 var ARCHIVEDIR="$WORKDIR/archives"
+var TESTRESULTSDIR="$WORKDIR/testresults"
 var CONFIGDIR="$SCRIPTDIR/configs"
 
 var ActiveCfg
@@ -293,6 +294,7 @@ proc elaborate_tests() {
       add_task test_${comp}_${testsuite_nodash}
     }
   }
+  add_task save_test_results
 }
 
 var DefaultBuildOpts = {
@@ -435,8 +437,7 @@ proc do_tasks (; todo) {
 
 func get_amd_gpus() {
   var LocalGPUs = []
-  rocm_agent_enumerator 2> /dev/null | read --all (&GPUs)
-  var List = GPUs=>split()
+  var List = @(rocm_agent_enumerator 2> /dev/null)
   for GPU in (List) {
     if (GPU !== "gfx000") {
       call LocalGPUs->append(GPU)

@@ -56,36 +56,152 @@ proc default_configure_opts_llvm() {
 }
 
 proc run_lit {
-  var args = ARGV
   var BuildDir = get_objdir("llvm")
   var Lit = "$BuildDir/bin/llvm-lit"
   $Lit -s --no-progress-bar @ARGV
 }
 
-proc test_llvm_llvm () {
+proc run_llvm_check(check_target) {
   var BuildDir = get_objdir("llvm")
-  cd $BuildDir/test {
-    run_lit -o llvm-results.json .
+  cd $BuildDir {
+    var Tool = get_build_tool("llvm")
+    if (Tool === "Ninja") {
+      try {
+        LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
+      }
+    } else {
+      try {
+        make -k $check_target LIT_OPTS="-o testresults.json"
+      }
+    }
   }
 }
+
+proc save_llvm_results(name, relpath; files) {
+  var BuildDir = get_objdir("llvm")
+  if test --exists $BuildDir/$relpath/testresults.json {
+    cp $BuildDir/$relpath/testresults.json $TESTRESULTSDIR/${name}.json
+  }
+  call files->setValue (:| ${name}.json |)
+}
+
+### ALL ###
+
+proc test_llvm_all () {
+  run_llvm_check check-all
+}
+
+proc save_results_llvm_all (; files) {
+  # FIXME: Check, probably wrong.
+  save_llvm_results llvm-all . (files)
+}
+
+### LLVM ###
+
+proc test_llvm_llvm () {
+  run_llvm_check check-llvm
+}
+
+proc save_results_llvm_llvm (; files) {
+  save_llvm_results llvm test (files)
+}
+
+### CLANG ###
 
 proc test_llvm_clang () {
-  var BuildDir = get_objdir("llvm")
-  cd $BuildDir/tools/clang/test {
-    run_lit -o clang-results.json .
-  }
+  run_llvm_check check-clang
 }
 
-proc test_llvm_clang_tools_extra () {
-  var BuildDir = get_objdir("llvm")
-  cd $BuildDir/tools/clang/tools/extra/test {
-    run_lit -o clang-tools-extra-results.json .
-  }
+proc save_results_llvm_clang (; files) {
+  save_llvm_results clang tools/clang/test (files)
 }
+
+### FLANG ###
+
+proc test_llvm_flang () {
+  run_llvm_check check-flang
+}
+
+proc save_results_llvm_flang (; files) {
+  save_llvm_results flang tools/flang/test (files)
+}
+
+### LLD ###
 
 proc test_llvm_lld () {
-  var BuildDir = get_objdir("llvm")
-  cd $BuildDir/tools/lld/test {
-    run_lit -o lld-results.json .
-  }
+  run_llvm_check check-lld
+}
+
+proc save_results_llvm_lld (; files) {
+  save_llvm_results lld tools/lld/test (files)
+}
+
+### RUNTIMES ###
+
+proc test_llvm_runtimes () {
+  run_llvm_check check-runtimes
+}
+
+proc save_results_llvm_runtimes (; files) {
+  save_llvm_results runtimes runtimes/runtimes-bins (files)
+}
+
+### COMPILER_RT ###
+
+proc test_llvm_compiler_rt () {
+  run_llvm_check check-compiler-rt
+}
+
+proc save_results_llvm_compiler_rt (; files) {
+  save_llvm_results compiler-rt runtimes/runtimes-bins/compiler-rt/test (files)
+}
+
+### LIBCXX ###
+
+proc test_llvm_libcxx () {
+  run_llvm_check check-cxx
+}
+
+proc save_results_llvm_libcxx (; files) {
+  save_llvm_results libcxx runtimes/runtimes-bins/libcxx/test (files)
+}
+
+### LIBCXXABI ###
+
+proc test_llvm_libcxxabi () {
+  run_llvm_check check-cxxabi
+}
+
+proc save_results_llvm_libcxxabi (; files) {
+  save_llvm_results libcxxabi runtimes/runtimes-bins/libcxxabi/test (files)
+}
+
+### LIBUNWIND ###
+
+proc test_llvm_libunwind () {
+  run_llvm_check check-unwind
+}
+
+proc save_results_llvm_libunwind (; files) {
+  save_llvm_results libunwind runtimes/runtimes-bins/libunwind/test (files)
+}
+
+### OFFLOAD ###
+
+proc test_llvm_offload () {
+  run_llvm_check check-offload
+}
+
+proc save_results_llvm_offload (; files) {
+  save_llvm_results offload runtimes/runtimes-bins/offload/test (files)
+}
+
+### OPENMP ###
+
+proc test_llvm_openmp () {
+  run_llvm_check check-openmp
+}
+
+proc save_results_llvm_openmp (; files) {
+  save_llvm_results openmp runtimes/runtimes-bins/openmp (files)
 }

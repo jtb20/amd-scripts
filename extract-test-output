@@ -1,0 +1,19 @@
+#!/usr/bin/env ysh
+
+if (len(ARGV) !== 2) {
+  error "Usage: $0 <results.json> <testname>"
+}
+
+var Results = ARGV[0]
+var TestName = ARGV[1]
+
+json read (&Content) < $Results
+
+for test in (Content.tests) {
+  if (test.name ~~ "*$TestName*") {
+    write -- "$[test.code]: $[test.name]"
+    write "Elapsed time: $[test.elapsed]"
+    write -- $[test.output]
+    write
+  }
+}

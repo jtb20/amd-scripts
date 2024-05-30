@@ -43,6 +43,34 @@ proc test_aomp_examples {
   }
 }
 
+# The "smoke" and "smokefails" testsuites (maybe others) use the same
+# arrangement to report their test results.  Process that into a .sum file
+# here.
+
+proc gather_smoketests_results(which, reldir) {
+  var BuildDir = get_objdir (which)
+  cd $BuildDir/$reldir {
+    rm -f ${which}-tmp.sum
+    if test --exists passing-tests.txt {
+      cat passing-tests.txt | while read n {
+        write "PASS: $n"
+      } >> ${which}-tmp.sum
+    }
+    if test --exists failing-tests.txt {
+      cat failing-tests.txt | while read n {
+        write "FAIL: $n"
+      } >> ${which}-tmp.sum
+    }
+    if test --exists make-fail.txt {
+      cat make-fail.txt | while read n {
+        write "ERROR: $n"
+      } >> ${which}-tmp.sum
+    }
+    sort --key=2 ${which}-tmp.sum > $TESTRESULTSDIR/$which.sum
+    rm -f ${which}-tmp.sum
+  }
+}
+
 ### SMOKE ###
 
 func get_smoke_src() {
@@ -74,6 +102,11 @@ proc test_aomp_smoke {
   }
 }
 
+proc save_results_aomp_smoke (; files) {
+  gather_smoketests_results smoke test/smoke
+  call files->setValue (:| smoke.sum |)
+}
+
 ### SMOKE_FAILS ###
 
 func get_smokefails_src() {
@@ -98,13 +131,20 @@ proc test_aomp_smokefails {
   ln -sf $AOMP_Src/test/smoke/Makefile.rules $Obj/test/smoke
   cd $Obj/test/smoke-fails {
     shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          AOMP_PARALLEL_SMOKE=1 {
       export AOMP
       export LD_LIBRARY_PATH
+      export AOMP_PARALLEL_SMOKE
       ./check_smoke_fails.sh
       ./check_smoke_fails.sh gatherdata
     }
   }
+}
+
+proc save_results_aomp_smokefails (; files) {
+  gather_smoketests_results smokefails test/smoke-fails
+  call files->setValue (:| smokefails.sum |)
 }
 
 ### HIP-OPENMP ###
@@ -130,6 +170,42 @@ proc test_aomp_hip_openmp {
       ./check_hip-openmp.sh
     }
   }
+}
+
+proc save_results_aomp_hip_openmp (; files) {
+  var Obj = get_objdir ("hip_openmp")
+  cd $Obj/hip-openmp {
+    # Yes, we're really extracting the known failing tests from the shell
+    # script here.  That's where the info is...
+    var known_fails_line = $(grep -F "known_fails=" check_hip-openmp.sh)
+    var pattern = / 'known_fails="' <capture ![\"]* as testnames> '"' /
+
+    var xfails = []
+
+    if (known_fails_line ~ pattern) {
+      setvar xfails = _group('testnames')=>split()
+    }
+
+    var resultline = / 'Return Code for ' <capture ![':']+ as testname> \
+                      ':' s* <capture digit+ as res: int> /
+
+    cat hip-openmp-check.txt | while read n {
+      if (n ~ resultline) {
+        if (_group('res') === 0) {
+          if (xfails=>indexOf(_group('testname')) >= 0) {
+            write "XPASS: $[_group('testname')]"
+          } else {
+            write "PASS: $[_group('testname')]"
+          }
+        } elif (xfails=>indexOf(_group('testname')) >= 0) {
+          write "XFAIL: $[_group('testname')]"
+        } else {
+          write "FAIL: $[_group('testname')]"
+        }
+      }
+    } > $TESTRESULTSDIR/hip_openmp.sum
+  }
+  call files->setValue (:| hip_openmp.sum |)
 }
 
 ### USM ###
@@ -252,14 +328,34 @@ proc test_aomp_llnl {
   var LibDir = "$INSTALLDIR/lib/x86_64-unknown-linux-gnu"
   sed -i "s,LIBS = \"\",LIBS = \" -L$LibDir\"," $Obj/test.py
   cd $Obj {
-    shvar AOMP=$INSTALLDIR \
+    shvar PATH=$[sanitize_path (PATH)] \
+          AOMP=$INSTALLDIR \
           AOMP_GPU=$[GPUs[0]] \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          BLOG_DATE=today {
+      export PATH
       export AOMP
       export AOMP_GPU
       export LD_LIBRARY_PATH
+      export BLOG_DATE
 
-      ./check_LLNL.sh log $Obj
+      try {
+        # This script (or the python program it calls) does something strange
+        # with file descriptors, such that it's difficult to capture its output
+        # successfully if output is already redirected (as we have here).
+        # Try to work around that.
+        expect <<< """
+        spawn ./check_LLNL.sh
+        expect eofnn
+        lassign [wait] pid spawn_id os_error_flag exit_status
+        exit \$exit_status
+        """
+      }
+      if (_status === 0) {
+        write "Success."
+      } else {
+        write "Failure."
+      }
     }
   }
 }

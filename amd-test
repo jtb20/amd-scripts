@@ -5,36 +5,155 @@ const ScriptName = "amd-test"
 source --builtin args.ysh
 source $_this_dir/common
 
-proc get_test_options() {
-  true
-}
+#proc get_test_options() {
+#  true
+#}
 
-proc run_test(; testname_parts, options) {
-  var testname = testname_parts->join('_')
-  setvar testname = testname->replace('-', '_')
-  eval "test_$testname ([])"
-}
+#proc run_test(; testname_parts, options) {
+#  var testname = testname_parts->join('_')
+#  setvar testname = testname->replace('-', '_')
+#  eval "test_$testname ([])"
+#}
 
-proc do_tests (; testlist) {
-  for testsuite in (testlist) {
-    write "Running $testsuite testsuite"
-    var testname_parts = testsuite->split('/')
-    var testname
-    try {
-      if (len(testname_parts) > 1) {
-        run_test (testname_parts, [])
+#proc do_tests (; testlist) {
+#  for testsuite in (testlist) {
+#    write "Running $testsuite testsuite"
+#    var testname_parts = testsuite->split('/')
+#    var testname
+#    try {
+#      if (len(testname_parts) > 1) {
+#        run_test (testname_parts, [])
+#      } else {
+#        for testcomp in (testname_parts[0]) {
+#          run_test (testname_parts, [])
+#        }
+#      }
+#    }
+#    if (_status === 0) {
+#      write "Success."
+#    } else {
+#      write "Failure."
+#    }
+#  }
+#}
+
+var GatheredTestResults = []
+var SaveDone = false
+
+proc save_test_results() {
+  for test in (TASKARR) {
+    if (test=>startsWith("test_")) {
+      var name = test=>trimStart("test_")
+      var SaverProc = "save_results_$name"
+      var Files
+      try {
+        eval "$SaverProc (&Files)"
+        setglobal GatheredTestResults = GatheredTestResults ++ Files
+      }
+      if (_status === 0) {
+        write "Saved results for $test"
       } else {
-        for testcomp in (testname_parts[0]) {
-          run_test (testname_parts, [])
-        }
+        write "Result saving failed for $test"
       }
     }
-    if (_status === 0) {
-      write "Success."
-    } else {
-      write "Failure."
+  }
+  setglobal SaveDone = true
+}
+
+proc summarise_json_tests() {
+  for file in (GatheredTestResults) {
+    if (file=>endsWith(".json")) {
+      var Res
+      var SumFile = file=>replace(".json", ".sum")
+      json read (&Res) < $TESTRESULTSDIR/$file
+      for test in (Res.tests) {
+        write "$[test.code]: $[test.name]"
+      } > $TESTRESULTSDIR/$SumFile
     }
   }
+}
+
+var Totals = {}
+
+func AccumulateResults(Result, Num) {
+  if (Result in Totals) {
+    setglobal Totals[Result] += Num
+  } else {
+    setglobal Totals[Result] = Num
+  }
+}
+
+func GetResultOrZero(Result) {
+  if (Result in Totals) {
+    return (Totals[Result])
+  } else {
+    return (0)
+  }
+}
+
+proc summarise_one_test(SumFile) {
+  var Passes = 0
+  var XPasses = 0
+  var Fails = 0
+  var XFails = 0
+  var Errors = 0
+  var Unsupported = 0
+  cat $TESTRESULTSDIR/$SumFile | while read n {
+    case (n) {
+      PASS:* {
+        setvar Passes += 1
+      }
+      XPASS:* {
+        setvar XPasses += 1
+      }
+      FAIL:* {
+        setvar Fails += 1
+      }
+      XFAIL:* {
+        setvar XFails += 1
+      }
+      ERROR:* {
+        setvar Errors += 1
+      }
+      UNSUPPORTED:* {
+        setvar Unsupported += 1
+      }
+      * {
+        write "Unhandled result kind: $n (FIXME)"
+      }
+    }
+  }
+  write """=== $SumFile ===
+
+PASSes: $Passes
+XPASSes: $XPasses
+FAILs: $Fails
+XFAILs: $XFails
+UNSUPPORTED: $Unsupported
+ERRORs: $Errors
+
+"""
+  call AccumulateResults("Passes", Passes)
+  call AccumulateResults("XPasses", XPasses)
+  call AccumulateResults("Fails", Fails)
+  call AccumulateResults("XFails", XFails)
+  call AccumulateResults("Unsupported", Unsupported)
+  call AccumulateResults("Errors", Errors)
+}
+
+proc print_result_summary() {
+  for test in (GatheredTestResults) {
+    var SumFile = test->replace(".json", ".sum")
+    summarise_one_test $SumFile
+  }
+  write """=== TOTALS ===
+
+PASSes: $[GetResultOrZero ("Passes")]
+XPASSes: $[GetResultOrZero ("XPasses")]
+FAILs: $[GetResultOrZero ("Fails")]
+XFAILs: $[GetResultOrZero ("XFails")]
+UNSUPPORTED: $[GetResultOrZero ("Unsupported")]
+ERRORs: $[GetResultOrZero ("Errors")]"""
 }
 
 parse_args (ARGV)
@@ -43,4 +162,19 @@ eval (load_config)
 
 elaborate_tests
 
+maybe_mkdir $TESTRESULTSDIR
+
 do_tasks (TASKLIST)
+
+if (SaveDone) {
+  write "Summarise JSON results..."
+
+  summarise_json_tests
+
+  write "Generating test report..."
+
+  print_result_summary > $TESTRESULTSDIR/report.txt
+
+  write
+  cat $TESTRESULTSDIR/report.txt
+}
