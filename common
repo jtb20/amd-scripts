@@ -288,6 +288,7 @@ proc elaborate_tasks() {
 }
 
 proc elaborate_tests() {
+  add_task clean_test_dirs
   for comp in (Testsuites) {
     for testsuite in (Testsuites[comp]) {
       var testsuite_nodash = testsuite->replace('-', '_')
@@ -444,6 +445,15 @@ func get_amd_gpus() {
     }
   }
   return (LocalGPUs)
+}
+
+proc clean_component (component) {
+  var OBJDIR = get_objdir(component)
+  if test --dir $OBJDIR {
+    rm -rf $OBJDIR/*
+  } else {
+    mkdir -p $OBJDIR
+  }
 }
 
 # Loading these on demand is a bit awkward. Never mind, just load them all

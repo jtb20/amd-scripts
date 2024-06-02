@@ -77,15 +77,26 @@ proc run_llvm_check(check_target) {
   }
 }
 
-proc save_llvm_results(name, relpath; files) {
+proc llvm_results_helper(task, name, relpath; files=null) {
   var BuildDir = get_objdir("llvm")
-  if test --exists $BuildDir/$relpath/testresults.json {
-    cp $BuildDir/$relpath/testresults.json $TESTRESULTSDIR/${name}.json
+  var ResultFile = "$BuildDir/$relpath/testresults.json"
+  if (task === "save") {
+    if test --exists $ResultFile {
+      cp $ResultFile $TESTRESULTSDIR/${name}.json
+      call files->setValue (:| ${name}.json |)
+    }
+  } elif (task === "clean") {
+    rm -f $ResultFile
+  } else {
+    error "Unknown task $task"
   }
-  call files->setValue (:| ${name}.json |)
 }
 
 ### ALL ###
+
+proc clean_results_llvm_all () {
+  llvm_results_helper clean llvm-all .
+}
 
 proc test_llvm_all () {
   run_llvm_check check-all
@@ -93,115 +104,159 @@ proc test_llvm_all () {
 
 proc save_results_llvm_all (; files) {
   # FIXME: Check, probably wrong.
-  save_llvm_results llvm-all . (files)
+  llvm_results_helper save llvm-all . (files)
 }
 
 ### LLVM ###
+
+proc clean_results_llvm_llvm () {
+  llvm_results_helper clean llvm test
+}
 
 proc test_llvm_llvm () {
   run_llvm_check check-llvm
 }
 
 proc save_results_llvm_llvm (; files) {
-  save_llvm_results llvm test (files)
+  llvm_results_helper save llvm test (files)
 }
 
 ### CLANG ###
+
+proc clean_results_llvm_clang () {
+  llvm_results_helper clean clang tools/clang/test
+}
 
 proc test_llvm_clang () {
   run_llvm_check check-clang
 }
 
 proc save_results_llvm_clang (; files) {
-  save_llvm_results clang tools/clang/test (files)
+  llvm_results_helper save clang tools/clang/test (files)
 }
 
 ### FLANG ###
+
+proc clean_results_llvm_flang () {
+  llvm_results_helper clean flang tools/flang/test
+}
 
 proc test_llvm_flang () {
   run_llvm_check check-flang
 }
 
 proc save_results_llvm_flang (; files) {
-  save_llvm_results flang tools/flang/test (files)
+  llvm_results_helper save flang tools/flang/test (files)
 }
 
 ### LLD ###
+
+proc clean_results_llvm_lld () {
+  llvm_results_helper clean lld tools/lld/test
+}
 
 proc test_llvm_lld () {
   run_llvm_check check-lld
 }
 
 proc save_results_llvm_lld (; files) {
-  save_llvm_results lld tools/lld/test (files)
+  llvm_results_helper save lld tools/lld/test (files)
 }
 
 ### RUNTIMES ###
+
+proc clean_results_llvm_runtimes () {
+  llvm_results_helper clean runtimes runtimes/runtimes-bins
+}
 
 proc test_llvm_runtimes () {
   run_llvm_check check-runtimes
 }
 
 proc save_results_llvm_runtimes (; files) {
-  save_llvm_results runtimes runtimes/runtimes-bins (files)
+  llvm_results_helper save runtimes runtimes/runtimes-bins (files)
 }
 
 ### COMPILER_RT ###
+
+proc clean_results_llvm_compiler_rt () {
+  llvm_results_helper clean compiler-rt runtimes/runtimes-bins/compiler-rt/test
+}
 
 proc test_llvm_compiler_rt () {
   run_llvm_check check-compiler-rt
 }
 
 proc save_results_llvm_compiler_rt (; files) {
-  save_llvm_results compiler-rt runtimes/runtimes-bins/compiler-rt/test (files)
+  llvm_results_helper save compiler-rt runtimes/runtimes-bins/compiler-rt/test (files)
 }
 
 ### LIBCXX ###
+
+proc clean_results_llvm_libcxx () {
+  llvm_results_helper clean libcxx runtimes/runtimes-bins/libcxx/test
+}
 
 proc test_llvm_libcxx () {
   run_llvm_check check-cxx
 }
 
 proc save_results_llvm_libcxx (; files) {
-  save_llvm_results libcxx runtimes/runtimes-bins/libcxx/test (files)
+  llvm_results_helper save libcxx runtimes/runtimes-bins/libcxx/test (files)
 }
 
 ### LIBCXXABI ###
+
+proc clean_results_llvm_libcxxabi () {
+  llvm_results_helper clean libcxxabi runtimes/runtimes-bins/libcxxabi/test
+}
 
 proc test_llvm_libcxxabi () {
   run_llvm_check check-cxxabi
 }
 
 proc save_results_llvm_libcxxabi (; files) {
-  save_llvm_results libcxxabi runtimes/runtimes-bins/libcxxabi/test (files)
+  llvm_results_helper save libcxxabi runtimes/runtimes-bins/libcxxabi/test (files)
 }
 
 ### LIBUNWIND ###
+
+proc clean_results_llvm_libunwind () {
+  llvm_results_helper clean libunwind runtimes/runtimes-bins/libunwind/test
+}
 
 proc test_llvm_libunwind () {
   run_llvm_check check-unwind
 }
 
 proc save_results_llvm_libunwind (; files) {
-  save_llvm_results libunwind runtimes/runtimes-bins/libunwind/test (files)
+  llvm_results_helper save libunwind runtimes/runtimes-bins/libunwind/test (files)
 }
 
 ### OFFLOAD ###
+
+proc clean_results_llvm_offload () {
+  llvm_results_helper clean offload runtimes/runtimes-bins/offload/test
+}
 
 proc test_llvm_offload () {
   run_llvm_check check-offload
 }
 
 proc save_results_llvm_offload (; files) {
-  save_llvm_results offload runtimes/runtimes-bins/offload/test (files)
+  llvm_results_helper save offload runtimes/runtimes-bins/offload/test (files)
 }
 
 ### OPENMP ###
+
+proc clean_results_llvm_openmp () {
+  llvm_results_helper clean openmp runtimes/runtimes-bins/openmp
+}
 
 proc test_llvm_openmp () {
   run_llvm_check check-openmp
 }
 
 proc save_results_llvm_openmp (; files) {
-  save_llvm_results openmp runtimes/runtimes-bins/openmp (files)
+  llvm_results_helper save openmp runtimes/runtimes-bins/openmp (files)
 }

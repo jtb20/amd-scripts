@@ -8,15 +8,6 @@ source $_this_dir/common
 
 var CurrentLogFile
 
-proc clean_component (component) {
-  var OBJDIR = get_objdir(component)
-  if test --dir $OBJDIR {
-    rm -rf $OBJDIR/*
-  } else {
-    mkdir -p $OBJDIR
-  }
-}
-
 maybe_mkdir $LOGDIR
 maybe_mkdir $OBJDIR
 maybe_mkdir $INSTALLDIR

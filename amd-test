@@ -37,6 +37,25 @@ source $_this_dir/common
 #  }
 #}
 
+proc clean_test_dirs() {
+  for test in (TASKARR) {
+    if (test=>startsWith("test_")) {
+      try {
+        var name = test=>trimStart("test_")
+        var CleanProc = "clean_results_$name"
+        try {
+          eval $CleanProc
+        }
+        if (_status === 0) {
+          write "Cleaned results for $test"
+        } else {
+          write "Failed to clean results for $test (FIXME)"
+        }
+      }
+    }
+  }
+}
+
 var GatheredTestResults = []
 var SaveDone = false
 

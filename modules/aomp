@@ -43,7 +43,7 @@ proc test_aomp_examples {
   }
 }
 
-# The "smoke" and "smokefails" testsuites (maybe others) use the same
+# The "smoke" and "smoke_fails" testsuites (and similar) use the same
 # arrangement to report their test results.  Process that into a .sum file
 # here.
 
@@ -72,6 +72,10 @@ proc gather_smoketests_results(which, reldir) {
 }
 
 ### SMOKE ###
+
+proc clean_results_aomp_smoke() {
+  clean_component smoke
+}
 
 func get_smoke_src() {
   var AOMP_Src = get_aomp_src()
@@ -109,16 +113,20 @@ proc save_results_aomp_smoke (; files) {
 
 ### SMOKE_FAILS ###
 
-func get_smokefails_src() {
+proc clean_results_aomp_smoke_fails() {
+  clean_component smoke_fails
+}
+
+func get_smoke_fails_src() {
   var AOMP_Src = get_aomp_src()
-  var Relative = Sources.smokefails.subdir
+  var Relative = Sources.smoke_fails.subdir
   return ("$AOMP_Src/$Relative")
 }
 
-proc test_aomp_smokefails {
+proc test_aomp_smoke_fails {
   var AOMP_Src = get_srcdir ("aomp")
-  var Source = get_srcdir ("smokefails")
-  var Obj = get_objdir ("smokefails")
+  var Source = get_srcdir ("smoke_fails")
+  var Obj = get_objdir ("smoke_fails")
   # These tests write into their source directory.  Copy to obj dir and
   # run from there.
   rm -rf $Obj
@@ -142,9 +150,53 @@ proc test_aomp_smokefails {
   }
 }
 
-proc save_results_aomp_smokefails (; files) {
-  gather_smoketests_results smokefails test/smoke-fails
-  call files->setValue (:| smokefails.sum |)
+proc save_results_aomp_smoke_fails (; files) {
+  gather_smoketests_results smoke_fails test/smoke-fails
+  call files->setValue (:| smoke_fails.sum |)
+}
+
+### SMOKE_LIMBO ###
+
+func get_smoke_limbo_src() {
+  var AOMP_Src = get_aomp_src()
+  var Relative = Sources.smoke_limbo.subdir
+  return ("$AOMP_Src/$Relative")
+}
+
+proc clean_results_aomp_smoke_limbo() {
+  clean_component smoke_limbo
+}
+
+proc test_aomp_smoke_limbo {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Source = get_srcdir ("smoke_limbo")
+  var Obj = get_objdir ("smoke_limbo")
+  # These tests write into their source directory.  Copy to obj dir and
+  # run from there.
+  rm -rf $Obj
+  copy_dir $Source $Obj/test/smoke-limbo
+  ln -sf $AOMP_Src/bin $Obj/bin
+  ln -sf $AOMP_Src/test/Makefile.defs $Obj/test
+  # The smoke-limbo dir links to Makefile.rules in the smoke dir...
+  # fix that up.
+  mkdir -p $Obj/test/smoke
+  ln -sf $AOMP_Src/test/smoke/Makefile.rules $Obj/test/smoke
+  cd $Obj/test/smoke-limbo {
+    shvar AOMP=$INSTALLDIR \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          AOMP_PARALLEL_SMOKE=1 {
+      export AOMP
+      export LD_LIBRARY_PATH
+      export AOMP_PARALLEL_SMOKE
+      ./check_smoke_limbo.sh
+      ./check_smoke_limbo.sh gatherdata
+    }
+  }
+}
+
+proc save_results_aomp_smoke_limbo (; files) {
+  gather_smoketests_results smoke_limbo test/smoke-limbo
+  call files->setValue (:| smoke_limbo.sum |)
 }
 
 ### HIP-OPENMP ###
@@ -153,6 +205,10 @@ func get_hip_openmp_src() {
   var AOMP_Src = get_aomp_src()
   var Relative = Sources.hip_openmp.subdir
   return ("$AOMP_Src/$Relative")
+}
+
+proc clean_results_aomp_hip_openmp() {
+  clean_component hip_openmp
 }
 
 proc test_aomp_hip_openmp {
@@ -319,8 +375,11 @@ proc llnl_tasks {
   true
 }
 
+proc clean_results_aomp_llnl () {
+  clean_component llnl
+}
+
 proc test_aomp_llnl {
-  var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("llnl")
   var Obj = get_objdir ("llnl")
   var GPUs = get_amd_gpus ()
@@ -343,13 +402,15 @@ proc test_aomp_llnl {
         # This script (or the python program it calls) does something strange
         # with file descriptors, such that it's difficult to capture its output
         # successfully if output is already redirected (as we have here).
-        # Try to work around that.
-        expect <<< """
-        spawn ./check_LLNL.sh
-        expect eofnn
-        lassign [wait] pid spawn_id os_error_flag exit_status
-        exit \$exit_status
-        """
+        # Try to work around that.  (This didn't work; we fixed the Python
+        # script instead.)
+        #expect <<< """
+        #spawn ./check_LLNL.sh
+        #expect eof
+        #lassign [wait] pid spawn_id os_error_flag exit_status
+        #exit \$exit_status
+        #"""
+        ./check_LLNL.sh log $Obj
       }
       if (_status === 0) {
         write "Success."
@@ -357,6 +418,47 @@ proc test_aomp_llnl {
         write "Failure."
       }
     }
+  }
+}
+
+proc save_results_aomp_llnl (; files) {
+  var Obj = get_objdir ("llnl")
+  cd $Obj {
+    var comp_passed = / 'Compiling' s+ <capture !s+ as testname> /
+    var comp_failed = / 'Compilation of' s+ <capture !s+ as testname> s+ 'failed' /
+    var run_passed = / 'Running' s+ <capture !s+ as testname> s+ '... Passed' /
+    var run_failed = / 'Running' s+ <capture !s+ as testname> s+ '... Failed' /
+    var name
+    cat LLNL.run.log.today | while read n {
+      if (n ~ comp_passed) {
+        write "PASS: $[_group('testname')] compile"
+      } elif (n ~ comp_failed) {
+        setvar name = _group('testname')=>trimEnd(/ '.' alnum+ /)
+        write "FAIL: $name compile"
+      } elif (n ~ run_passed) {
+        write "PASS: $[_group('testname')] run"
+      } elif (n ~ run_failed) {
+        write "FAIL: $[_group('testname')] run"
+      }
+    } > llnl.sum.tmp
+    # It seems more useful to have this all glued together.  Let's do that.
+    cat LLNL.run.log.today | while read n {
+      if (n ~ comp_failed) {
+        setvar name = _group('testname')=>trimEnd(/ '.' alnum+ /)
+        var errfile = "${name}.ERR"
+        if test --exists $errfile {
+          cat $errfile
+          write
+        } else {
+          # Not a disaster, but make a note of it for the unsuspecting user.
+          write "Expected error output file ${name}.ERR not found"
+        }
+      }
+      write -- $n
+    } > $TESTRESULTSDIR/llnl.log
+    sort --key=2 llnl.sum.tmp > $TESTRESULTSDIR/llnl.sum
+    rm -f llnl.sum.tmp
+    call files->setValue (:| llnl.sum |)
   }
 }
 

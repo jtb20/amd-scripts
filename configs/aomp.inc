@@ -16,13 +16,21 @@ var smoke_src = {
 
 add_sources ("smoke", smoke_src)
 
-var smokefails_src = {
+var smoke_fails_src = {
   "type" : "subcomponent"
   "parent" : "aomp"
   "subdir" : "test/smoke-fails"
 }
 
-add_sources ("smokefails", smokefails_src)
+add_sources ("smoke_fails", smoke_fails_src)
+
+var smoke_limbo_src = {
+  "type" : "subcomponent"
+  "parent" : "aomp"
+  "subdir" : "test/smoke-limbo"
+}
+
+add_sources ("smoke_limbo", smoke_limbo_src)
 
 var llnl_src = {
   "type" : "subcomponent"
