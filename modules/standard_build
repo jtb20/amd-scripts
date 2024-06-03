@@ -1,14 +1,5 @@
 #!/usr/bin/env ysh
 
-func get_standard_src(comp) {
-  if (Sources[comp].type === "subcomponent") {
-    return (get_standard_src(Sources[comp].parent))
-  } else {
-    var version_name = Sources[comp].version_name
-    return ("${comp}-${version_name}")
-  }
-}
-
 proc standard_configure(comp) {
   var Build = get_objdir(comp)
   var Src = get_srcdir(comp)

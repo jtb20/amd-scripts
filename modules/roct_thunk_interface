@@ -5,7 +5,7 @@ proc clean_roct_thunk_interface() {
 }
 
 func get_roct_thunk_interface_src() {
-  return (get_standard_src ("roct_thunk_interface"))
+  return (get_src_default ("roct_thunk_interface"))
 }
 
 proc configure_roct_thunk_interface() {

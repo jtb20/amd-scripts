@@ -1,17 +1,16 @@
 #!/usr/bin/env ysh
 
-func get_composable_kernel_src() {
-  var version_name = Sources.composable_kernel.version_name
-  return ("composable_kernel-$version_name")
+func get_composable_kernels_src() {
+  return (get_src_default ("composable_kernels"))
 }
 
-proc clean_composable_kernel() {
-  clean_component composable_kernel
+proc clean_composable_kernels() {
+  clean_component composable_kernels
 }
 
-proc configure_composable_kernel() {
-  var Build = get_objdir("composable_kernel")
-  var Src = get_srcdir("composable_kernel")
+proc configure_composable_kernels() {
+  var Build = get_objdir("composable_kernels")
+  var Src = get_srcdir("composable_kernels")
   local HIPCC_COMPILE_FLAGS_APPEND
 
   # --fresh
@@ -26,8 +25,8 @@ proc configure_composable_kernel() {
   }
 }
   
-proc build_composable_kernel() {
-  var Build = get_objdir("composable_kernel")
+proc build_composable_kernels() {
+  var Build = get_objdir("composable_kernels")
   cd $Build {
     make example_gemm_xdl_fp16_v3
   }

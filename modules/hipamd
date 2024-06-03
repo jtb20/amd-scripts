@@ -5,7 +5,7 @@ proc clean_hipamd() {
 }
 
 func get_hipamd_src() {
-  return (get_standard_src ("hipamd"))
+  return (get_src_default ("hipamd"))
 }
 
 proc configure_hipamd() {

@@ -4,7 +4,7 @@
 # testsuite scripts therein.
 
 func get_aomp_src() {
-  return (get_standard_src ("aomp"))
+  return (get_src_default ("aomp"))
 }
 
 func aomp_dependencies() {
@@ -19,9 +19,7 @@ proc aomp_tasks {
 ### EXAMPLES ###
 
 func get_examples_src() {
-  var AOMP_Src = get_aomp_src()
-  var Relative = Sources.examples.subdir
-  return ("$AOMP_Src/$Relative")
+  return (get_src_default ("examples"))
 }
 
 proc test_aomp_examples {
@@ -78,9 +76,7 @@ proc clean_results_aomp_smoke() {
 }
 
 func get_smoke_src() {
-  var AOMP_Src = get_aomp_src()
-  var Relative = Sources.smoke.subdir
-  return ("$AOMP_Src/$Relative")
+  return (get_src_default ("smoke"))
 }
 
 proc test_aomp_smoke {
@@ -118,9 +114,7 @@ proc clean_results_aomp_smoke_fails() {
 }
 
 func get_smoke_fails_src() {
-  var AOMP_Src = get_aomp_src()
-  var Relative = Sources.smoke_fails.subdir
-  return ("$AOMP_Src/$Relative")
+  return (get_src_default ("smoke_fails"))
 }
 
 proc test_aomp_smoke_fails {
@@ -144,6 +138,23 @@ proc test_aomp_smoke_fails {
       export AOMP
       export LD_LIBRARY_PATH
       export AOMP_PARALLEL_SMOKE
+      if (SelectTests !== null) {
+        var DoTests = []
+        for Test in * {
+          if test --dir $Test {
+            if (Test ~~ "*${SelectTests}*") {
+              append $Test (DoTests)
+            } else {
+              # OK, this is revolting.  We know we have a fresh copy of the
+              # test dir.  We can disable tests by moving them out of the way.
+              # FIXME: do it more nicely.
+              mv $Test .$Test
+            }
+          }
+        }
+        write "Running selected tests: $[DoTests=>join(' ')]"
+        export AOMP_PARALLEL_SMOKE=0
+      }
       ./check_smoke_fails.sh
       ./check_smoke_fails.sh gatherdata
     }
@@ -158,9 +169,7 @@ proc save_results_aomp_smoke_fails (; files) {
 ### SMOKE_LIMBO ###
 
 func get_smoke_limbo_src() {
-  var AOMP_Src = get_aomp_src()
-  var Relative = Sources.smoke_limbo.subdir
-  return ("$AOMP_Src/$Relative")
+  return (get_src_default ("smoke_limbo"))
 }
 
 proc clean_results_aomp_smoke_limbo() {
@@ -202,9 +211,7 @@ proc save_results_aomp_smoke_limbo (; files) {
 ### HIP-OPENMP ###
 
 func get_hip_openmp_src() {
-  var AOMP_Src = get_aomp_src()
-  var Relative = Sources.hip_openmp.subdir
-  return ("$AOMP_Src/$Relative")
+  return (get_src_default ("hip_openmp"))
 }
 
 proc clean_results_aomp_hip_openmp() {
@@ -267,9 +274,7 @@ proc save_results_aomp_hip_openmp (; files) {
 ### USM ###
 
 func get_usm_src() {
-  var AOMP_Src = get_aomp_src()
-  var Relative = Sources.usm.subdir
-  return ("$AOMP_Src/$Relative")
+  return (get_src_default ("usm"))
 }
 
 proc test_aomp_usm {
@@ -292,9 +297,7 @@ proc test_aomp_usm {
 ### OMP5 ###
 
 func get_omp5_src() {
-  var AOMP_Src = get_aomp_src()
-  var Relative = Sources.omp5.subdir
-  return ("$AOMP_Src/$Relative")
+  return (get_src_default ("omp5"))
 }
 
 proc test_aomp_omp5 {
@@ -317,7 +320,7 @@ proc test_aomp_omp5 {
 ### SOLLVE_VV ###
 
 func get_sollve_vv_src() {
-  return (get_standard_src ("sollve_vv"))
+  return (get_src_default ("sollve_vv"))
 }
 
 func sollve_vv_dependencies() {
@@ -361,9 +364,7 @@ proc test_aomp_sollve_vv {
 ### LLNL ###
 
 func get_llnl_src() {
-  var AOMP_Src = get_aomp_src()
-  var Relative = Sources.llnl.subdir
-  return ("$AOMP_Src/$Relative")
+  return (get_src_default ("llnl"))
 }
 
 func llnl_dependencies() {
@@ -465,7 +466,7 @@ proc save_results_aomp_llnl (; files) {
 ### OPENMPAPPS ###
 
 func get_openmpapps_src() {
-  return (get_standard_src ("openmpapps"))
+  return (get_src_default ("openmpapps"))
 }
 
 func openmpapps_dependencies() {

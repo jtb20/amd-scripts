@@ -5,9 +5,7 @@ proc clean_offload() {
 }
 
 func get_offload_src() {
-  var LLVM_Src = get_llvm_src()
-  var Relative = Sources.offload.subdir
-  return ("$LLVM_Src/$Relative")
+  return (get_src_default ("offload"))
 }
 
 proc configure_offload() {

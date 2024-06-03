@@ -5,9 +5,7 @@ proc clean_hipcc() {
 }
 
 func get_hipcc_src() {
-  var LLVM_Src = get_llvm_src()
-  var Relative = Sources.hipcc.subdir
-  return ("$LLVM_Src/$Relative")
+  return (get_src_default ("hipcc"))
 }
 
 proc configure_hipcc() {

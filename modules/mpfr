@@ -5,7 +5,7 @@ proc clean_mpfr() {
 }
 
 func get_mpfr_src() {
-  return (get_standard_src("mpfr"))
+  return (get_src_default ("mpfr"))
 }
 
 proc configure_mpfr() {

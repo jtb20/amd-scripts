@@ -5,7 +5,7 @@ proc clean_isl() {
 }
 
 func get_isl_src() {
-  return (get_standard_src("isl"))
+  return (get_src_default ("isl"))
 }
 
 proc configure_isl() {

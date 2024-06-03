@@ -5,7 +5,7 @@ proc clean_gcc() {
 }
 
 func get_gcc_src() {
-  return (get_standard_src("gcc"))
+  return (get_src_default ("gcc"))
 }
 
 proc configure_gcc() {

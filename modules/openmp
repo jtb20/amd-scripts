@@ -5,9 +5,7 @@ proc clean_openmp() {
 }
 
 func get_openmp_src() {
-  var LLVM_Src = get_llvm_src()
-  var Relative = Sources.openmp.subdir
-  return ("$LLVM_Src/$Relative")
+  return (get_src_default ("openmp"))
 }
 
 proc configure_openmp() {

@@ -5,7 +5,7 @@ proc clean_mpc() {
 }
 
 func get_mpc_src() {
-  return (get_standard_src("mpc"))
+  return (get_src_default ("mpc"))
 }
 
 proc configure_mpc() {

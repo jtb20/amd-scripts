@@ -5,7 +5,7 @@ proc clean_accel_gcc() {
 }
 
 func get_accel_gcc_src() {
-  return (get_standard_src("accel_gcc"))
+  return (get_src_default ("accel_gcc"))
 }
 
 proc configure_accel_gcc() {

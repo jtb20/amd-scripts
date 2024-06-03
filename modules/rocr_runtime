@@ -5,7 +5,7 @@ proc clean_rocr_runtime() {
 }
 
 func get_rocr_runtime_src() {
-  return (get_standard_src ("rocr_runtime"))
+  return (get_src_default ("rocr_runtime"))
 }
 
 proc configure_rocr_runtime() {

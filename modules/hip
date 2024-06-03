@@ -1,7 +1,7 @@
 #!/usr/bin/env ysh
 
 func get_hip_src() {
-  return (get_standard_src ("hip"))
+  return (get_src_default ("hip"))
 }
 
 func hip_dependencies() {

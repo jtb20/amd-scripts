@@ -13,6 +13,7 @@ var ActiveCfg
 var Sources={}
 var Components=[]
 var Testsuites={}
+var SelectTests=null
 var ConfigureOpts={}
 var DefaultBuildOpts={}
 var BuildOpts={}
@@ -93,6 +94,11 @@ proc parse_args(; argv) {
 
       -g | --debug {
         setglobal DefaultBuildOpts.build_type = "Debug"
+      }
+
+      -S | --select {
+        setvar opt += 1
+        setglobal SelectTests = argv[opt]
       }
 
       -* {
@@ -327,6 +333,16 @@ func get_build_type(comp) {
 
 func get_build_parallelism(comp) {
   return (get_tool_opt (comp, "parallelism"))
+}
+
+func get_src_default(comp) {
+  if (Sources[comp].type === "subcomponent") {
+    var parent_src = get_src_default(Sources[comp].parent)
+    return ("$parent_src/$[Sources[comp].subdir]")
+  } else {
+    var version_name = Sources[comp].version_name
+    return ("${comp}-${version_name}")
+  }
 }
 
 func cmake_ccache_option(comp) {

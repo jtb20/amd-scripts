@@ -5,7 +5,7 @@ proc clean_accel_newlib() {
 }
 
 func get_accel_newlib_src() {
-  return (get_standard_src("accel_newlib"))
+  return (get_src_default("accel_newlib"))
 }
 
 proc configure_accel_newlib() {

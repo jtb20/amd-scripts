@@ -5,7 +5,7 @@ proc clean_gmp() {
 }
 
 func get_gmp_src() {
-  return (get_standard_src("gmp"))
+  return (get_src_default ("gmp"))
 }
 
 proc configure_gmp() {

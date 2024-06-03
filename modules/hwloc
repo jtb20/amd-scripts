@@ -5,7 +5,7 @@ proc clean_hwloc() {
 }
 
 func get_hwloc_src() {
-  return (get_standard_src("hwloc"))
+  return (get_src_default ("hwloc"))
 }
 
 proc autogen_hwloc() {

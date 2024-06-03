@@ -5,9 +5,7 @@ proc clean_device_libs() {
 }
 
 func get_device_libs_src() {
-  var LLVM_Src = get_llvm_src()
-  var Relative = Sources.device_libs.subdir
-  return ("$LLVM_Src/$Relative")
+  return (get_src_default ("device_libs"))
 }
 
 proc configure_device_libs() {

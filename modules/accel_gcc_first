@@ -5,7 +5,7 @@ proc clean_accel_gcc_first() {
 }
 
 func get_accel_gcc_first_src() {
-  return (get_standard_src("accel_gcc_first"))
+  return (get_src_default ("accel_gcc_first"))
 }
 
 proc llvm_symlinks_accel_gcc_first() {

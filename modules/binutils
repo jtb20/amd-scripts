@@ -5,7 +5,7 @@ proc clean_binutils() {
 }
 
 func get_binutils_src() {
-  return (get_standard_src("binutils"))
+  return (get_src_default("binutils"))
 }
 
 proc configure_binutils() {

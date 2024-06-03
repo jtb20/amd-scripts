@@ -5,7 +5,7 @@ proc clean_rocsmilib() {
 }
 
 func get_rocsmilib_src() {
-  return (get_standard_src("rocsmilib"))
+  return (get_src_default ("rocsmilib"))
 }
 
 proc configure_rocsmilib() {

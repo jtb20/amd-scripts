@@ -5,7 +5,7 @@ proc clean_llvm_mos_sdk() {
 }
 
 func get_llvm_mos_sdk_src() {
-  return (get_standard_src("llvm_mos_sdk"))
+  return (get_src_default ("llvm_mos_sdk"))
 }
 
 proc configure_llvm_mos_sdk() {
