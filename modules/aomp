@@ -399,18 +399,27 @@ proc test_aomp_llnl {
       export LD_LIBRARY_PATH
       export BLOG_DATE
 
+      if (SelectTests !== null) {
+        # !!! The check_LLNL.sh script adds
+        # test_requires_unified_shared_memory.cxx itself.  But it doesn't use
+        # set -e, so we can override its behaviour by forcing the file
+        # permissions.  (Yuck!)
+        try {
+          lspci | grep -Fq VMware
+        }
+        if (_pipeline_status[1] !== 0) {
+          echo test_requires_unified_shared_memory.cxx >> $Obj/test_list
+        }
+        cat $Source/test_list | while read n {
+          if (n ~~ "*${SelectTests}*") {
+            write -- $n
+          }
+        } > $Obj/test_list_tmp
+        mv -f test_list_tmp test_list
+        chmod a-w $Obj/test_list
+      }
+
       try {
-        # This script (or the python program it calls) does something strange
-        # with file descriptors, such that it's difficult to capture its output
-        # successfully if output is already redirected (as we have here).
-        # Try to work around that.  (This didn't work; we fixed the Python
-        # script instead.)
-        #expect <<< """
-        #spawn ./check_LLNL.sh
-        #expect eof
-        #lassign [wait] pid spawn_id os_error_flag exit_status
-        #exit \$exit_status
-        #"""
         ./check_LLNL.sh log $Obj
       }
       if (_status === 0) {
@@ -439,7 +448,11 @@ proc save_results_aomp_llnl (; files) {
       } elif (n ~ run_passed) {
         write "PASS: $[_group('testname')] run"
       } elif (n ~ run_failed) {
-        write "FAIL: $[_group('testname')] run"
+        if boolstatus grep -Fq "$[_group('testname')] run" xfail-list {
+          write "XFAIL: $[_group('testname')] run"
+        } else {
+          write "FAIL: $[_group('testname')] run"
+        }
       }
     } > llnl.sum.tmp
     # It seems more useful to have this all glued together.  Let's do that.
