@@ -5,7 +5,7 @@ proc clean_rocm_cmake() {
 }
 
 func get_rocm_cmake_src() {
-  return (get_standard_src ("rocm_cmake"))
+  return (get_src_default ("rocm_cmake"))
 }
 
 proc configure_rocm_cmake() {
