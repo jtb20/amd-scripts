@@ -48,7 +48,7 @@ proc llvm_tasks() {
 
 proc default_configure_opts_llvm() {
   var LLDOpts = []
-  if test --exists /usr/bin/ld.lld* {
+  if (len(glob("ld.lld*")) > 0) {
     # Opportunistically use lld if we find it (for linking LLVM libs/binaries
     # themselves).  This should probably be a build option (like Ninja, ccache
     # usage).
