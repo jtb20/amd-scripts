@@ -408,7 +408,7 @@ proc do_task_number (; num) {
   setglobal CurrentLogFile="$LOGDIR/$logname"
   printf u'[%s] [%.3d/%.3d]: start %s\n' $(time_now) $num $numtasks $taskfn
   try {
-    PATH=$[sanitize_path (PATH)] eval "$taskfn" >> $CurrentLogFile 2>&1
+    PATH=$[sanitize_path (PATH)] eval "$taskfn" > $CurrentLogFile 2>&1
   }
   if (_status !== 0) {
     write "Task '$taskfn' failed. Current log file is $CurrentLogFile"

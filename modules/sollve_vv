@@ -11,6 +11,8 @@ proc sollve_vv_tasks {
   true
 }
 
+var RanSingleSollveTest=false
+
 proc test_misc_sollve_vv {
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("sollve_vv")
@@ -28,14 +30,102 @@ proc test_misc_sollve_vv {
           AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
           AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
           PATH=$Obj/tmpbin:$PATH \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          SKIP_SOLLVE45=0 \
+          SKIP_SOLLVE50=0 \
+          SKIP_SOLLVE51=0 \
+          SKIP_SOLLVE52=0 {
       export AOMP
       export AOMP_REPOS_TEST
       export AOMP_SOLVV_REPO_NAME
       export PATH
       export LD_LIBRARY_PATH
+      export SKIP_SOLLVE45
+      export SKIP_SOLLVE50
+      export SKIP_SOLLVE51
+      export SKIP_SOLLVE52
 
-      $AOMP_Src/bin/run_sollve.sh
+      if (SelectTests !== null) {
+        # Not beautiful, but maybe useful?
+        # Maybe we should have "sollve" be its own test group, containing
+        # 4.5/5.0/5.1/5.2 "testsuites", instead?
+        case (SelectTests) {
+          "4.5" {
+            export SKIP_SOLLVE50=1
+            export SKIP_SOLLVE51=1
+            export SKIP_SOLLVE52=1
+            $AOMP_Src/bin/run_sollve.sh
+          }
+          "5.0" {
+            export SKIP_SOLLVE45=1
+            export SKIP_SOLLVE51=1
+            export SKIP_SOLLVE52=1
+            $AOMP_Src/bin/run_sollve.sh
+          }
+          "5.1" {
+            export SKIP_SOLLVE45=1
+            export SKIP_SOLLVE50=1
+            export SKIP_SOLLVE52=1
+            $AOMP_Src/bin/run_sollve.sh
+          }
+          "5.2" {
+            export SKIP_SOLLVE45=1
+            export SKIP_SOLLVE50=1
+            export SKIP_SOLLVE51=1
+            $AOMP_Src/bin/run_sollve.sh
+          }
+          * {
+            setglobal RanSingleSollveTest=true
+            # This isn't a glob, exactly.  It needs to identify an individual
+            # test case.  The run_sollve.sh script just compiles the test, and
+            # doesn't attempt to run it (so we do that here instead).
+            try > singletest.log {
+              $AOMP_Src/bin/run_sollve.sh $SelectTests
+            }
+            var MakeStatus = _status
+            var TestSrc = null
+            var TestBin = null
+            var SourcePattern = / 'Source file:' s+ <capture .* as Src> /
+            var GoodBin = / 'Binary' s+ <capture .* as Bin> ' exists!' /
+            var BadBin = / 'Expected binary' s+ <capture .* as Bin> s+ 'does NOT exist!' /
+            cat singletest.log | while read n {
+              if (n ~ SourcePattern) {
+                setvar TestSrc = _group('Src')
+              } elif (n ~ GoodBin) {
+                setvar TestBin = _group('Bin')
+              } elif (n ~ BadBin) {
+                setvar MakeStatus = 1
+              }
+            }
+            rm -f singletest.sum
+            if (TestSrc === null) {
+              cat singletest.log >&2
+              # This probably means an individual test wasn't found.
+              error "Test source pattern not found"
+            }
+            var TestSrcRel = TestSrc=>trimStart(Obj++"/")
+            if (MakeStatus === 0) {
+              write "PASS: $TestSrcRel compile" >> singletest.sum
+            } else {
+              write "FAIL: $TestSrcRel compile" >> singletest.sum
+            }
+            if (TestBin === null) {
+              write "SKIPPED: $TestSrcRel run" >> singletest.sum
+            } else {
+              try {
+                $TestBin
+              }
+              if (_status === 0) {
+                write "PASS: $TestSrcRel run" >> singletest.sum
+              } else {
+                write "FAIL: $TestSrcRel run" >> singletest.sum
+              }
+            }
+          }
+        }
+      } else {
+        $AOMP_Src/bin/run_sollve.sh
+      }
     }
   }
 }
@@ -44,7 +134,7 @@ proc sollve_json_to_sum(; FileName) {
   sed -e 's/var jsonResults =//' -e 's/^];/]/' < $FileName | json read (&J)
 
   for Test in (J) {
-    var TestPath = Test["Test path"]=>trimStart("tests/")
+    var TestPath = Test["Test path"]
     var CompileRes = Test["Compiler result"]
     var RunRes = Test["Runtime result"]
     write -- "$CompileRes: $TestPath compile"
@@ -100,6 +190,19 @@ proc save_results_misc_sollve_vv (; files) {
   var FoundResults = false
 
   cd $Obj {
+    if (RanSingleSollveTest) {
+      # The run_sollve.sh script has support for building a single test, but
+      # does not populate the JSON, etc. result files in that case.  So this
+      # script does it manually instead.
+      if test --exists singletest.sum {
+        cp -f singletest.log $TESTRESULTSDIR/sollve.log
+        cp -f singletest.sum $TESTRESULTSDIR/sollve.sum
+        setvar FoundResults = true
+      }
+      # FIXME: ysh control flow.
+      return
+    }
+
     for Dir in results_report* {
       sollve_json_to_sum ("$Dir/results.json")
       setvar FoundResults = true

@@ -284,6 +284,11 @@ proc test_aomp_hip_openmp {
           LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
       export AOMP
       export LD_LIBRARY_PATH
+
+      if (SelectTests !== null) {
+        error "No test selection support for hip_openmp"
+      }
+
       ./check_hip-openmp.sh
     }
   }
@@ -331,6 +336,10 @@ func get_usm_src() {
   return (get_src_default ("usm"))
 }
 
+proc clean_results_aomp_usm() {
+  clean_component usm
+}
+
 proc test_aomp_usm {
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("usm")
@@ -343,15 +352,30 @@ proc test_aomp_usm {
           LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
       export AOMP
       export LD_LIBRARY_PATH
+
+      if (SelectTests !== null) {
+        select_smoke_tests (SelectTests)
+      }
+
       ./check_usm.sh
+      ./check_usm.sh gatherdata
     }
   }
+}
+
+proc save_results_aomp_usm (; files) {
+  gather_smoketests_results usm test/usm
+  call files->setValue (:| usm.sum |)
 }
 
 ### OMP5 ###
 
 func get_omp5_src() {
   return (get_src_default ("omp5"))
+}
+
+proc clean_results_aomp_omp5 () {
+  clean_component omp5
 }
 
 proc test_aomp_omp5 {
@@ -366,9 +390,20 @@ proc test_aomp_omp5 {
           LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
       export AOMP
       export LD_LIBRARY_PATH
+
+      if (SelectTests !== null) {
+        select_smoke_tests (SelectTests)
+      }
+
       ./check_omp5.sh
+      ./check_omp5.sh gatherdata
     }
   }
+}
+
+proc save_results_aomp_omp5 (; files) {
+  gather_smoketests_results omp5 test/omp5
+  call files->setValue (:| omp5.sum |)
 }
 
 ### LLNL ###
