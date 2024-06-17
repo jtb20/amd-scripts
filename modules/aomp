@@ -45,23 +45,37 @@ proc test_aomp_examples {
 # arrangement to report their test results.  Process that into a .sum file
 # here.
 
-proc gather_smoketests_results(which, reldir) {
+proc gather_smoketests_results(which, reldir; known_fails=null) {
   var BuildDir = get_objdir (which)
   cd $BuildDir/$reldir {
     rm -f ${which}-tmp.sum
     if test --exists passing-tests.txt {
       cat passing-tests.txt | while read n {
-        write "PASS: $n"
+        if (known_fails !== null and in_list(n, known_fails)) {
+          write "XPASS: $n"
+        } else {
+          write "PASS: $n"
+        }
       } >> ${which}-tmp.sum
     }
     if test --exists failing-tests.txt {
       cat failing-tests.txt | while read n {
-        write "FAIL: $n"
+        if (known_fails !== null and in_list(n, known_fails)) {
+          write "XFAIL: $n"
+        } else {
+          write "FAIL: $n"
+        }
       } >> ${which}-tmp.sum
     }
     if test --exists make-fail.txt {
+      var n
       cat make-fail.txt | while read n {
-        write "ERROR: $n"
+        setvar n = n=>trimEnd(": Make Failed")
+        if (known_fails !== null and in_list(n, known_fails)) {
+          write "XFAIL: $n"
+        } else {
+          write "ERROR: $n"
+        }
       } >> ${which}-tmp.sum
     }
     sort --key=2 ${which}-tmp.sum > $TESTRESULTSDIR/$which.sum
@@ -84,6 +98,21 @@ proc select_smoke_tests (; Pattern) {
     }
   }
   write "Running selected tests: $[DoTests=>join(' ')]"
+}
+
+func extract_smoke_known_fails(Script) {
+    # Yes, we're really extracting the known failing tests from a shell
+    # script here.  That's where the info is...
+    var known_fails_line = $(grep -F "known_fails=" $Script)
+    var pattern = / 'known_fails="' <capture ![\"]* as testnames> '"' /
+
+    var xfails = []
+
+    if (known_fails_line ~ pattern) {
+      setvar xfails = _group('testnames')=>split()
+    }
+
+  return (xfails)
 }
 
 ### SMOKE ###
@@ -297,16 +326,7 @@ proc test_aomp_hip_openmp {
 proc save_results_aomp_hip_openmp (; files) {
   var Obj = get_objdir ("hip_openmp")
   cd $Obj/hip-openmp {
-    # Yes, we're really extracting the known failing tests from the shell
-    # script here.  That's where the info is...
-    var known_fails_line = $(grep -F "known_fails=" check_hip-openmp.sh)
-    var pattern = / 'known_fails="' <capture ![\"]* as testnames> '"' /
-
-    var xfails = []
-
-    if (known_fails_line ~ pattern) {
-      setvar xfails = _group('testnames')=>split()
-    }
+    var xfails = extract_smoke_known_fails ("check_hip-openmp.sh")
 
     var resultline = / 'Return Code for ' <capture ![':']+ as testname> \
                       ':' s* <capture digit+ as res: int> /
@@ -364,7 +384,7 @@ proc test_aomp_usm {
 }
 
 proc save_results_aomp_usm (; files) {
-  gather_smoketests_results usm test/usm
+  gather_smoketests_results usm usm
   call files->setValue (:| usm.sum |)
 }
 
@@ -402,7 +422,9 @@ proc test_aomp_omp5 {
 }
 
 proc save_results_aomp_omp5 (; files) {
-  gather_smoketests_results omp5 test/omp5
+  var Obj = get_objdir ("omp5")
+  var xfails = extract_smoke_known_fails ("$Obj/omp5/check_omp5.sh")
+  gather_smoketests_results omp5 omp5 (xfails)
   call files->setValue (:| omp5.sum |)
 }
 
