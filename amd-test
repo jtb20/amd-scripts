@@ -116,6 +116,7 @@ proc summarise_one_test(SumFile) {
   var Fails = 0
   var XFails = 0
   var Errors = 0
+  var Skipped = 0
   var Unsupported = 0
   cat $TESTRESULTSDIR/$SumFile | while read n {
     case (n) {
@@ -134,6 +135,9 @@ proc summarise_one_test(SumFile) {
       ERROR:* {
         setvar Errors += 1
       }
+      SKIPPED:* {
+        setvar Skipped += 1
+      }
       UNSUPPORTED:* {
         setvar Unsupported += 1
       }
@@ -148,6 +152,7 @@ PASSes: $Passes
 XPASSes: $XPasses
 FAILs: $Fails
 XFAILs: $XFails
+SKIPPED: $Skipped
 UNSUPPORTED: $Unsupported
 ERRORs: $Errors
 
@@ -156,6 +161,7 @@ ERRORs: $Errors
   call AccumulateResults("XPasses", XPasses)
   call AccumulateResults("Fails", Fails)
   call AccumulateResults("XFails", XFails)
+  call AccumulateResults("Skipped", Skipped)
   call AccumulateResults("Unsupported", Unsupported)
   call AccumulateResults("Errors", Errors)
 }
@@ -171,6 +177,7 @@ PASSes: $[GetResultOrZero ("Passes")]
 XPASSes: $[GetResultOrZero ("XPasses")]
 FAILs: $[GetResultOrZero ("Fails")]
 XFAILs: $[GetResultOrZero ("XFails")]
+SKIPPED: $[GetResultOrZero ("Skipped")]
 UNSUPPORTED: $[GetResultOrZero ("Unsupported")]
 ERRORs: $[GetResultOrZero ("Errors")]"""
 }
@@ -178,6 +185,8 @@ ERRORs: $[GetResultOrZero ("Errors")]"""
 parse_args (ARGV)
 
 eval (load_config)
+
+add_optional_modules
 
 elaborate_tests
 

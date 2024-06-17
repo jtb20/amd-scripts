@@ -32,6 +32,14 @@ var smoke_limbo_src = {
 
 add_sources ("smoke_limbo", smoke_limbo_src)
 
+var smoke_dev_src = {
+  "type" : "subcomponent"
+  "parent" : "aomp"
+  "subdir" : "test/smoke-dev"
+}
+
+add_sources ("smoke_dev", smoke_dev_src)
+
 var llnl_src = {
   "type" : "subcomponent"
   "parent" : "aomp"

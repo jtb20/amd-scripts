@@ -69,6 +69,23 @@ proc gather_smoketests_results(which, reldir) {
   }
 }
 
+proc select_smoke_tests (; Pattern) {
+  var DoTests = []
+  for Test in * {
+    if test --dir $Test {
+      if (Test ~~ "*${Pattern}*") {
+        append $Test (DoTests)
+      } else {
+        # OK, this is revolting.  We know we have a fresh copy of the
+        # test dir.  We can disable tests by moving them out of the way.
+        # FIXME: do it more nicely.
+        mv $Test .$Test
+      }
+    }
+  }
+  write "Running selected tests: $[DoTests=>join(' ')]"
+}
+
 ### SMOKE ###
 
 proc clean_results_aomp_smoke() {
@@ -96,6 +113,10 @@ proc test_aomp_smoke {
       export AOMP
       export LD_LIBRARY_PATH
       export AOMP_PARALLEL_SMOKE
+      if (SelectTests !== null) {
+        select_smoke_tests (SelectTests)
+        export AOMP_PARALLEL_SMOKE=0
+      }
       CLEANUP=0 ./check_smoke.sh
       ./check_smoke.sh gatherdata
     }
@@ -139,20 +160,7 @@ proc test_aomp_smoke_fails {
       export LD_LIBRARY_PATH
       export AOMP_PARALLEL_SMOKE
       if (SelectTests !== null) {
-        var DoTests = []
-        for Test in * {
-          if test --dir $Test {
-            if (Test ~~ "*${SelectTests}*") {
-              append $Test (DoTests)
-            } else {
-              # OK, this is revolting.  We know we have a fresh copy of the
-              # test dir.  We can disable tests by moving them out of the way.
-              # FIXME: do it more nicely.
-              mv $Test .$Test
-            }
-          }
-        }
-        write "Running selected tests: $[DoTests=>join(' ')]"
+        select_smoke_tests (SelectTests)
         export AOMP_PARALLEL_SMOKE=0
       }
       ./check_smoke_fails.sh
@@ -197,6 +205,10 @@ proc test_aomp_smoke_limbo {
       export AOMP
       export LD_LIBRARY_PATH
       export AOMP_PARALLEL_SMOKE
+      if (SelectTests !== null) {
+        select_smoke_tests (SelectTests)
+        export AOMP_PARALLEL_SMOKE=0
+      }
       ./check_smoke_limbo.sh
       ./check_smoke_limbo.sh gatherdata
     }
@@ -206,6 +218,48 @@ proc test_aomp_smoke_limbo {
 proc save_results_aomp_smoke_limbo (; files) {
   gather_smoketests_results smoke_limbo test/smoke-limbo
   call files->setValue (:| smoke_limbo.sum |)
+}
+
+### SMOKE_DEV ###
+
+func get_smoke_dev_src() {
+  return (get_src_default ("smoke_dev"))
+}
+
+proc clean_results_aomp_smoke_dev() {
+  clean_component smoke_dev
+}
+
+proc test_aomp_smoke_dev {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Source = get_srcdir ("smoke_dev")
+  var Obj = get_objdir ("smoke_dev")
+  # These tests write into their source directory.  Copy to obj dir and
+  # run from there.
+  rm -rf $Obj
+  copy_dir $Source $Obj/test/smoke-dev
+  ln -sf $AOMP_Src/bin $Obj/bin
+  ln -sf $AOMP_Src/test/Makefile.defs $Obj/test
+  cd $Obj/test/smoke-dev {
+    shvar AOMP=$INSTALLDIR \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          AOMP_PARALLEL_SMOKE=1 {
+      export AOMP
+      export LD_LIBRARY_PATH
+      export AOMP_PARALLEL_SMOKE
+      if (SelectTests !== null) {
+        select_smoke_tests (SelectTests)
+        export AOMP_PARALLEL_SMOKE=0
+      }
+      ./check_smoke_dev.sh
+      ./check_smoke_dev.sh gatherdata
+    }
+  }
+}
+
+proc save_results_aomp_smoke_dev (; files) {
+  gather_smoketests_results smoke_dev test/smoke-dev
+  call files->setValue (:| smoke_dev.sum |)
 }
 
 ### HIP-OPENMP ###
@@ -313,50 +367,6 @@ proc test_aomp_omp5 {
       export AOMP
       export LD_LIBRARY_PATH
       ./check_omp5.sh
-    }
-  }
-}
-
-### SOLLVE_VV ###
-
-func get_sollve_vv_src() {
-  return (get_src_default ("sollve_vv"))
-}
-
-func sollve_vv_dependencies() {
-  return ([])
-}
-
-proc sollve_vv_tasks {
-  # No tasks!
-  true
-}
-
-proc test_aomp_sollve_vv {
-  var AOMP_Src = get_srcdir ("aomp")
-  var Source = get_srcdir ("sollve_vv")
-  var Obj = get_objdir ("sollve_vv")
-  copy_dir $Source $Obj
-  maybe_mkdir $Obj/tmpbin
-  # The run_solvve.sh script tries to update the repo -- let's try to avoid
-  # that here (it'd be confusing since we're copying the source directory
-  # above, and if we update in the obj directory then sources could get out of
-  # sync).
-  ln -sf $(which true) $Obj/tmpbin/git
-  cd $AOMP_Src/bin {
-    var Parts = Obj=>split("/")
-    shvar AOMP=$INSTALLDIR \
-          AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
-          AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
-          PATH=$Obj/tmpbin:$PATH \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
-      export AOMP
-      export AOMP_REPOS_TEST
-      export AOMP_SOLVV_REPO_NAME
-      export PATH
-      export LD_LIBRARY_PATH
-
-      ./run_sollve.sh
     }
   }
 }

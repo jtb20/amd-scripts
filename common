@@ -19,6 +19,7 @@ var DefaultBuildOpts={}
 var BuildOpts={}
 const DefaultParallelism=32
 var GithubUsername=""
+var OptionalModules=[]
 var TASKLIST=[]
 var TASKARR=()
 
@@ -99,6 +100,11 @@ proc parse_args(; argv) {
       -S | --select {
         setvar opt += 1
         setglobal SelectTests = argv[opt]
+      }
+
+      -A | --add {
+        setvar opt += 1
+        setglobal OptionalModules = OptionalModules ++ split(argv[opt], ',')
       }
 
       -* {
@@ -261,8 +267,6 @@ var load_config = ^(
     error "No such config: $ActiveCfg"
   }
 )
-
-alias load_config="eval (load_config_1)"
 
 proc elaborate_tasks() {
   var ordered_comp
@@ -472,6 +476,23 @@ proc clean_component (component) {
   }
 }
 
+proc add_optional_modules() {
+  # We don't want to force configs to define the add_optional_module function
+  # if they don't need it.  Try to avoid failing if we don't have it.
+  try {
+    for Mod in (OptionalModules) {
+      add_optional_module $Mod
+    }
+  }
+  if (_status !== 0) {
+    if ("message" in _error) {
+      error "$[_error.message]"
+    } else {
+      error "Optional modules not supported for this config"
+    }
+  }
+}
+
 # Loading these on demand is a bit awkward. Never mind, just load them all
 # here.
 source "$SCRIPTDIR/modules/cmake_build"
@@ -501,3 +522,4 @@ source "$SCRIPTDIR/modules/hwloc"
 source "$SCRIPTDIR/modules/rocsmilib"
 source "$SCRIPTDIR/modules/offload"
 source "$SCRIPTDIR/modules/openmp"
+source "$SCRIPTDIR/modules/sollve_vv"

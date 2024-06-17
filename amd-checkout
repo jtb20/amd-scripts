@@ -147,6 +147,8 @@ parse_args (ARGV)
 
 eval (load_config)
 
+add_optional_modules
+
 maybe_mkdir $ARCHIVEDIR
 maybe_mkdir $SRCDIR
 

@@ -1,0 +1,41 @@
+func get_nekbone_src() {
+  return (get_src_default ("nekbone"))
+}
+
+func nekbone_dependencies() {
+  return (:| aomp |)
+}
+
+proc nekbone_tasks {
+  # No tasks!
+  true
+}
+
+proc test_misc_nekbone {
+  var Source = get_srcdir ("nekbone")
+  var Obj = get_objdir ("nekbone")
+  copy_dir $Source $Obj
+  maybe_mkdir $Obj/tmpbin
+  # The run_solvve.sh script tries to update the repo -- let's try to avoid
+  # that here (it'd be confusing since we're copying the source directory
+  # above, and if we update in the obj directory then sources could get out of
+  # sync).
+  ln -sf $(which true) $Obj/tmpbin/git
+  cd $Obj {
+    var Parts = Obj=>split("/")
+    shvar AOMP=$INSTALLDIR \
+          AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
+          AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
+          PATH=$Obj/tmpbin:$PATH \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+      export AOMP
+      export AOMP_REPOS_TEST
+      export AOMP_SOLVV_REPO_NAME
+      export PATH
+      export LD_LIBRARY_PATH
+
+      ./run_sollve.sh
+    }
+  }
+}
+
