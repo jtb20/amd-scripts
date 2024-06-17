@@ -86,18 +86,31 @@ proc sollve_json_to_log(; FileName, ObjDir) {
   }
 }
 
+proc clean_results_misc_sollve_vv () {
+  var Obj = get_objdir ("sollve_vv")
+
+  cd $Obj {
+    rm -rf bin
+    rm -rf results_report*
+  }
+}
+
 proc save_results_misc_sollve_vv (; files) {
   var Obj = get_objdir ("sollve_vv")
+  var FoundResults = false
 
   cd $Obj {
     for Dir in results_report* {
       sollve_json_to_sum ("$Dir/results.json")
+      setvar FoundResults = true
     } > $TESTRESULTSDIR/sollve.sum
     for Dir in results_report* {
       sollve_json_to_log ("$Dir/results.json", Obj)
     } > $TESTRESULTSDIR/sollve.log
   }
 
-  call files->setValue (:| sollve.sum |)
+  if (FoundResults) {
+    call files->setValue (:| sollve.sum |)
+  }
 }
 
