@@ -1,0 +1,59 @@
+func get_openmp_examples_src() {
+  return (get_src_default ("openmp_examples"))
+}
+
+func openmp_examples_dependencies() {
+  # Sort of but not really -- a source dependency maybe.
+  return (:| aomp |)
+}
+
+proc openmp_examples_tasks {
+  # No tasks!
+  true
+}
+
+proc test_misc_openmp_examples {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Source = get_srcdir ("openmp_examples")
+  var Obj = get_objdir ("openmp_examples")
+  copy_dir $Source $Obj/OpenMP/Examples
+  maybe_mkdir $Obj/smoke
+  # This doesn't look quite right... did these move at some point?
+  ln -sf $AOMP_Src/test/smoke/Makefile.rules $Obj/smoke
+  ln -sf $AOMP_Src/test/Makefile.defs $Obj/smoke
+  ln -sf $AOMP_Src/test/Makefile.defs $Obj/OpenMP
+  cp -f $AOMP_Src/test/OpenMP/run.sh $Obj/OpenMP
+  cp -f $AOMP_Src/test/OpenMP/build.sh $Obj/OpenMP
+  cd $Obj/OpenMP {
+    shvar AOMP=$INSTALLDIR \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
+      export AOMP
+      export LD_LIBRARY_PATH
+
+      if (SelectTests !== null) {
+        error "No test selection support for openmp_examples"
+      }
+
+      try {
+        # This compiles and runs stuff but doesn't seem to gather any results
+        # to report.  I might have missed something.
+        ./run.sh
+      }
+      if (_status === 0) {
+        echo "Success."
+      } else {
+        echo "Failure."
+      }
+    }
+  }
+}
+
+
+proc clean_results_misc_openmp_examples () {
+  clean_component openmp_examples
+}
+
+proc save_results_misc_openmp_examples (; files) {
+  var Obj = get_objdir ("openmp_examples")
+}
+
