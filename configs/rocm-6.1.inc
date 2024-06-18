@@ -45,9 +45,18 @@ var hipcc_src = {
   "subdir" : "amd/hipcc"
 }
 
+var composable_kernels_src = {
+  "url" : "https://github.com/ROCm/composable_kernel.git",
+  "type" : "git",
+  "version" : "release/rocm-rel-6.1",
+  "version_name" : "6.1",
+  "shallow_clone" : false
+}
+
 add_sources ("rocm_cmake", rocm_cmake_src)
 add_sources ("roct_thunk_interface", roct_thunk_interface_src)
 add_sources ("rocr_runtime", rocr_runtime_src)
 add_sources ("hipamd", hipamd_src)
 add_sources ("hip", hip_src)
 add_sources ("hipcc", hipcc_src)
+add_sources ("composable_kernels", composable_kernels_src)

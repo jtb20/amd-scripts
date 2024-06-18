@@ -38,10 +38,18 @@ proc install_hipamd() {
   cmake_install hipamd
 }
 
+proc llvm_symlink_hipamd() {
+  # ROCM-related stuff (e.g. composable_kernel) wants a symlink here.
+  cd $INSTALLDIR {
+    ln -sf $INSTALLDIR llvm
+  }
+}
+
 func hipamd_dependencies() {
   return (:| roct_thunk_interface rocr_runtime comgr hipcc hip |)
 }
 
 proc hipamd_tasks {
   standard_tasks hipamd
+  add_tasks hipamd llvm_symlink
 }
