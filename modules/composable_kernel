@@ -1,18 +1,18 @@
 #!/usr/bin/env ysh
 
-func get_composable_kernels_src() {
-  return (get_src_default ("composable_kernels"))
+func get_composable_kernel_src() {
+  return (get_src_default ("composable_kernel"))
 }
 
-proc clean_composable_kernels() {
-  clean_component composable_kernels
+proc clean_composable_kernel() {
+  clean_component composable_kernel
 }
 
-proc configure_composable_kernels() {
-  var Build = get_objdir("composable_kernels")
-  var Src = get_srcdir("composable_kernels")
-  var BuildType = get_build_type("composable_kernels")
-  var Tool = get_build_tool("composable_kernels")
+proc configure_composable_kernel() {
+  var Build = get_objdir("composable_kernel")
+  var Src = get_srcdir("composable_kernel")
+  var BuildType = get_build_type("composable_kernel")
+  var Tool = get_build_tool("composable_kernel")
   #local HIPCC_COMPILE_FLAGS_APPEND
 
   cd $Build {
@@ -33,25 +33,25 @@ proc configure_composable_kernels() {
   }
 }
   
-proc build_composable_kernels() {
+proc build_composable_kernel() {
   shvar HIP_CLANG_PATH=$INSTALLDIR/bin \
         ROCM_PATH=$INSTALLDIR \
         HIP_PATH=$INSTALLDIR \
         LLVM_PATH=$INSTALLDIR {
-    cmake_build composable_kernels
+    cmake_build composable_kernel
   }
 }
 
-proc install_composable_kernels() {
+proc install_composable_kernel() {
   shvar HIP_CLANG_PATH=$INSTALLDIR/bin \
         ROCM_PATH=$INSTALLDIR \
         HIP_PATH=$INSTALLDIR \
         LLVM_PATH=$INSTALLDIR {
-    cmake_install composable_kernels
+    cmake_install composable_kernel
   }
 }
 
-func composable_kernels_dependencies() {
+func composable_kernel_dependencies() {
   return (:| llvm device_libs comgr hipamd |)
 }
 
@@ -67,6 +67,6 @@ func composable_kernels_dependencies() {
 
 # gfx942
 
-proc composable_kernels_tasks {
-  standard_tasks composable_kernels
+proc composable_kernel_tasks {
+  standard_tasks composable_kernel
 }
