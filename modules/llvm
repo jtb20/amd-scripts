@@ -76,11 +76,20 @@ proc run_llvm_check(check_target) {
     var Tool = get_build_tool("llvm")
     if (Tool === "Ninja") {
       try {
-        LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
+        if (SelectTests !== null) {
+          # This is a regex, not a glob.  Consistency, schmonstistency.
+          LIT_FILTER=$SelectTests LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
+        } else {
+          LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
+        }
       }
     } else {
       try {
-        make -k $check_target LIT_OPTS="-o testresults.json"
+        if (SelectTests !== null) {
+          make -k $check_target LIT_OPTS="-o testresults.json" LIT_FILTER=$SelectTests
+        } else {
+          make -k $check_target LIT_OPTS="-o testresults.json"
+        }
       }
     }
   }

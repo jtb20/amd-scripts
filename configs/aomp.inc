@@ -1,5 +1,5 @@
 var aomp_src = {
-  "url" : "https://github.com/ROCm-Developer-Tools/aomp",
+  "url" : "https://github.com/ROCm/aomp",
   "type" : "git",
   "version" : "aomp-dev",
   "version_name" : "aomp_dev",
