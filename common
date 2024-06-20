@@ -452,6 +452,20 @@ proc do_tasks (; todo) {
     } elif (t === "list") {
       print_tasks
       exit 0
+    } else {
+      # Treat anything else like this:
+      #   1. Brace-expand (so "{build,install}_llvm" can be written)
+      #   2. Run tasks sequentially that glob-match the resulting list
+      shopt -s noglob { var braceexp=@(eval "write -- $t") }
+      for globname in (braceexp) {
+        for tasknum in (1..len(TASKARR)+1) {
+          var taskname = TASKARR[tasknum - 1]
+          if (taskname ~~ "*${globname}*") {
+            do_task_number (tasknum)
+            setvar nexttask = tasknum + 1
+          }
+        }
+      }
     }
   }
 }
