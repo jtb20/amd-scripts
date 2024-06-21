@@ -67,11 +67,11 @@ var rocr_runtime_patch_src = {
 add_sources ("rocr_runtime_patch", rocr_runtime_patch_src)
 add_sources ("rocr_runtime_unpatch", rocr_runtime_patch_src)
 
-proc do_rocr_runtime_patch () {
+proc modify_rocr_runtime_patch () {
   patch_rocr_runtime
 }
 
-proc do_rocr_runtime_unpatch () {
+proc restore_rocr_runtime_unpatch () {
   unpatch_rocr_runtime
 }
 
@@ -84,7 +84,7 @@ func rocr_runtime_patch_dependencies() {
 }
 
 proc rocr_runtime_patch_tasks {
-  add_tasks rocr_runtime_patch do
+  add_tasks rocr_runtime_patch modify
 }
 
 func get_rocr_runtime_unpatch_src () {
@@ -96,5 +96,5 @@ func rocr_runtime_unpatch_dependencies() {
 }
 
 proc rocr_runtime_unpatch_tasks {
-  add_tasks rocr_runtime_unpatch do
+  add_tasks rocr_runtime_unpatch restore
 }

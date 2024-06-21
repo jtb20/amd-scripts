@@ -50,7 +50,7 @@ var roct_thunk_symlink_src = {
 add_sources ("roct_thunk_add_symlink", roct_thunk_symlink_src)
 add_sources ("roct_thunk_remove_symlink", roct_thunk_symlink_src)
 
-proc do_roct_thunk_add_symlink () {
+proc modify_roct_thunk_add_symlink () {
   var Src = get_srcdir ("roct_thunk_interface")
   cd $Src/include {
     write "Adding hsakmt symlink for roct_thunk_interface..."
@@ -60,7 +60,7 @@ proc do_roct_thunk_add_symlink () {
   }
 }
 
-proc do_roct_thunk_remove_symlink() {
+proc restore_roct_thunk_remove_symlink() {
   var Src = get_srcdir ("roct_thunk_interface")
   cd $Src/include {
     if test --symlink hsakmt {
@@ -79,7 +79,7 @@ func roct_thunk_add_symlink_dependencies() {
 }
 
 proc roct_thunk_add_symlink_tasks {
-  add_tasks roct_thunk_add_symlink do
+  add_tasks roct_thunk_add_symlink modify
 }
 
 func get_roct_thunk_remove_symlink_src () {
@@ -91,5 +91,5 @@ func roct_thunk_remove_symlink_dependencies() {
 }
 
 proc roct_thunk_remove_symlink_tasks {
-  add_tasks roct_thunk_remove_symlink do
+  add_tasks roct_thunk_remove_symlink restore
 }
