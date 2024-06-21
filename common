@@ -60,12 +60,8 @@ proc copy_dir (Src, Dest) {
 }
 
 func lookup_func(name) {
-  try {
-    # It seems like evalExpr "..." might be better here somehow, but it doesn't
-    # seem to work like that (yet?)
-    eval "var fn = $name" 2> /dev/null
-  }
-  if (_status === 0 and type(fn) === "Func") {
+  var fn = getVar(name)
+  if (type(fn) === "Func") {
     return (fn)
   } else {
     error "Not a function: $name"
@@ -547,3 +543,4 @@ source "$SCRIPTDIR/modules/offload"
 source "$SCRIPTDIR/modules/openmp"
 source "$SCRIPTDIR/modules/sollve_vv"
 source "$SCRIPTDIR/modules/openmp_examples"
+source "$SCRIPTDIR/modules/nekbone"
