@@ -1,3 +1,5 @@
+#!/usr/bin/env ysh
+
 var WORKDIR="$(pwd)"
 
 var SRCDIR="$WORKDIR/src"
@@ -271,6 +273,7 @@ var load_config = ^(
 proc elaborate_tasks() {
   var ordered_comp
   var add_task_fn
+  add_task clean_install_dir
   if (len(Components) === 1) {
     # If we only have one component, nothing depends on it and it doesn't
     # depend on anything, so we end up with an empty task list.  So we
@@ -487,6 +490,12 @@ proc clean_component (component) {
     rm -rf $OBJDIR/*
   } else {
     mkdir -p $OBJDIR
+  }
+}
+
+proc clean_install_dir () {
+  if test --dir $INSTALLDIR {
+    rm -rf $INSTALLDIR/*
   }
 }
 
