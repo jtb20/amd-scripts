@@ -37,3 +37,59 @@ func roct_thunk_interface_dependencies() {
 proc roct_thunk_interface_tasks {
   standard_tasks roct_thunk_interface
 }
+
+# See also patch/unpatch handling in rocr_runtime, which is handled similarly
+# to making this symlink.
+
+var roct_thunk_symlink_src = {
+  "type" : "subcomponent"
+  "parent" : "roct_thunk_interface"
+  "subdir" : "."
+}
+
+add_sources ("roct_thunk_add_symlink", roct_thunk_symlink_src)
+add_sources ("roct_thunk_remove_symlink", roct_thunk_symlink_src)
+
+proc do_roct_thunk_add_symlink () {
+  var Src = get_srcdir ("roct_thunk_interface")
+  cd $Src/include {
+    write "Adding hsakmt symlink for roct_thunk_interface..."
+    if ! test --symlink hsakmt {
+      ln -s . hsakmt
+    }
+  }
+}
+
+proc do_roct_thunk_remove_symlink() {
+  var Src = get_srcdir ("roct_thunk_interface")
+  cd $Src/include {
+    if test --symlink hsakmt {
+      write "Removing hsakmt symlink for roct_thunk_interface..."
+      rm hsakmt
+    }
+  }
+}
+
+func get_roct_thunk_add_symlink_src () {
+  return (get_src_default ("roct_thunk_add_symlink"))
+}
+
+func roct_thunk_add_symlink_dependencies() {
+  return (:| roct_thunk_interface |)
+}
+
+proc roct_thunk_add_symlink_tasks {
+  add_tasks roct_thunk_add_symlink do
+}
+
+func get_roct_thunk_remove_symlink_src () {
+  return (get_src_default ("roct_thunk_remove_symlink"))
+}
+
+func roct_thunk_remove_symlink_dependencies() {
+  return (:| roct_thunk_add_symlink llvm |)
+}
+
+proc roct_thunk_remove_symlink_tasks {
+  add_tasks roct_thunk_remove_symlink do
+}

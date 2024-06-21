@@ -8,6 +8,10 @@ func get_rocr_runtime_src() {
   return (get_src_default ("rocr_runtime"))
 }
 
+proc patch_rocr_runtime() {
+  aomp_apply_patch rocr_runtime
+}
+
 proc configure_rocr_runtime() {
   var Build = get_objdir("rocr_runtime")
   var BuildType = get_build_type("rocr_runtime")
@@ -32,10 +36,65 @@ proc install_rocr_runtime() {
   cmake_install rocr_runtime
 }
 
+proc unpatch_rocr_runtime() {
+  aomp_revert_patch rocr_runtime
+}
+
 func rocr_runtime_dependencies() {
-  return (:| roct_thunk_interface |)
+  return (:| llvm roct_thunk_interface rocr_runtime_unpatch |)
 }
 
 proc rocr_runtime_tasks {
-  standard_tasks rocr_runtime
+  add_tasks rocr_runtime clean patch configure build install unpatch
+}
+
+# Well, this is all a bit of a fiddle.  As well as patching the rocr_runtime
+# sources for the build proper, we also have to patch them for building *llvm*.
+# So this complicated arrangement makes llvm depend on rocr_runtime_patch,
+# and rocr_runtime_unpatch depend on llvm.  Then we must manually add
+# rocr_runtime_unpatch as a component in the config file, e.g.
+# aomp-amd-staging.cfg.
+# See also symlink handling in roct_thunk_interface.
+# We could do all this patching/unpatching just once, but that would seem to
+# make "bracketing" the operation a bit more fragile.
+
+var rocr_runtime_patch_src = {
+  "type" : "subcomponent"
+  "parent" : "rocr_runtime"
+  "subdir" : "."
+}
+
+add_sources ("rocr_runtime_patch", rocr_runtime_patch_src)
+add_sources ("rocr_runtime_unpatch", rocr_runtime_patch_src)
+
+proc do_rocr_runtime_patch () {
+  patch_rocr_runtime
+}
+
+proc do_rocr_runtime_unpatch () {
+  unpatch_rocr_runtime
+}
+
+func get_rocr_runtime_patch_src () {
+  return (get_src_default ("rocr_runtime_patch"))
+}
+
+func rocr_runtime_patch_dependencies() {
+  return ([])
+}
+
+proc rocr_runtime_patch_tasks {
+  add_tasks rocr_runtime_patch do
+}
+
+func get_rocr_runtime_unpatch_src () {
+  return (get_src_default ("rocr_runtime_unpatch"))
+}
+
+func rocr_runtime_unpatch_dependencies() {
+  return (:| rocr_runtime_patch llvm |)
+}
+
+proc rocr_runtime_unpatch_tasks {
+  add_tasks rocr_runtime_unpatch do
 }

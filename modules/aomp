@@ -16,6 +16,85 @@ proc aomp_tasks {
   true
 }
 
+# 'comp' is the module name we use in these scripts, which isn't necessarily
+# spelled the same as the directory name used in the patch control file.
+# Translate the former to the latter.
+func aomp_module_to_patch_control_name(comp) {
+  case (comp) {
+    rocr_runtime {
+      return ("rocr-runtime")
+    }
+    * {
+      error "Unknown module for patching: $comp"
+    }
+  }
+}
+
+func find_aomp_patch(comp) {
+  var AOMP_Src = get_srcdir ("aomp")
+  var PatchDir = "$AOMP_Src/bin/patches"
+  var ControlFile = "$PatchDir/$[ConfigureOpts.aomp.patch_control]"
+  var CtrlLine = / s* <capture !s+ as compname> s* ':' s* <capture !s+ as patchfile> s* /
+  var ControlName = aomp_module_to_patch_control_name (comp)
+  cat $ControlFile | while read n {
+    if (n ~ CtrlLine) {
+      var CompName = _group('compname')
+      var PatchFile = _group('patchfile')
+      if (CompName === ControlName) {
+        return (PatchFile)
+      }
+    } else {
+      error "Unexpected line in patch control file: $n"
+    }
+  }
+  return (null)
+}
+
+proc aomp_apply_patch(comp) {
+  var AOMP_Src = get_srcdir ("aomp")
+  var PatchDir = "$AOMP_Src/bin/patches"
+  var PatchFile = find_aomp_patch(comp)
+  var Src = get_srcdir (comp)
+  write "Found patch file: $PatchFile"
+  cd $Src {
+    try {
+      patch -p1 --dry-run < $PatchDir/$PatchFile
+    }
+    if (_status !== 0) {
+      # Check if we already have this exact patch applied to the sources,
+      # for convenience.
+      if patch -p1 -R --dry-run < $PatchDir/$PatchFile {
+        write "Patch already applied."
+        # NOTE: ysh control flow, this only breaks out of the 'cd' block.
+        return
+      }
+      error "Patch for $comp doesn't apply, bailing out"
+    } else {
+      patch -p1 < $PatchDir/$PatchFile
+      write "Patch applied successfully!"
+    }
+  }
+}
+
+proc aomp_revert_patch(comp) {
+  var AOMP_Src = get_srcdir ("aomp")
+  var PatchDir = "$AOMP_Src/bin/patches"
+  var PatchFile = find_aomp_patch(comp)
+  var Src = get_srcdir (comp)
+  write "Found patch file: $PatchFile"
+  cd $Src {
+    try {
+      patch -p1 -R --dry-run < $PatchDir/$PatchFile
+    }
+    if (_status !== 0) {
+      error "Patch for $comp doesn't revert, bailing out"
+    } else {
+      patch -p1 -R < $PatchDir/$PatchFile
+      write "Patch reverted successfully!"
+    }
+  }
+}
+
 ### EXAMPLES ###
 
 func get_examples_src() {
