@@ -22,6 +22,7 @@ var BuildOpts={}
 const DefaultParallelism=32
 var GithubUsername=""
 var OptionalModules=[]
+var CleanInstallDir=false
 var TASKLIST=[]
 var TASKARR=()
 
@@ -103,6 +104,10 @@ proc parse_args(; argv) {
       -A | --add {
         setvar opt += 1
         setglobal OptionalModules = OptionalModules ++ split(argv[opt], ',')
+      }
+
+      -C | --clean {
+        setglobal CleanInstallDir = true
       }
 
       -* {
@@ -273,7 +278,9 @@ var load_config = ^(
 proc elaborate_tasks() {
   var ordered_comp
   var add_task_fn
-  add_task clean_install_dir
+  if (CleanInstallDir) {
+    add_task clean_install_dir
+  }
   if (len(Components) === 1) {
     # If we only have one component, nothing depends on it and it doesn't
     # depend on anything, so we end up with an empty task list.  So we
