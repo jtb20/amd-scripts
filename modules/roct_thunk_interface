@@ -39,7 +39,7 @@ proc roct_thunk_interface_tasks {
 }
 
 # See also patch/unpatch handling in rocr_runtime, which is handled similarly
-# to making this symlink.
+# to the making of this symlink below.
 
 var roct_thunk_symlink_src = {
   "type" : "subcomponent"

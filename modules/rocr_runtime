@@ -41,6 +41,8 @@ proc unpatch_rocr_runtime() {
 }
 
 func rocr_runtime_dependencies() {
+  # Make sure we don't have the patch applied for the LLVM (runtimes) build
+  # before we build rocr_runtime separately.
   return (:| llvm roct_thunk_interface rocr_runtime_unpatch |)
 }
 
