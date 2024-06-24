@@ -11,6 +11,7 @@ func get_offload_src() {
 proc configure_offload() {
   var Build = get_objdir("offload")
   var LLVM_Build = get_objdir("llvm")
+  var LLVM_Cfg = ConfigureOpts["llvm"]
   var BuildType = get_build_type("offload")
   var Src = get_srcdir("offload")
   var Tool = get_build_tool("offload")
@@ -22,8 +23,9 @@ proc configure_offload() {
       -DOPENMP_TEST_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
       -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
       -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DLIBOMPTARGET_AMDGCN_GFXLIST=$[LLVM_Cfg.gfxlist=>join(';')] \
       -DLIBOMPTARGET_ENABLE_DEBUG=ON \
-      -DLLVM_DIR=$LLVM_Build
+      -DLLVM_DIR=$LLVM_Build \
       $Src
   }
 }

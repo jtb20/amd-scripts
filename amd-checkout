@@ -9,7 +9,11 @@ proc git_checkout (;; srcdir, destname, url, branch, shallow) {
   if test --dir "$srcdir/$destname" {
     cd "$srcdir/$destname" {
       try {
-        var remote = $(git remote show)
+        var remotes = @(git remote show)
+        if (remotes=>indexOf("origin") < 0) {
+          error "'origin' not found in remotes"
+        }
+        var remote = 'origin'
         var rem_url = $(git remote get-url $remote)
         var current = $(git branch --show-current)
         if (rem_url !== url) {
@@ -22,7 +26,7 @@ proc git_checkout (;; srcdir, destname, url, branch, shallow) {
           if (modifications !== "") {
             error "Local modifications in '$srcdir/$destname'"
           }
-          var localcommits = $(git log origin/$branch..HEAD)
+          var localcommits = $(git log $remote/$branch..HEAD)
           if (localcommits !== "") {
             error "Local commits in '$srcdir/$destname'"
           }

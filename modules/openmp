@@ -1,5 +1,9 @@
 #!/usr/bin/env ysh
 
+# This one isn't quite as abstracted as it could be, but it's only needed for
+# "--add openmp_legacy" builds, i.e. for historical versions of amd_staging,
+# etc.  So keep it simple.
+
 proc clean_openmp() {
   clean_component openmp
 }
@@ -10,7 +14,9 @@ func get_openmp_src() {
 
 proc configure_openmp() {
   var Build = get_objdir("openmp")
+  var LLVM_Src = get_srcdir("llvm")
   var LLVM_Build = get_objdir("llvm")
+  var LLVM_Cfg = ConfigureOpts["llvm"]
   var BuildType = get_build_type("openmp")
   var Src = get_srcdir("openmp")
   var Tool = get_build_tool("openmp")
@@ -22,8 +28,16 @@ proc configure_openmp() {
       -DOPENMP_TEST_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
       -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
       -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DLIBOMPTARGET_AMDGCN_GFXLIST=$[LLVM_Cfg.gfxlist=>join(';')] \
+      -DDEVICELIBS_ROOT=$[get_objdir ("device_libs")] \
+      -DLIBOMP_COPY_EXPORTS=OFF \
       -DLIBOMPTARGET_ENABLE_DEBUG=ON \
-      -DLLVM_DIR=$LLVM_Build
+      -DLLVM_DIR=$LLVM_Build \
+      -DLLVM_MAIN_INCLUDE_DIR=$LLVM_Src/llvm/include \
+      -DLIBOMPTARGET_LLVM_INCLUDE_DIRS=$LLVM_Src/llvm/include \
+      -DLIBOMP_USE_HWLOC=ON \
+      -DLIBOMP_HWLOC_INSTALL_DIR=$[get_objdir ("hwloc")] \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR/lib/cmake \
       $Src
   }
 }
@@ -37,7 +51,7 @@ proc install_openmp() {
 }
 
 func openmp_dependencies() {
-  return (:| offload |)
+  return (:| llvm device_libs hwloc |)
 }
 
 proc openmp_tasks {
