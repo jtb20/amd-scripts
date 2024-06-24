@@ -1,0 +1,58 @@
+#!/usr/bin/env ysh
+
+proc clean_flang_legacy() {
+  clean_component flang_legacy
+}
+
+func get_flang_legacy_src() {
+  return (get_src_default ("flang_legacy"))
+}
+
+proc configure_flang_legacy() {
+  var Build = get_objdir("flang_legacy")
+  #var LLVM_Build = get_objdir("llvm")
+  #var DevLibs_Build = get_objdir("device_libs")
+  var BuildType = get_build_type("flang_legacy")
+  var Src = get_srcdir("flang_legacy")
+  var Tool = get_build_tool("flang_legacy")
+  var LLVMCfg = ConfigureOpts["llvm"]
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
+      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DCMAKE_CXX_STANDARD=17 \
+      -DBUILD_SHARED_LIBS=ON \
+      $Src/flang-legacy/$AOMP_LFL_DIR
+  }
+}
+
+proc build_symlink_flang_legacy() {
+  var LLVMLegacyObj = get_objdir("llvm_legacy")
+  var Obj = get_objdir("flang_legacy")
+  cd $Obj {
+    ln -sf $LLVMLegacyObj llvm-legacy
+  }
+}
+
+proc build_flang_legacy() {
+  cmake_build flang_legacy
+}
+
+proc install_flang_legacy() {
+  cmake_install flang_legacy
+}
+
+proc install_symlink_flang_legacy() {
+  cd $INSTALLDIR/bin {
+    ln -sf flang-legacy flang
+  }
+}
+
+func flang_legacy_dependencies() {
+  return (:| llvm_legacy llvm |)
+}
+
+proc flang_legacy_tasks {
+  add_tasks flang_legacy clean configure build_symlink build install install_symlink
+}

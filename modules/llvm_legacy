@@ -1,0 +1,49 @@
+#!/usr/bin/env ysh
+
+proc clean_llvm_legacy() {
+  clean_component llvm_legacy
+}
+
+func get_llvm_legacy_src() {
+  return (get_src_default ("llvm_legacy"))
+}
+
+proc configure_llvm_legacy() {
+  var Build = get_objdir("llvm_legacy")
+  var BuildType = get_build_type("llvm_legacy")
+  var Src = get_srcdir("llvm_legacy")
+  var Tool = get_build_tool("llvm_legacy")
+  # We probably want to support the same targets as the non-legacy LLVM.
+  var LLVMCfg = ConfigureOpts["llvm"]
+  var LLVMVersionMajor=$($INSTALLDIR/bin/clang --version | grep -oP '(?<=clang version )[0-9]+')
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DLLVM_ENABLE_PROJECTS=clang \
+      -DLLVM_TARGETS_TO_BUILD=$[join(LLVMCfg.targets, ';')] \
+      -DCLANG_DEFAULT_LINKER=lld \
+      -DLLVM_VERSION_MAJOR=$LLVMVersionMajor \
+      -DLLVM_INCLUDE_BENCHMARKS=0 \
+      -DLLVM_INCLUDE_RUNTIMES=0 \
+      -DLLVM_INCLUDE_EXAMPLES=0 \
+      -DLLVM_INCLUDE_TESTS=0 \
+      -DLLVM_INCLUDE_DOCS=0 \
+      -DLLVM_INCLUDE_UTILS=0 \
+      -DCLANG_DEFAULT_PIE_ON_LINUX=0 \
+      -DLLVM_ENABLE_ZSTD=OFF \
+      $Src/llvm
+  }
+}
+
+proc build_llvm_legacy() {
+  cmake_build llvm_legacy
+}
+
+func llvm_legacy_dependencies() {
+  return (:| llvm |)
+}
+
+proc llvm_legacy_tasks {
+  # Don't install this, it's just for flang-legacy.
+  add_tasks llvm_legacy clean configure build
+}
