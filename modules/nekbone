@@ -16,6 +16,9 @@ proc clean_results_misc_nekbone() {
 }
 
 proc test_misc_nekbone() {
+  if ! test --exists $INSTALLDIR/bin/flang1 {
+    write 'NOTE: Build with "--add flang_legacy" to test Nekbone.'
+  }
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("nekbone")
   var Obj = get_objdir ("nekbone")
@@ -41,7 +44,14 @@ proc test_misc_nekbone() {
     export FLANG
     export AOMP_GPU
 
-    $AOMP_Src/bin/run_nekbone.sh
+    try {
+      $AOMP_Src/bin/run_nekbone.sh
+    }
+    if (_status === 0) {
+      write "Success."
+    } else {
+      write "Failure."
+    }
   }
 }
 
