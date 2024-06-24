@@ -44,3 +44,8 @@ proc test_misc_nekbone() {
     $AOMP_Src/bin/run_nekbone.sh
   }
 }
+
+proc save_results_misc_nekbone(; files) {
+  gather_smoketests_results nekbone Nekbone/test/nek_gpu1
+  call files->setValue (:| nekbone.sum |)
+}

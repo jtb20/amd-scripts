@@ -90,6 +90,22 @@ var flang_src = {
 
 add_sources ("flang", flang_src)
 
+var flang_runtime_src = {
+  "type" : "subcomponent",
+  "parent" : "flang",
+  "subdir" : "."
+}
+
+add_sources ("flang_runtime", flang_runtime_src)
+
+var pgmath_src = {
+  "type" : "subcomponent",
+  "parent" : "flang",
+  "subdir" : "runtime/libpgmath"
+}
+
+add_sources ("pgmath", pgmath_src)
+
 # The Last Frozen LLVM version (see aomp/build_flang-legacy.sh).  This is a
 # physical directory in the flang repo.  Components are built separately.
 const AOMP_LFL_DIR="17.0-4"

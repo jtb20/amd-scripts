@@ -1,0 +1,53 @@
+#!/usr/bin/env ysh
+
+proc clean_flang_runtime() {
+  clean_component flang_runtime
+}
+
+func get_flang_runtime_src() {
+  return (get_src_default ("flang_runtime"))
+}
+
+proc configure_flang_runtime() {
+  var Build = get_objdir("flang_runtime")
+  var LLVM_Build = get_objdir("llvm")
+  var BuildType = get_build_type("flang_runtime")
+  var Src = get_srcdir("flang_runtime")
+  var Tool = get_build_tool("flang_runtime")
+  var LLVMCfg = ConfigureOpts["llvm"]
+  var CompIncDir = "$Src/runtime/libpgmath/lib/common"
+  var OpenMPBuildRuntimeSrc = "$LLVM_Build/runtimes/runtimes-bins/openmp/runtime/src"
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DLLVM_ENABLE_ASSERTIONS=ON \
+      -DLLVM_CONFIG=$INSTALLDIR/bin/llvm-config \
+      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
+      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DCMAKE_C_FLAGS="${CFLAGS:-} -I$CompIncDir" \
+      -DCMAKE_CXX_FLAGS="${CXXFLAGS:-} -I$CompIncDir" \
+      -DCMAKE_Fortran_COMPILER=$INSTALLDIR/bin/flang \
+      -DLLVM_TARGETS_TO_BUILD=$[join(LLVMCfg.targets, ';')] \
+      -DLLVM_INSTALL_RUNTIME=ON \
+      -DFLANG_BUILD_RUNTIME=ON \
+      -DOPENMP_BUILD_DIR=$OpenMPBuildRuntimeSrc \
+      -DFLANG_INCLUDE_TESTS=OFF \
+      $Src
+  }
+}
+
+proc build_flang_runtime() {
+  cmake_build flang_runtime
+}
+
+proc install_flang_runtime() {
+  cmake_install flang_runtime
+}
+
+func flang_runtime_dependencies() {
+  return (:| llvm flang flang_legacy pgmath |)
+}
+
+proc flang_runtime_tasks {
+  standard_tasks flang_runtime
+}

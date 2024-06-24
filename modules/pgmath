@@ -1,0 +1,59 @@
+#!/usr/bin/env ysh
+
+proc clean_pgmath() {
+  clean_component pgmath
+}
+
+func get_pgmath_src() {
+  return (get_src_default ("pgmath"))
+}
+
+func pgmath_get_clang_includes() {
+  var Includes = glob("$INSTALLDIR/lib/clang/*/include")
+  if (len(Includes) !== 1) {
+    error "Expected a single Clang include dir, found $[len(Includes)]"
+  }
+  return (Includes[0])
+}
+
+proc configure_pgmath() {
+  var Build = get_objdir("pgmath")
+  var BuildType = get_build_type("pgmath")
+  var Src = get_srcdir("pgmath")
+  var Tool = get_build_tool("pgmath")
+  var LLVMCfg = ConfigureOpts["llvm"]
+  var CompIncDir = pgmath_get_clang_includes ()
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DLLVM_ENABLE_ASSERTIONS=ON \
+      -DLLVM_CONFIG=$INSTALLDIR/bin/llvm-config \
+      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
+      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DCMAKE_C_FLAGS="${CFLAGS:-} -I$CompIncDir" \
+      -DCMAKE_CXX_FLAGS="${CXXFLAGS:-} -I$CompIncDir" \
+      -DCMAKE_Fortran_COMPILER=$INSTALLDIR/bin/flang \
+      -DLLVM_TARGETS_TO_BUILD=$[join(LLVMCfg.targets, ';')] \
+      -DFLANG_OPENMP_GPU_AMD=ON \
+      -DFLANG_OPENMP_GPU_NVIDIA=ON \
+      -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
+      -DFLANG_INCLUDE_TESTS=OFF \
+      $Src
+  }
+}
+
+proc build_pgmath() {
+  cmake_build pgmath
+}
+
+proc install_pgmath() {
+  cmake_install pgmath
+}
+
+func pgmath_dependencies() {
+  return (:| llvm flang_legacy |)
+}
+
+proc pgmath_tasks {
+  standard_tasks pgmath
+}

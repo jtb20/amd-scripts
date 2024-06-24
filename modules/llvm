@@ -77,7 +77,7 @@ proc run_llvm_check(check_target) {
     if (Tool === "Ninja") {
       try {
         if (SelectTests !== null) {
-          # This is a regex, not a glob.  Consistency, schmonstistency.
+          # This is a regex, not a glob.  Consistency, schmonsistency.
           LIT_FILTER=$SelectTests LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
         } else {
           LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
