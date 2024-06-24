@@ -79,3 +79,33 @@ var omp5_src = {
 }
 
 add_sources ("omp5", omp5_src)
+
+var flang_src = {
+  "url" : "https://github.com/ROCm/flang",
+  "type" : "git",
+  "version" : "aomp-dev",
+  "version_name" : "aomp_dev",
+  "shallow_clone" : false
+}
+
+add_sources ("flang", flang_src)
+
+# The Last Frozen LLVM version (see aomp/build_flang-legacy.sh).  This is a
+# physical directory in the flang repo.  Components are built separately.
+const AOMP_LFL_DIR="17.0-4"
+
+var flang_legacy_src = {
+  "type" : "subcomponent",
+  "parent" : "flang",
+  "subdir" : "flang-legacy/$AOMP_LFL_DIR"
+}
+
+add_sources ("flang_legacy", flang_legacy_src)
+
+var llvm_legacy_src = {
+  "type" : "subcomponent",
+  "parent" : "flang",
+  "subdir" : "flang-legacy/$AOMP_LFL_DIR/llvm-legacy"
+}
+
+add_sources ("llvm_legacy", llvm_legacy_src)

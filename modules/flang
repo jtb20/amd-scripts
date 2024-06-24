@@ -1,0 +1,53 @@
+#!/usr/bin/env ysh
+
+proc clean_flang() {
+  clean_component flang
+}
+
+func get_flang_src() {
+  return (get_src_default ("flang"))
+}
+
+proc configure_flang() {
+  var Build = get_objdir("flang")
+  #var LLVM_Build = get_objdir("llvm")
+  #var DevLibs_Build = get_objdir("device_libs")
+  var BuildType = get_build_type("flang")
+  var Src = get_srcdir("flang")
+  var Tool = get_build_tool("flang")
+  var LLVMCfg = ConfigureOpts["llvm"]
+  var CompIncDir = "$Src/runtime/libpgmath/lib/common"
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DLLVM_ENABLE_ASSERTIONS=ON \
+      -DLLVM_CONFIG=$INSTALLDIR/bin/llvm-config \
+      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
+      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DCMAKE_C_FLAGS="${CFLAGS:-} -I$CompIncDir" \
+      -DCMAKE_CXX_FLAGS="${CXXFLAGS:-} -I$CompIncDir" \
+      -DCMAKE_Fortran_COMPILER=gfortran \
+      -DLLVM_TARGETS_TO_BUILD=$[join(LLVMCfg.targets, ';')] \
+      -DFLANG_OPENMP_GPU_AMD=ON \
+      -DFLANG_OPENMP_GPU_NVIDIA=ON \
+      -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
+      -DFLANG_INCLUDE_TESTS=OFF \
+      $Src
+  }
+}
+
+proc build_flang() {
+  cmake_build flang
+}
+
+proc install_flang() {
+  cmake_install flang
+}
+
+func flang_dependencies() {
+  return (:| llvm |)
+}
+
+proc flang_tasks {
+  standard_tasks flang
+}
