@@ -171,7 +171,6 @@ proc add_components(...components) {
         # module, invoke it now.  Configuration files can then append their
         # own options, etc. as necessary.
         eval "default_configure_opts_${comp}"
-        write "Set default configuration opts for $comp"
       }
     }
   }
