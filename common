@@ -77,6 +77,14 @@ func in_list(item, inlist) {
   return (inlist=>indexOf(item) >= 0)
 }
 
+func has_proc (procname) {
+  var t = null
+  try > /dev/null 2>&1 {
+    setvar t = "$(type -t $procname)"
+  }
+  return (_status === 0 and t === 'function')
+}
+
 proc parse_args(; argv) {
   var spec
   var tasks
@@ -158,6 +166,13 @@ proc add_components(...components) {
         add_components @cond_deps
       }
       append $comp (Components)
+      if (has_proc ("default_configure_opts_${comp}")) {
+        # If we have a "default_configure_opts_${comp}" procedure for the
+        # module, invoke it now.  Configuration files can then append their
+        # own options, etc. as necessary.
+        eval "default_configure_opts_${comp}"
+        write "Set default configuration opts for $comp"
+      }
     }
   }
 }
@@ -431,7 +446,7 @@ proc do_task_number (; num) {
     write "Task '$taskfn' failed. Current log file is $CurrentLogFile"
     write "Last 20 lines:"
     tail -n 20 $CurrentLogFile
-    if ("message" in _error) {
+    if (_error.status !== 0 and "message" in _error) {
       error "$[_error.message]"
     } else {
       exit 1
@@ -514,6 +529,9 @@ proc clean_install_dir () {
 }
 
 proc add_optional_modules() {
+  if (len(OptionalModules) > 0 and not has_proc ("add_optional_module")) {
+    error "Optional modules not supported for this config"
+  }
   # We don't want to force configs to define the add_optional_module function
   # if they don't need it.  Try to avoid failing if we don't have it.
   try {
@@ -521,12 +539,8 @@ proc add_optional_modules() {
       add_optional_module $Mod
     }
   }
-  if (_status !== 0) {
-    if ("message" in _error) {
-      error "$[_error.message]"
-    } else {
-      error "Optional modules not supported for this config"
-    }
+  if (_status !== 0 and _error.status !== 0 and "message" in _error) {
+    error "$[_error.message]"
   }
 }
 

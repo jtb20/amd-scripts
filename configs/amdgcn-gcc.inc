@@ -19,13 +19,10 @@ add_sources ("binutils", binutils_src)
 
 add_components accel_gcc_first accel_newlib accel_gcc gcc
 
-default_configure_opts_llvm
-
 set_configure_key ("llvm", "projects", :| lld |)
 set_configure_key ("llvm", "targets", :| X86 AMDGPU |)
 set_configure_key ("llvm", "runtimes", [])
 
-default_configure_opts_accel_gcc_first
 set_target ("accel_gcc_first", "amdgcn-amdhsa")
 append_configure_opts ("accel_gcc_first", :| --with-sysroot=/opt/amd
                                              --with-build-sysroot=$INSTALLDIR/amdgcn-amdhsa
@@ -37,11 +34,9 @@ append_configure_opts ("accel_gcc_first", :| --with-sysroot=/opt/amd
                                              --disable-libgomp
                                              --disable-libssp |)
 
-default_configure_opts_accel_newlib
 set_target ("accel_newlib", "amdgcn-amdhsa")
 append_configure_opts ("accel_newlib", :| --enable-newlib-io-long-long |)
 
-default_configure_opts_accel_gcc
 set_target ("accel_gcc", "amdgcn-amdhsa")
 append_configure_opts ("accel_gcc", :| --with-sysroot=/opt/amd
                                        --with-build-sysroot=$INSTALLDIR/amdgcn-amdhsa
@@ -56,8 +51,6 @@ func gcc_conditional_deps() {
   return (:| accel_gcc |)
 }
 
-# These default functions could be called automatically from somewhere...
-default_configure_opts_gcc
 set_target ("gcc", "x86_64-linux-gnu")
 append_configure_opts ("gcc", :| --enable-offload-targets=amdgcn-amdhsa
                                  --enable-lto
