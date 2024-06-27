@@ -85,6 +85,11 @@ func has_proc (procname) {
   return (_status === 0 and t === 'function')
 }
 
+proc clear_error () {
+  setglobal _error.message = null
+  setglobal _error.status = 0
+}
+
 proc parse_args(; argv) {
   var spec
   var tasks
@@ -165,6 +170,8 @@ proc add_components(...components) {
         var cond_deps = lookup_func ("${comp}_conditional_deps")()
         add_components @cond_deps
       }
+      # Wipe 'sticky' errors from failed lookup_func above.
+      clear_error
       append $comp (Components)
       if (has_proc ("default_configure_opts_${comp}")) {
         # If we have a "default_configure_opts_${comp}" procedure for the
@@ -312,6 +319,7 @@ proc elaborate_tasks() {
           setvar CompWithDeps[dep] = true
         }
       }
+      clear_error
     }
     for comp in (Components) {
       if (comp not in CompWithDeps) {
