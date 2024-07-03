@@ -1,0 +1,14 @@
+#!/usr/bin/env ysh
+
+func get_hsa_runtime_src() {
+  return (get_src_default ("hsa_runtime"))
+}
+
+func hsa_runtime_dependencies() {
+  return ([])
+}
+
+proc hsa_runtime_tasks {
+  # No tasks!
+  true
+}
