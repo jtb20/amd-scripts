@@ -1,0 +1,42 @@
+#!/usr/bin/env ysh
+
+proc clean_rocprofiler_register() {
+  clean_component rocprofiler_register
+}
+
+func get_rocprofiler_register_src() {
+  return (get_src_default ("rocprofiler_register"))
+}
+
+proc configure_rocprofiler_register() {
+  var Build = get_objdir("rocprofiler_register")
+  var Src = get_srcdir("rocprofiler_register")
+  var BuildType = get_build_type("rocprofiler_register")
+  var Tool = get_build_tool("rocprofiler_register")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DBUILD_SHARED_LIBS=YES \
+      -DENABLE_LDCONFIG=OFF \
+      -DROCPROFILER_REGISTER_BUILD_CI=1 \
+      -DROCPROFILER_REGISTER_BUILD_TESTS=1 \
+      -DROCPROFILER_REGISTER_BUILD_SAMPLES=1 \
+      $Src
+  }
+}
+
+proc build_rocprofiler_register() {
+  cmake_build rocprofiler_register
+}
+
+proc install_rocprofiler_register() {
+  cmake_install rocprofiler_register
+}
+
+func rocprofiler_register_dependencies() {
+  return (:| rocm_cmake llvm |)
+}
+
+proc rocprofiler_register_tasks() {
+  standard_tasks rocprofiler_register
+}
