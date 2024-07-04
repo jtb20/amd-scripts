@@ -17,6 +17,16 @@ proc configure_rocr_runtime() {
   var BuildType = get_build_type("rocr_runtime")
   var Src = get_srcdir("rocr_runtime")
   var Tool = get_build_tool("rocr_runtime")
+  var SrcSubdir = Src
+  if test --exists $Src/src {
+    # There are two arrangements for the rocr_runtime component -- as a
+    # component of that name (e.g. for ROCm 6.1) or as a subdirectory of the
+    # hsa_runtime component (e.g. for ROCm 6.3).  The former has a "src"
+    # subdirectory, the latter an "opensrc/hsa-runtime" subdirectory  (which we
+    # get as part of the source path above).  This awkward condition supports
+    # both versions.
+    setvar SrcSubdir = "$Src/src"
+  }
   cd $Build {
     # PATH=$INSTALLDIR/bin:$[sanitize_path (PATH)]
     cmake -G $Tool \
@@ -24,7 +34,7 @@ proc configure_rocr_runtime() {
       -DCMAKE_PREFIX_PATH=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DIMAGE_SUPPORT=OFF \
-      $Src/src
+      $SrcSubdir
   }
 }
 
@@ -41,8 +51,6 @@ proc unpatch_rocr_runtime() {
 }
 
 func rocr_runtime_dependencies() {
-  # Make sure we don't have the patch applied for the LLVM (runtimes) build
-  # before we build rocr_runtime separately.
   return (:| llvm roct_thunk_interface |)
 }
 
