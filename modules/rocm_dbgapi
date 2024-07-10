@@ -1,0 +1,50 @@
+#!/usr/bin/env ysh
+
+proc clean_rocm_dbgapi() {
+  clean_component rocm_dbgapi
+}
+
+func get_rocm_dbgapi_src() {
+  return (get_src_default ("rocm_dbgapi"))
+}
+
+proc configure_rocm_dbgapi() {
+  var Build = get_objdir("rocm_dbgapi")
+  var Src = get_srcdir("rocm_dbgapi")
+  var BuildType = get_build_type("rocm_dbgapi")
+  var Tool = get_build_tool("rocm_dbgapi")
+  var LLVMCfg = ConfigureOpts["llvm"]
+  var GPUList = join(LLVMCfg.gfxlist, ';')
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_MODULE_PATH="$[get_srcdir("rocprofiler")]/cmake_modules" \
+      -DBUILD_SHARED_LIBS=YES \
+      -DENABLE_LDCONFIG=OFF \
+      -DUSE_GET_ROCM_PATH_API=1 \
+      -DGPU_TARGETS=$GPUList \
+      -DPython3_EXECUTABLE=$(which python3) \
+      -DHIP_HIPCC_FLAGS="${HIP_HIPCC_FLAGS:-};--offload-arch=$GPUList" \
+      -DCPACK_OBJCOPY_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objcopy \
+      -DCPACK_READELF_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-readelf \
+      -DCPACK_STRIP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-strip \
+      -DCPACK_OBJDUMP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objdump \
+      $Src
+  }
+}
+
+proc build_rocm_dbgapi() {
+  cmake_build rocm_dbgapi
+}
+
+proc install_rocm_dbgapi() {
+  cmake_install rocm_dbgapi
+}
+
+func rocm_dbgapi_dependencies() {
+  return (:| hipcc hipamd llvm |)
+}
+
+proc rocm_dbgapi_tasks() {
+  standard_tasks rocm_dbgapi
+}

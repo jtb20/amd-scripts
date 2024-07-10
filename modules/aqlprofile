@@ -1,0 +1,62 @@
+#!/usr/bin/env ysh
+
+proc clean_aqlprofile() {
+  clean_component aqlprofile
+}
+
+func get_aqlprofile_src() {
+  return (get_src_default ("aqlprofile"))
+}
+
+proc configure_aqlprofile() {
+  var Build = get_objdir("aqlprofile")
+  var Src = get_srcdir("aqlprofile")
+  var BuildType = get_build_type("aqlprofile")
+  var Tool = get_build_tool("aqlprofile")
+  var GPUList = join(ConfigureOpts.llvm.gfxlist, ',')
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_MODULE_PATH=$Src/cmake_modules \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DBUILD_SHARED_LIBS=YES \
+      -DENABLE_LDCONFIG=OFF \
+      -DGPU_TARGETS=$GPUList \
+      -DHIP_HIPCC_FLAGS="--rocm-path=$INSTALLDIR ${HIP_HIPCC_FLAGS:-};--offload-arch=$GPUList" \
+      -DCPACK_OBJCOPY_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objcopy \
+      -DCPACK_READELF_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-readelf \
+      -DCPACK_STRIP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-strip \
+      -DCPACK_OBJDUMP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objdump \
+      $Src
+  }
+}
+
+proc build_aqlprofile() {
+  cmake_build aqlprofile
+}
+
+# This is actually prerequisite for the "install" step, because it builds
+# some artifacts (e.g. in test/simple_convolution/...)
+proc test_aqlprofile() {
+  var Build = get_objdir("aqlprofile")
+  var Tool = get_build_tool("aqlprofile")
+  cd $Build {
+    if (Tool === "Ninja") {
+      ninja test
+    } else {
+      make test
+    }
+  }
+}
+
+proc install_aqlprofile() {
+  cmake_install aqlprofile
+}
+
+func aqlprofile_dependencies() {
+  return (:| llvm hipamd |)
+}
+
+proc aqlprofile_tasks() {
+  add_tasks aqlprofile clean configure build test install
+}

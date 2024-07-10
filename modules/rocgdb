@@ -1,0 +1,47 @@
+#!/usr/bin/env ysh
+
+proc clean_rocgdb() {
+  clean_component rocgdb
+}
+
+func get_rocgdb_src() {
+  return (get_src_default ("rocgdb"))
+}
+
+proc configure_rocgdb() {
+  standard_configure rocgdb
+}
+
+proc build_rocgdb() {
+  standard_build rocgdb
+}
+
+proc install_rocgdb() {
+  standard_install rocgdb
+}
+
+func rocgdb_dependencies() {
+  return (:| hipcc rocm_dbgapi llvm |)
+}
+
+proc rocgdb_tasks() {
+  standard_tasks rocgdb
+}
+
+proc default_configure_opts_rocgdb() {
+  set_configure_opts ("rocgdb", :| --program-prefix=roc
+                                   --htmldir=$INSTALLDIR/share/html
+                                   --pdfdir=$INSTALLDIR/share/doc/rocgdb
+                                   --infodir=$INSTALLDIR/share/info/rocgdb
+                                   --with-separate-debug-dir="$INSTALLDIR/lib/debug:/usr/lib/debug"
+                                   --enable-targets="x86_64-linux-gnu,amdgcn-amd-amdhsa"
+                                   --disable-ld --disable-gas --disable-gdbserver
+                                   --disable-sim --enable-tui --disable-gdbtk
+                                   --disable-shared --disable-gprofng
+                                   --with-expat --with-system-zlib
+                                   --without-guile --without-babeltrace
+                                   --with-lzma
+                                   --with-rocm-dbgapi=$INSTALLDIR
+                                   --with-amd-dbgapi
+                                   PKG_CONFIG_PATH=$INSTALLDIR/share/pkgconfig |)
+}

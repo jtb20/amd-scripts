@@ -1,0 +1,51 @@
+#!/usr/bin/env ysh
+
+proc clean_roctracer() {
+  clean_component roctracer
+}
+
+func get_roctracer_src() {
+  return (get_src_default ("roctracer"))
+}
+
+proc configure_roctracer() {
+  var Build = get_objdir("roctracer")
+  var Src = get_srcdir("roctracer")
+  var BuildType = get_build_type("roctracer")
+  var Tool = get_build_tool("roctracer")
+  var LLVMCfg = ConfigureOpts["llvm"]
+  var GPUList = join(LLVMCfg.targets, ';')
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_MODULE_PATH="$[get_srcdir("rocprofiler")]/cmake_modules" \
+      -DBUILD_SHARED_LIBS=YES \
+      -DENABLE_LDCONFIG=OFF \
+      -DUSE_GET_ROCM_PATH_API=1 \
+      -DGPU_TARGETS=$GPUList \
+      -DPython3_EXECUTABLE=$(which python3) \
+      -DPROF_ABI_HEADER_PATH="$[get_srcdir("roctracer")]/inc/ext" \
+      -DHIP_HIPCC_FLAGS="${HIP_HIPCC_FLAGS:-};--offload-arch=$GPUList" \
+      -DCPACK_OBJCOPY_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objcopy \
+      -DCPACK_READELF_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-readelf \
+      -DCPACK_STRIP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-strip \
+      -DCPACK_OBJDUMP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objdump \
+      $Src
+  }
+}
+
+proc build_roctracer() {
+  cmake_build roctracer
+}
+
+proc install_roctracer() {
+  cmake_install roctracer
+}
+
+func roctracer_dependencies() {
+  return (:| rocm_dbgapi device_libs |)
+}
+
+proc roctracer_tasks() {
+  standard_tasks roctracer
+}

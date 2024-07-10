@@ -1,0 +1,44 @@
+#!/usr/bin/env ysh
+
+proc clean_rocminfo() {
+  clean_component rocminfo
+}
+
+func get_rocminfo_src() {
+  return (get_src_default ("rocminfo"))
+}
+
+proc configure_rocminfo() {
+  var Build = get_objdir("rocminfo")
+  var Src = get_srcdir("rocminfo")
+  var BuildType = get_build_type("rocminfo")
+  var Tool = get_build_tool("rocminfo")
+  var GPUList = join(ConfigureOpts.llvm.gfxlist, ';')
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DROCRTST_BLD_TYPE=$BuildType \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DBUILD_SHARED_LIBS=YES \
+      -DCPACK_PACKAGE_VERSION_MAJOR="1" \
+      -DCPACK_PACKAGE_VERSION_MINOR="0" \
+      -DCPACK_PACKAGE_VERSION_PATCH="0" \
+      -DCMAKE_SKIP_BUILD_RPATH=TRUE \
+      $Src
+  }
+}
+
+proc build_rocminfo() {
+  LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" cmake_build rocminfo
+}
+
+proc install_rocminfo() {
+  cmake_install rocminfo
+}
+
+func rocminfo_dependencies() {
+  return (:| rocr_runtime |)
+}
+
+proc rocminfo_tasks() {
+  standard_tasks rocminfo
+}
