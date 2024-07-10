@@ -81,6 +81,7 @@ var qmcpack_src = {
 add_sources ("qmcpack", qmcpack_src)
 
 var sollve_vv_src = {
+  # Moved to: https://github.com/OpenMP-Validation-and-Verification/OpenMP_VV
   "url" : "https://github.com/SOLLVE/sollve_vv",
   "type" : "git",
   "version" : "master",
