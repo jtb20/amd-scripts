@@ -15,19 +15,22 @@ proc configure_aqlprofile() {
   var Tool = get_build_tool("aqlprofile")
   var GPUList = join(ConfigureOpts.llvm.gfxlist, ',')
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-      -DCMAKE_BUILD_TYPE=$BuildType \
-      -DCMAKE_MODULE_PATH=$Src/cmake_modules \
-      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
-      -DBUILD_SHARED_LIBS=YES \
-      -DENABLE_LDCONFIG=OFF \
-      -DGPU_TARGETS=$GPUList \
-      -DHIP_HIPCC_FLAGS="--rocm-path=$INSTALLDIR ${HIP_HIPCC_FLAGS:-};--offload-arch=$GPUList" \
-      -DCPACK_OBJCOPY_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objcopy \
-      -DCPACK_READELF_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-readelf \
-      -DCPACK_STRIP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-strip \
-      -DCPACK_OBJDUMP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objdump \
-      $Src
+    shvar HIPCC_COMPILE_FLAGS_APPEND="--rocm-path=$INSTALLDIR --offload-arch=$GPUList" \
+          ROCM_PATH=$INSTALLDIR {
+      cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+        -DCMAKE_BUILD_TYPE=$BuildType \
+        -DCMAKE_MODULE_PATH=$Src/cmake_modules \
+        -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+	-DROCM_PATH=$INSTALLDIR \
+        -DBUILD_SHARED_LIBS=YES \
+        -DENABLE_LDCONFIG=OFF \
+        -DGPU_TARGETS=$GPUList \
+        -DCPACK_OBJCOPY_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objcopy \
+        -DCPACK_READELF_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-readelf \
+        -DCPACK_STRIP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-strip \
+        -DCPACK_OBJDUMP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objdump \
+        $Src
+    }
   }
 }
 
@@ -40,11 +43,12 @@ proc build_aqlprofile() {
 proc test_aqlprofile() {
   var Build = get_objdir("aqlprofile")
   var Tool = get_build_tool("aqlprofile")
+  var GPUList = join(ConfigureOpts.llvm.gfxlist, ',')
   cd $Build {
     if (Tool === "Ninja") {
-      ninja test
+      ROCM_PATH=$INSTALLDIR ninja test
     } else {
-      make test
+      make test ROCM_PATH=$INSTALLDIR
     }
   }
 }

@@ -15,37 +15,58 @@ proc configure_rocprofiler() {
   var Tool = get_build_tool("rocprofiler")
   # NOTE: For tonight only, the gfx separator is comma not semicolon.
   var GPUList = join(ConfigureOpts.rocprofiler.gfxlist, ',')
-  cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-      -DCMAKE_BUILD_TYPE=$BuildType \
-      -DCMAKE_MODULE_PATH="$[get_srcdir("rocprofiler")]/cmake_modules" \
-      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
-      -DBUILD_SHARED_LIBS=YES \
-      -DENABLE_LDCONFIG=OFF \
-      -DUSE_GET_ROCM_PATH_API=1 \
-      -DGPU_TARGETS=$GPUList \
-      -DPython3_EXECUTABLE=$(which python3) \
-      -DPROF_ABI_HEADER_PATH="$[get_srcdir("roctracer")]/inc/ext" \
-      -DHIP_HIPCC_FLAGS="${HIP_HIPCC_FLAGS:-};--offload-arch=$GPUList" \
-      -DCPACK_OBJCOPY_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objcopy \
-      -DCPACK_READELF_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-readelf \
-      -DCPACK_STRIP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-strip \
-      -DCPACK_OBJDUMP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objdump \
-      $Src
+  shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" \
+        ROCM_PATH=$INSTALLDIR \
+        HIP_PATH=$INSTALLDIR {
+    export LD_LIBRARY_PATH
+    export ROCM_PATH
+    export HIP_PATH
+    cd $Build {
+      cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+        -DCMAKE_BUILD_TYPE=$BuildType \
+        -DCMAKE_MODULE_PATH="$[get_srcdir("rocprofiler")]/cmake_modules" \
+        -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+        -DBUILD_SHARED_LIBS=YES \
+        -DENABLE_LDCONFIG=OFF \
+        -DUSE_GET_ROCM_PATH_API=1 \
+        -DGPU_TARGETS=$GPUList \
+        -DPython3_EXECUTABLE=$(which python3) \
+        -DPROF_ABI_HEADER_PATH="$[get_srcdir("roctracer")]/inc/ext" \
+        -DHIP_HIPCC_FLAGS="${HIP_HIPCC_FLAGS:-};--offload-arch=$GPUList" \
+        -DCPACK_OBJCOPY_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objcopy \
+        -DCPACK_READELF_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-readelf \
+        -DCPACK_STRIP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-strip \
+        -DCPACK_OBJDUMP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objdump \
+        $Src
+    }
   }
 }
 
 proc build_rocprofiler() {
-  LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" cmake_build rocprofiler
+  shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" \
+        ROCM_PATH=$INSTALLDIR \
+        HIP_PATH=$INSTALLDIR {
+    export LD_LIBRARY_PATH
+    export ROCM_PATH
+    export HIP_PATH
+    cmake_build rocprofiler
+  }
 }
 
 proc install_rocprofiler() {
-  LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" cmake_install rocprofiler
+  shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" \
+        ROCM_PATH=$INSTALLDIR \
+        HIP_PATH=$INSTALLDIR {
+    export LD_LIBRARY_PATH
+    export ROCM_PATH
+    export HIP_PATH
+    cmake_install rocprofiler
+  }
 }
 
 func rocprofiler_dependencies() {
   return (:| rocm_dbgapi hipamd device_libs aqlprofile rocprofiler_register
-             rocminfo |)
+             rocminfo rocprofiler_sdk roctracer |)
 }
 
 proc rocprofiler_tasks() {

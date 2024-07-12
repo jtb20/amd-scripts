@@ -1,0 +1,67 @@
+#!/usr/bin/env ysh
+
+proc clean_rocprofiler_sdk() {
+  clean_component rocprofiler_sdk
+}
+
+func get_rocprofiler_sdk_src() {
+  return (get_src_default ("rocprofiler_sdk"))
+}
+
+proc configure_rocprofiler_sdk() {
+  var Build = get_objdir("rocprofiler_sdk")
+  var Src = get_srcdir("rocprofiler_sdk")
+  var BuildType = get_build_type("rocprofiler_sdk")
+  var Tool = get_build_tool("rocprofiler_sdk")
+  var GPUList = join(ConfigureOpts.rocprofiler.gfxlist, ';')
+  shvar HIP_CLANG_PATH=$INSTALLDIR/bin \
+        ROCM_PATH=$INSTALLDIR \
+        HIP_PATH=$INSTALLDIR {
+    export HIP_CLANG_PATH
+    export ROCM_PATH
+    export HIP_PATH
+    cd $Build {
+      cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+        -DCMAKE_BUILD_TYPE=$BuildType \
+        -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+        -DBUILD_SHARED_LIBS=YES \
+        -DGPU_TARGETS=$GPUList \
+        -DPython3_EXECUTABLE=$(which python3) \
+        -DROCPROFILER_BUILD_SAMPLES=ON \
+        -DROCPROFILER_BUILD_TESTS=ON \
+        -DCPACK_DEBIAN_PACKAGE_SHLIBDEPS=OFF \
+        $Src
+    }
+  }
+}
+
+proc build_rocprofiler_sdk() {
+  shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" \
+        ROCM_PATH=$INSTALLDIR \
+        HIP_PATH=$INSTALLDIR {
+    export LD_LIBRARY_PATH
+    export ROCM_PATH
+    export HIP_PATH
+    cmake_build rocprofiler_sdk
+  }
+}
+
+proc install_rocprofiler_sdk() {
+  shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" \
+        ROCM_PATH=$INSTALLDIR \
+        HIP_PATH=$INSTALLDIR {
+    export LD_LIBRARY_PATH
+    export ROCM_PATH
+    export HIP_PATH
+    cmake_install rocprofiler_sdk
+  }
+}
+
+func rocprofiler_sdk_dependencies() {
+  # Not sure if all of these are needed.
+  return (:| rocm_dbgapi hipamd device_libs rocprofiler_register rocminfo |)
+}
+
+proc rocprofiler_sdk_tasks() {
+  standard_tasks rocprofiler_sdk
+}

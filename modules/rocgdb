@@ -13,11 +13,11 @@ proc configure_rocgdb() {
 }
 
 proc build_rocgdb() {
-  standard_build rocgdb
+  LD_LIBRARY_PATH=$INSTALLDIR/lib:${LD_LIBRARY_PATH:-} standard_build rocgdb
 }
 
 proc install_rocgdb() {
-  standard_install rocgdb
+  LD_LIBRARY_PATH=$INSTALLDIR/lib:${LD_LIBRARY_PATH:-} standard_install rocgdb
 }
 
 func rocgdb_dependencies() {
