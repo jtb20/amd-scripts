@@ -23,6 +23,7 @@ const DefaultParallelism=32
 var GithubUsername=""
 var OptionalModules=[]
 var CleanInstallDir=false
+var NoBWrap = false
 var TASKLIST=[]
 var TASKARR=()
 
@@ -119,8 +120,22 @@ proc parse_args(; argv) {
         setglobal OptionalModules = OptionalModules ++ split(argv[opt], ',')
       }
 
+      -B | --no-bwrap {
+        setglobal NoBWrap = true
+      }
+
       -C | --clean {
         setglobal CleanInstallDir = true
+      }
+
+      --shell {
+        if (NoBWrap) {
+          write """
+*** This is a bubble-wrapped shell, unless you explicitly specified
+*** -B/--no-bwrap on the command line.  Exit with ctrl-D.
+"""
+          exec $SHELL
+        }
       }
 
       -* {
@@ -549,6 +564,84 @@ proc add_optional_modules() {
   if (_status !== 0 and _error.status !== 0 and "message" in _error) {
     error "$[_error.message]"
   }
+}
+
+# Unset variables apart from those in the whitelist.  Invoke like this:
+#
+# unset @(unset_varlist)
+proc unset_varlist() {
+  var current=$(env -0)=>split(b'\y00')
+  var bashfunc = / 'BASH_FUNC_' .* /
+  var kv = / <capture (w|'_')+ (alnum|'_')* as key> '=' <capture dot* as value> /
+  var env_whitelist = :| _ PATH HOME TERM LANG PWD OLDPWD USER LOGNAME SHELL
+                         NAME SHLVL HOSTTYPE LINES COLUMNS |
+
+  for x in (current) {
+    if (x ~ bashfunc) {
+      :
+    } elif (x ~ kv) {
+      var Key = _group('key')
+      if (env_whitelist=>indexOf(Key) < 0) {
+        write -- $Key
+      }
+    } else {
+      error "Unexpected environment var setting: $x"
+    }
+  }
+}
+
+# This is meant to be used with 'Bernstein chaining', i.e. as a prefix to
+# another command, i.e.:
+#
+# rocm_env cmake_build my_component
+
+proc rocm_env {
+  shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" \
+        HIP_CLANG_PATH=$INSTALLDIR/bin \
+        ROCM_PATH=$INSTALLDIR \
+        HIP_PATH=$INSTALLDIR \
+        LLVM_PATH=$INSTALLDIR {
+    export LD_LIBRARY_PATH
+    export ROCM_PATH
+    export HIP_PATH
+    export HIP_CLANG_PATH
+    export LLVM_PATH
+    @ARGV
+  }
+}
+
+#proc tidyup_tmp_dirs() {
+#  for dir in /tmp/tmp.amdscripts.* {
+#    rmdir $dir
+#  }
+#}
+
+proc do_bwrap {
+  # Not beautiful but it'll do.
+  #tidyup_tmp_dirs
+  #var tmp1 = $(mktemp -d /tmp/tmp.amdscripts.XXXXXX)
+  #var tmp2 = $(mktemp -d /tmp/tmp.amdscripts.XXXXXX)
+  #trap tidyup_tmp_dirs INT EXIT KILL QUIT HUP
+  # There's stuff in /usr/local that we need, e.g. a more recent version of
+  # 'cmake' than the one in /usr (at least on dell-rack-14).  FIXME.
+        #--ro-bind $tmp2 /usr/local \
+  bwrap --ro-bind / / \
+        --bind /tmp /tmp \
+        --bind /home /home \
+        --bind /work /work \
+        --tmpfs /opt \
+        --tmpfs /usr/lib/cmake \
+        --dev /dev \
+        --proc /proc \
+        --unshare-pid \
+        --unshare-net \
+        --die-with-parent \
+        @ARGV
+
+  # These won't get removed if the above fails of course.  The 'trap' should
+  # do it, but might fail to execute.
+  #rmdir $tmp1
+  #rmdir $tmp2
 }
 
 # Loading these on demand is a bit awkward. Never mind, just load them all

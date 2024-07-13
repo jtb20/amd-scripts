@@ -16,13 +16,16 @@ proc configure_hipamd() {
   var Src = get_srcdir("hipamd")
   var Tool = get_build_tool("hipamd")
   cd $Build {
-    LLVM_DIR=$INSTALLDIR cmake -G $Tool \
+    rocm_env cmake -G $Tool \
       -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DHIP_COMMON_DIR=$HipSrc \
       -DHIP_PLATFORM=amd \
       -DHIP_COMPILER=clang \
       -DCMAKE_HIP_ARCHITECTURES=OFF \
+      -DHIP_ENABLE_ROCPROFILER_REGISTER=ON \
+      -DROCM_PATH=$INSTALLDIR \
+      -DHIP_LLVM_ROOT=$INSTALLDIR \
       -DCLR_BUILD_HIP=ON \
       -DCLR_BUILD_OCL=ON \
       -DHIPCC_BIN_DIR=$HipCCBuild \
@@ -31,11 +34,11 @@ proc configure_hipamd() {
 }
 
 proc build_hipamd() {
-  cmake_build hipamd
+  rocm_env cmake_build hipamd
 }
 
 proc install_hipamd() {
-  cmake_install hipamd
+  rocm_env cmake_install hipamd
 }
 
 proc llvm_symlink_hipamd() {
@@ -46,7 +49,8 @@ proc llvm_symlink_hipamd() {
 }
 
 func hipamd_dependencies() {
-  return (:| roct_thunk_interface rocr_runtime comgr hipcc hip |)
+  return (:| roct_thunk_interface rocr_runtime comgr hipcc hip
+             rocprofiler_register |)
 }
 
 proc hipamd_tasks {

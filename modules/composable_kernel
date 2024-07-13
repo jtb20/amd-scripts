@@ -16,39 +16,19 @@ proc configure_composable_kernel() {
   #local HIPCC_COMPILE_FLAGS_APPEND
 
   cd $Build {
-    shvar HIP_CLANG_PATH=$INSTALLDIR/bin \
-          ROCM_PATH=$INSTALLDIR \
-          HIP_PATH=$INSTALLDIR \
-          LLVM_PATH=$INSTALLDIR \
-          GPU_TARGETS="" {
-      export HIP_CLANG_PATH
-      export HIP_PATH
-      export LLVM_PATH
-      unset GPU_TARGETS
-      #export HIPCC_COMPILE_FLAGS_APPEND="-mllvm -amdgpu-mfma-padding-ratio=100 -mllvm -verify-machineinstrs -mllvm -amdgpu-waitcnt-forcezero"
-      cmake -G $Tool -S $Src -D CMAKE_PREFIX_PATH=$INSTALLDIR \
-        -D CMAKE_CXX_COMPILER="$INSTALLDIR/bin/hipcc" \
-        -D CMAKE_BUILD_TYPE=$BuildType
-    }
+    #export HIPCC_COMPILE_FLAGS_APPEND="-mllvm -amdgpu-mfma-padding-ratio=100 -mllvm -verify-machineinstrs -mllvm -amdgpu-waitcnt-forcezero"
+    rocm_env cmake -G $Tool -S $Src -D CMAKE_PREFIX_PATH=$INSTALLDIR \
+      -D CMAKE_CXX_COMPILER="$INSTALLDIR/bin/hipcc" \
+      -D CMAKE_BUILD_TYPE=$BuildType
   }
 }
   
 proc build_composable_kernel() {
-  shvar HIP_CLANG_PATH=$INSTALLDIR/bin \
-        ROCM_PATH=$INSTALLDIR \
-        HIP_PATH=$INSTALLDIR \
-        LLVM_PATH=$INSTALLDIR {
-    cmake_build composable_kernel
-  }
+  rocm_env cmake_build composable_kernel
 }
 
 proc install_composable_kernel() {
-  shvar HIP_CLANG_PATH=$INSTALLDIR/bin \
-        ROCM_PATH=$INSTALLDIR \
-        HIP_PATH=$INSTALLDIR \
-        LLVM_PATH=$INSTALLDIR {
-    cmake_install composable_kernel
-  }
+  rocm_env cmake_install composable_kernel
 }
 
 func composable_kernel_dependencies() {

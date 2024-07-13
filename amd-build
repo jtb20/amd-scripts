@@ -20,4 +20,10 @@ add_optional_modules
 
 elaborate_tasks
 
-do_tasks (TASKLIST)
+unset @(unset_varlist)
+
+if (NoBWrap) {
+  do_tasks (TASKLIST)  
+} else {
+  do_bwrap $0 --no-bwrap @ARGV
+}

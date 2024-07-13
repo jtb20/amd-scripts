@@ -15,13 +15,12 @@ proc configure_aqlprofile() {
   var Tool = get_build_tool("aqlprofile")
   var GPUList = join(ConfigureOpts.llvm.gfxlist, ',')
   cd $Build {
-    shvar HIPCC_COMPILE_FLAGS_APPEND="--rocm-path=$INSTALLDIR --offload-arch=$GPUList" \
-          ROCM_PATH=$INSTALLDIR {
-      cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    shvar HIPCC_COMPILE_FLAGS_APPEND="--rocm-path=$INSTALLDIR --offload-arch=$GPUList" {
+      rocm_env cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
         -DCMAKE_BUILD_TYPE=$BuildType \
         -DCMAKE_MODULE_PATH=$Src/cmake_modules \
         -DCMAKE_PREFIX_PATH=$INSTALLDIR \
-	-DROCM_PATH=$INSTALLDIR \
+	      -DROCM_PATH=$INSTALLDIR \
         -DBUILD_SHARED_LIBS=YES \
         -DENABLE_LDCONFIG=OFF \
         -DGPU_TARGETS=$GPUList \
@@ -35,7 +34,7 @@ proc configure_aqlprofile() {
 }
 
 proc build_aqlprofile() {
-  cmake_build aqlprofile
+  rocm_env cmake_build aqlprofile
 }
 
 # This is actually prerequisite for the "install" step, because it builds
@@ -46,15 +45,15 @@ proc test_aqlprofile() {
   var GPUList = join(ConfigureOpts.llvm.gfxlist, ',')
   cd $Build {
     if (Tool === "Ninja") {
-      ROCM_PATH=$INSTALLDIR ninja test
+      rocm_env ninja test
     } else {
-      make test ROCM_PATH=$INSTALLDIR
+      rocm_env make test
     }
   }
 }
 
 proc install_aqlprofile() {
-  cmake_install aqlprofile
+  rocm_env cmake_install aqlprofile
 }
 
 func aqlprofile_dependencies() {

@@ -28,11 +28,11 @@ proc configure_rocminfo() {
 }
 
 proc build_rocminfo() {
-  LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" cmake_build rocminfo
+  rocm_env cmake_build rocminfo
 }
 
 proc install_rocminfo() {
-  cmake_install rocminfo
+  rocm_env cmake_install rocminfo
 }
 
 func rocminfo_dependencies() {
