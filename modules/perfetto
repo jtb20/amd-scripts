@@ -1,0 +1,14 @@
+#!/usr/bin/env ysh
+
+func get_perfetto_src() {
+  return (get_src_default ("perfetto"))
+}
+
+func perfetto_dependencies() {
+  return ([])
+}
+
+proc perfetto_tasks {
+  # No tasks!
+  true
+}

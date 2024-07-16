@@ -11,6 +11,8 @@ proc sollve_vv_tasks {
   true
 }
 
+# This can't be a global -- we might be running tests and saving results in
+# different script invocations.  FIXME.
 var RanSingleSollveTest=false
 
 proc test_misc_sollve_vv {

@@ -610,6 +610,22 @@ proc rocm_env {
   }
 }
 
+# This proc is meant to be used with Bernstein chaining too.  "Hide" git, i.e.
+# by symlinking it to /bin/true so it doesn't do anything (successfully).
+# This could be done in do_bwrap, but we don't want to unconditionally
+# depend on that, I don't think.
+# Call like:
+# hide_git $TMPBIN other_command command_args [...]
+
+proc hide_git {
+  var TMPDIR=ARGV[0]
+  mkdir -p $TMPDIR
+  ln -sf $(which true) $TMPDIR/git
+  shvar PATH=$TMPDIR:$PATH {
+    @[ARGV[1:]]
+  }
+}
+
 #proc tidyup_tmp_dirs() {
 #  for dir in /tmp/tmp.amdscripts.* {
 #    rmdir $dir
@@ -685,6 +701,7 @@ source "$SCRIPTDIR/modules/hsa_runtime"
 source "$SCRIPTDIR/modules/rocprofiler_register"
 source "$SCRIPTDIR/modules/rocm_dbgapi"
 source "$SCRIPTDIR/modules/rocprofiler"
+source "$SCRIPTDIR/modules/perfetto"
 source "$SCRIPTDIR/modules/rocprofiler_sdk"
 source "$SCRIPTDIR/modules/rocgdb"
 source "$SCRIPTDIR/modules/roctracer"
