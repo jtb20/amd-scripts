@@ -27,15 +27,15 @@ proc configure_comgr() {
 }
 
 proc build_comgr() {
-  cmake_build comgr
+  rocm_env cmake_build comgr
 }
 
 proc install_comgr() {
-  cmake_install comgr
+  rocm_env cmake_install comgr
 }
 
 func comgr_dependencies() {
-  return (:| llvm device_libs |)
+  return (:| llvm device_libs hipamd |)
 }
 
 proc comgr_tasks {

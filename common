@@ -626,39 +626,27 @@ proc hide_git {
   }
 }
 
-#proc tidyup_tmp_dirs() {
-#  for dir in /tmp/tmp.amdscripts.* {
-#    rmdir $dir
-#  }
-#}
 
 proc do_bwrap {
-  # Not beautiful but it'll do.
-  #tidyup_tmp_dirs
-  #var tmp1 = $(mktemp -d /tmp/tmp.amdscripts.XXXXXX)
-  #var tmp2 = $(mktemp -d /tmp/tmp.amdscripts.XXXXXX)
-  #trap tidyup_tmp_dirs INT EXIT KILL QUIT HUP
-  # There's stuff in /usr/local that we need, e.g. a more recent version of
-  # 'cmake' than the one in /usr (at least on dell-rack-14).  FIXME.
-        #--ro-bind $tmp2 /usr/local \
+  var HideUsrLibCMake=[]
+
+  if test --exists /usr/lib/cmake {
+    setvar HideUsrLibCMake=:| --tmpfs /usr/lib/cmake |
+  }
+
   bwrap --ro-bind / / \
         --bind /tmp /tmp \
         --bind /home /home \
         --bind /work /work \
         --bind /run/user /run/user \
         --tmpfs /opt \
-        --tmpfs /usr/lib/cmake \
+        @HideUsrLibCMake \
         --dev /dev \
         --proc /proc \
         --unshare-pid \
         --unshare-net \
         --die-with-parent \
         @ARGV
-
-  # These won't get removed if the above fails of course.  The 'trap' should
-  # do it, but might fail to execute.
-  #rmdir $tmp1
-  #rmdir $tmp2
 }
 
 # Loading these on demand is a bit awkward. Never mind, just load them all
