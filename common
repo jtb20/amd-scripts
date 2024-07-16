@@ -645,6 +645,7 @@ proc do_bwrap {
         --bind /tmp /tmp \
         --bind /home /home \
         --bind /work /work \
+        --bind /run/user /run/user \
         --tmpfs /opt \
         --tmpfs /usr/lib/cmake \
         --dev /dev \
