@@ -49,7 +49,7 @@ proc llvm_symlink_hipamd() {
 }
 
 func hipamd_dependencies() {
-  return (:| roct_thunk_interface rocr_runtime hipcc hip |)
+  return (:| roct_thunk_interface rocr_runtime hipcc hip comgr |)
 }
 
 proc hipamd_tasks {

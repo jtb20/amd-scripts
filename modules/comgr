@@ -35,7 +35,7 @@ proc install_comgr() {
 }
 
 func comgr_dependencies() {
-  return (:| llvm device_libs hipamd |)
+  return (:| llvm device_libs |)
 }
 
 proc comgr_tasks {
