@@ -629,15 +629,19 @@ proc hide_git {
 
 proc do_bwrap {
   var HideUsrLibCMake=[]
+  var BindWork=[]
 
   if test --exists /usr/lib/cmake {
     setvar HideUsrLibCMake=:| --tmpfs /usr/lib/cmake |
+  }
+  if test --exists /work {
+    setvar BindWork=:| --bind /work /work |
   }
 
   bwrap --ro-bind / / \
         --bind /tmp /tmp \
         --bind /home /home \
-        --bind /work /work \
+        @BindWork \
         --bind /run/user /run/user \
         --tmpfs /opt \
         @HideUsrLibCMake \

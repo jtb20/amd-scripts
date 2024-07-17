@@ -17,6 +17,11 @@ var binutils_src = {
 
 add_sources ("binutils", binutils_src)
 
+# Define before adding gcc component.
+func gcc_conditional_deps() {
+  return (:| accel_gcc |)
+}
+
 add_components accel_gcc_first accel_newlib accel_gcc gcc
 
 set_configure_key ("llvm", "projects", :| lld |)
@@ -46,10 +51,6 @@ append_configure_opts ("accel_gcc", :| --with-sysroot=/opt/amd
                                        --enable-languages=c,fortran,lto |)
 
 set_target ("binutils", "x86_64-linux-gnu")
-
-func gcc_conditional_deps() {
-  return (:| accel_gcc |)
-}
 
 set_target ("gcc", "x86_64-linux-gnu")
 append_configure_opts ("gcc", :| --enable-offload-targets=amdgcn-amdhsa
