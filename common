@@ -594,19 +594,42 @@ proc unset_varlist() {
 # another command, i.e.:
 #
 # rocm_env cmake_build my_component
+#
+# or,
+#
+# rocm_env --system cmake_build my_component
+#
+# To use the system's installed version of ROCm (with a new LLVM build, e.g.
+# for testing mainline builds).  You need to use the -B/--no-bwrap option if
+# you want to access the system's /opt/rocm.
 
 proc rocm_env {
-  shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" \
-        HIP_CLANG_PATH=$INSTALLDIR/bin \
-        ROCM_PATH=$INSTALLDIR \
-        HIP_PATH=$INSTALLDIR \
-        LLVM_PATH=$INSTALLDIR {
-    export LD_LIBRARY_PATH
-    export ROCM_PATH
-    export HIP_PATH
-    export HIP_CLANG_PATH
-    export LLVM_PATH
-    @ARGV
+  if (ARGV[0] === '--system') {
+    shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:$INSTALLDIR/lib/x86_64-unknown-linux-gnu:/opt/rocm/lib/llvm/lib:/opt/rocm/lib:${LD_LIBRARY_PATH:-}" \
+          HIP_CLANG_PATH=$INSTALLDIR/bin \
+          ROCM_PATH=/opt/rocm \
+          HIP_PATH=/opt/rocm \
+          LLVM_PATH=$INSTALLDIR {
+      export LD_LIBRARY_PATH
+      export ROCM_PATH
+      export HIP_PATH
+      export HIP_CLANG_PATH
+      export LLVM_PATH
+      @[ARGV[1:]]
+    }
+  } else {
+    shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" \
+          HIP_CLANG_PATH=$INSTALLDIR/bin \
+          ROCM_PATH=$INSTALLDIR \
+          HIP_PATH=$INSTALLDIR \
+          LLVM_PATH=$INSTALLDIR {
+      export LD_LIBRARY_PATH
+      export ROCM_PATH
+      export HIP_PATH
+      export HIP_CLANG_PATH
+      export LLVM_PATH
+      @ARGV
+    }
   }
 }
 
@@ -626,22 +649,30 @@ proc hide_git {
   }
 }
 
+func get_ccache_cache_dir() {
+  var QueryPattern = / .* 'cache_dir = ' <capture .* as dirname> /
+  var All = @(ccache --show-config)
+  for Line in (All) {
+    if (Line ~ QueryPattern) {
+      return (_group('dirname'))
+    }
+  }
+  error "Failed to find ccache cache dir"
+}
 
 proc do_bwrap {
   var HideUsrLibCMake=[]
-  var BindWork=[]
+  var RealWD=$(readlink -f $WORKDIR)
+  var CCacheDir=$(readlink -f $[get_ccache_cache_dir ()])
 
   if test --exists /usr/lib/cmake {
     setvar HideUsrLibCMake=:| --tmpfs /usr/lib/cmake |
   }
-  if test --exists /work {
-    setvar BindWork=:| --bind /work /work |
-  }
 
   bwrap --ro-bind / / \
         --bind /tmp /tmp \
-        --bind /home /home \
-        @BindWork \
+        --bind $CCacheDir $CCacheDir \
+        --bind $RealWD $RealWD \
         --bind /run/user /run/user \
         --tmpfs /opt \
         @HideUsrLibCMake \

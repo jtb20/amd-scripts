@@ -19,6 +19,11 @@ proc test_misc_sollve_vv {
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("sollve_vv")
   var Obj = get_objdir ("sollve_vv")
+  var ROCmOpts = []
+  if ('sollve_vv' in ConfigureOpts and \
+      'rocm_opts' in ConfigureOpts.sollve_vv) {
+    setvar ROCmOpts = ConfigureOpts.sollve_vv.rocm_opts
+  }
   copy_dir $Source $Obj
   maybe_mkdir $Obj/tmpbin
   # The run_solvve.sh script tries to update the repo -- let's try to avoid
@@ -32,11 +37,12 @@ proc test_misc_sollve_vv {
           AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
           AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
           PATH=$Obj/tmpbin:$PATH \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib:$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
           SKIP_SOLLVE45=0 \
           SKIP_SOLLVE50=0 \
           SKIP_SOLLVE51=0 \
-          SKIP_SOLLVE52=0 {
+          SKIP_SOLLVE52=0 \
+          MY_SOLLVE_FLAGS="-Wl,-rpath,$INSTALLDIR/lib:$INSTALLDIR/lib/x86_64-unknown-linux-gnu --rocm-path=/opt/rocm -O2 -fopenmp --offload-arch=gfx90a" {
       export AOMP
       export AOMP_REPOS_TEST
       export AOMP_SOLVV_REPO_NAME
@@ -46,6 +52,7 @@ proc test_misc_sollve_vv {
       export SKIP_SOLLVE50
       export SKIP_SOLLVE51
       export SKIP_SOLLVE52
+      export MY_SOLLVE_FLAGS
 
       if (SelectTests !== null) {
         # Not beautiful, but maybe useful?
@@ -56,25 +63,25 @@ proc test_misc_sollve_vv {
             export SKIP_SOLLVE50=1
             export SKIP_SOLLVE51=1
             export SKIP_SOLLVE52=1
-            $AOMP_Src/bin/run_sollve.sh
+            rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           "5.0" {
             export SKIP_SOLLVE45=1
             export SKIP_SOLLVE51=1
             export SKIP_SOLLVE52=1
-            $AOMP_Src/bin/run_sollve.sh
+            rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           "5.1" {
             export SKIP_SOLLVE45=1
             export SKIP_SOLLVE50=1
             export SKIP_SOLLVE52=1
-            $AOMP_Src/bin/run_sollve.sh
+            rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           "5.2" {
             export SKIP_SOLLVE45=1
             export SKIP_SOLLVE50=1
             export SKIP_SOLLVE51=1
-            $AOMP_Src/bin/run_sollve.sh
+            rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           * {
             setglobal RanSingleSollveTest=true
@@ -82,7 +89,7 @@ proc test_misc_sollve_vv {
             # test case.  The run_sollve.sh script just compiles the test, and
             # doesn't attempt to run it (so we do that here instead).
             try > singletest.log {
-              $AOMP_Src/bin/run_sollve.sh $SelectTests
+              rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh $SelectTests
             }
             var MakeStatus = _status
             var TestSrc = null
@@ -126,7 +133,7 @@ proc test_misc_sollve_vv {
           }
         }
       } else {
-        $AOMP_Src/bin/run_sollve.sh
+        rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
       }
     }
   }
