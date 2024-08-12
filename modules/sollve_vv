@@ -11,10 +11,6 @@ proc sollve_vv_tasks {
   true
 }
 
-# This can't be a global -- we might be running tests and saving results in
-# different script invocations.  FIXME.
-var RanSingleSollveTest=false
-
 proc test_misc_sollve_vv {
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("sollve_vv")
@@ -84,7 +80,6 @@ proc test_misc_sollve_vv {
             rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           * {
-            setglobal RanSingleSollveTest=true
             # This isn't a glob, exactly.  It needs to identify an individual
             # test case.  The run_sollve.sh script just compiles the test, and
             # doesn't attempt to run it (so we do that here instead).
@@ -199,15 +194,13 @@ proc save_results_misc_sollve_vv (; files) {
   var FoundResults = false
 
   cd $Obj {
-    if (RanSingleSollveTest) {
+    if test --exists singletest.sum {
       # The run_sollve.sh script has support for building a single test, but
       # does not populate the JSON, etc. result files in that case.  So this
       # script does it manually instead.
-      if test --exists singletest.sum {
-        cp -f singletest.log $TESTRESULTSDIR/sollve.log
-        cp -f singletest.sum $TESTRESULTSDIR/sollve.sum
-        setvar FoundResults = true
-      }
+      cp -f singletest.log $TESTRESULTSDIR/sollve.log
+      cp -f singletest.sum $TESTRESULTSDIR/sollve.sum
+      setvar FoundResults = true
       # FIXME: ysh control flow.
       return
     }

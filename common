@@ -278,6 +278,14 @@ proc append_configure_opts(; comp, opts) {
   setglobal ConfigureOpts[comp].cfg = ConfigureOpts[comp].cfg ++ opts
 }
 
+func get_configure_opts(comp) {
+  if (comp in ConfigureOpts and 'cfg' in ConfigureOpts[comp]) {
+    return (ConfigureOpts[comp].cfg)
+  } else {
+    return ([])
+  }
+}
+
 proc set_build_key(; comp, key, value) {
   if (comp not in BuildOpts) {
     setglobal BuildOpts[comp] = {}

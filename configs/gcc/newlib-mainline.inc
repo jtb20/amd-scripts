@@ -1,7 +1,3 @@
-source $_this_dir/gcc-mainline.inc
-source $_this_dir/llvm-18.inc
-source $_this_dir/amdgcn-gcc.inc
-
 var newlib_src = {
   "url" : "https://sourceware.org/git/newlib-cygwin.git",
   "type" : "git",

@@ -1,13 +1,7 @@
-source $_this_dir/llvm-amd-staging.inc
-source $_this_dir/rocm-6.1.inc
-source $_this_dir/aomp-tests-19.0.inc
-source $_this_dir/aomp.inc
-source $_this_dir/aomp-supp-6.1.inc
-source $_this_dir/openmp-examples.inc
 
 # Define conditional deps before adding their associated component.
 func llvm_conditional_deps() {
-  return (:| roct_thunk_interface roct_thunk_add_symlink rocr_runtime_patch
+  return (:| roct_thunk_interface @llvm_more_conditional_deps rocr_runtime_patch
              hwloc |)
 }
 
@@ -18,7 +12,7 @@ func rocr_runtime_conditional_deps() {
 }
 
 add_components hwloc rocsmilib llvm comgr device_libs
-add_components rocm_cmake roct_thunk_interface roct_thunk_remove_symlink
+add_components rocm_cmake roct_thunk_interface
 add_components rocr_runtime_unpatch rocr_runtime hipamd openmp_examples
 
 set_configure_key ("llvm", "projects", :| clang lld clang-tools-extra
@@ -68,8 +62,11 @@ append_configure_opts ("llvm", :| -DLLVM_BUILD_LLVM_DYLIB=ON
 # must also be added separately as testsuites below.
 add_components aomp sollve_vv nekbone openmpapps
 
-# We need this for patching sources for some components, e.g. rocr_runtime.
-set_configure_key ("aomp", "patch_control", "patch-control-file_19.0.txt")
+#set_configure_opts ("device_libs",
+#                    :| -DCLANG_OPTIONS_APPEND="-Xclang;-mamdgpu-precise-memory-op" |)
+
+#set_configure_opts ("device_libs",
+#                    :| -DCLANG_OPTIONS_APPEND="-O0;-g" |)
 
 # FIXME: this is intended to roughly partition the tests that are run with
 # the "check-all" target.  Does this cover all those tests?  Should we just
@@ -106,6 +103,10 @@ proc add_optional_module (Mod) {
       add_components openmp
       set_configure_key ("llvm", "runtimes", :| compiler-rt libcxx libcxxabi
                                                 libunwind |)
+    }
+
+    rocgdb {
+      add_components rocgdb
     }
 
     composable_kernel {

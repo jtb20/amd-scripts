@@ -14,10 +14,12 @@ proc configure_device_libs() {
   var BuildType = get_build_type("device_libs")
   var LLVM_Build = get_objdir("llvm")
   var Tool = get_build_tool("device_libs")
+  var Cfg_opts = get_configure_opts("device_libs")
   cd $Build {
     cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_PREFIX_PATH=$LLVM_Build \
       -DCMAKE_BUILD_TYPE=$BuildType \
+      @Cfg_opts \
       $Src
   }
 }

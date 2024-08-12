@@ -15,10 +15,10 @@ proc configure_rocm_dbgapi() {
   var Tool = get_build_tool("rocm_dbgapi")
   var LLVMCfg = ConfigureOpts["llvm"]
   var GPUList = join(LLVMCfg.gfxlist, ';')
+  # -DCMAKE_MODULE_PATH="$[get_srcdir("rocprofiler")]/cmake_modules" \
   cd $Build {
     cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
-      -DCMAKE_MODULE_PATH="$[get_srcdir("rocprofiler")]/cmake_modules" \
       -DBUILD_SHARED_LIBS=YES \
       -DENABLE_LDCONFIG=OFF \
       -DUSE_GET_ROCM_PATH_API=1 \
