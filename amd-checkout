@@ -110,6 +110,17 @@ proc fetch_tar (;; url, tmpdir, md5_expected) {
   }
 }
 
+# This is pretty basic.  Make it smarter?
+proc setup_worktree (;; srcdir, parent, comp, tobranch) {
+  var fromdir = get_srcdir_rel(parent)
+  var todir = get_srcdir_rel(comp)
+  if ! test --dir "$srcdir/$todir" {
+    cd "$srcdir/$fromdir" {
+      git worktree add "$srcdir/$todir" $tobranch
+    }
+  }
+}
+
 proc do_downloads (; comps) {
   var download_comps = Components if len(comps) === 0 else comps
   var dirname_in_srcdir
@@ -146,8 +157,25 @@ proc do_downloads (; comps) {
         write "$comp: subcomponent of $[Sources[comp].parent]"
       }
 
+      "worktree" {
+        :
+      }
+
       * {
         error "$comp: Unknown source type '$[Sources[comp].type]'!"
+      }
+    }
+  }
+
+  # 2nd pass to set up worktrees (no dependency checking here!)
+  for comp in (download_comps) {
+    case (Sources[comp].type) {
+      "worktree" {
+        write "$comp: worktree shared with $[Sources[comp].parent]"
+        setup_worktree (srcdir=SRCDIR,
+                        parent=Sources[comp].parent,
+                        comp=comp,
+                        tobranch=Sources[comp].version)
       }
     }
   }
@@ -163,6 +191,3 @@ maybe_mkdir $ARCHIVEDIR
 maybe_mkdir $SRCDIR
 
 do_downloads (TASKLIST)
-#fetch_tar (url="https://gcc.gnu.org/pub/gcc/infrastructure/gmp-6.2.1.tar.bz2",
-#       tmpdir=ARCHIVEDIR,
-#       md5_expected="28971fc21cf028042d4897f02fd355ea")

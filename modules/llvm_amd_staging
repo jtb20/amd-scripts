@@ -1,0 +1,18 @@
+#!/usr/bin/env ysh
+
+# This is just for LLVM's amd-staging branch as a worktree 'clone' of another
+# LLVM checkout (i.e. mainline).
+
+func get_llvm_amd_staging_src() {
+  var version_name=Sources.llvm_amd_staging.version_name
+  return ("llvm-project-$version_name")
+}
+
+func llvm_amd_staging_dependencies() {
+  return ([])
+}
+
+proc llvm_amd_staging_tasks {
+  # No tasks!
+  true
+}
