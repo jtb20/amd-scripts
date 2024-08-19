@@ -1,0 +1,14 @@
+#!/usr/bin/env ysh
+
+func get_opencl_headers_src() {
+  return (get_src_default ("opencl_headers"))
+}
+
+func opencl_headers_dependencies() {
+  return ([])
+}
+
+proc opencl_headers_tasks() {
+  # No tasks!
+  true
+}

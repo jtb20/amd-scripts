@@ -8,7 +8,7 @@ func get_rocr_runtime_src() {
   return (get_src_default ("rocr_runtime"))
 }
 
-proc patch_rocr_runtime() {
+proc apply_patch_rocr_runtime() {
   aomp_apply_patch rocr_runtime
 }
 
@@ -46,7 +46,7 @@ proc install_rocr_runtime() {
   cmake_install rocr_runtime
 }
 
-proc unpatch_rocr_runtime() {
+proc revert_patch_rocr_runtime() {
   aomp_revert_patch rocr_runtime
 }
 
@@ -56,7 +56,7 @@ func rocr_runtime_dependencies() {
 
 proc rocr_runtime_tasks {
   if (ConfigureOpts.rocr_runtime.aomp_patch) {
-    add_tasks rocr_runtime clean patch configure build install unpatch
+    add_tasks rocr_runtime clean apply_patch configure build install revert_patch
   } else {
     standard_tasks rocr_runtime
   }
@@ -82,11 +82,11 @@ add_sources ("rocr_runtime_patch", rocr_runtime_patch_src)
 add_sources ("rocr_runtime_unpatch", rocr_runtime_patch_src)
 
 proc modify_rocr_runtime_patch () {
-  patch_rocr_runtime
+  apply_patch_rocr_runtime
 }
 
 proc restore_rocr_runtime_unpatch () {
-  unpatch_rocr_runtime
+  revert_patch_rocr_runtime
 }
 
 func get_rocr_runtime_patch_src () {

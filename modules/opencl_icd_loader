@@ -1,0 +1,40 @@
+#!/usr/bin/env ysh
+
+proc clean_opencl_icd_loader() {
+  clean_component opencl_icd_loader
+}
+
+func get_opencl_icd_loader_src() {
+  return (get_src_default ("opencl_icd_loader"))
+}
+
+proc configure_opencl_icd_loader() {
+    var Build = get_objdir("opencl_icd_loader")
+    var BuildType = get_build_type("opencl_icd_loader")
+    var Src = get_srcdir("opencl_icd_loader")
+    var OpenCLHeaders = get_srcdir("opencl_headers")
+    var Tool = get_build_tool("opencl_icd_loader")
+    cd $Build {
+      cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+        -DCMAKE_BUILD_TYPE=$BuildType \
+        -DENABLE_OPENCL_LAYERS="OFF" \
+        -DOPENCL_ICD_LOADER_HEADERS_DIR=$OpenCLHeaders \
+        $Src
+    }
+  }
+
+proc build_opencl_icd_loader() {
+  cmake_build opencl_icd_loader
+}
+
+proc install_opencl_icd_loader() {
+  cmake_install opencl_icd_loader
+}
+
+func opencl_icd_loader_dependencies() {
+  return (:| opencl_headers |)
+}
+
+proc opencl_icd_loader_tasks() {
+  standard_tasks opencl_icd_loader
+}

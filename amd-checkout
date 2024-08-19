@@ -5,7 +5,7 @@ const ScriptName = "amd-checkout"
 source --builtin args.ysh
 source $_this_dir/common
 
-proc git_checkout (;; srcdir, destname, url, branch, shallow) {
+proc git_checkout (;; srcdir, destname, url, branch, shallow, submods) {
   if test --dir "$srcdir/$destname" {
     cd "$srcdir/$destname" {
       try {
@@ -42,7 +42,8 @@ proc git_checkout (;; srcdir, destname, url, branch, shallow) {
   } else {
     cd $srcdir {
       var shallow_opt = :| --depth 1 | if shallow else ()
-      git clone @shallow_opt --branch $branch $url $destname
+      var submod_opt = :| --recurse-submodules | if submods else ()
+      git clone @shallow_opt @submod_opt --branch $branch $url $destname
     }
   }
 }
@@ -117,11 +118,16 @@ proc do_downloads (; comps) {
     case (Sources[comp].type) {
       "git" {
         write "$comp: check out url: $[Sources[comp].url]"
+        var SubMods = false
+        if ('submodules' in Sources[comp]) {
+          setvar SubMods = Sources[comp].submodules
+        }
         git_checkout (srcdir=SRCDIR,
                       destname=dirname_in_srcdir,
                       url=Sources[comp].url,
                       branch=Sources[comp].version,
-                      shallow=Sources[comp].shallow_clone)
+                      shallow=Sources[comp].shallow_clone,
+                      submods=SubMods)
       }
 
       "archive" {

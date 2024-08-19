@@ -306,6 +306,10 @@ proc test_aomp_smoke_limbo {
   # fix that up.
   mkdir -p $Obj/test/smoke
   ln -sf $AOMP_Src/test/smoke/Makefile.rules $Obj/test/smoke
+  # This one reuses the check_smoke.sh from smoke now.
+  if test --symlink $Obj/test/smoke-limbo/check_smoke_limbo.sh {
+    ln -sf $AOMP_Src/test/smoke/check_smoke.sh $Obj/test/smoke
+  }
   cd $Obj/test/smoke-limbo {
     shvar AOMP=$INSTALLDIR \
           LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \

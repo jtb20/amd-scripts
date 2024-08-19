@@ -38,6 +38,31 @@ var hip_src = {
   "shallow_clone" : false
 }
 
+var rocprofiler_register_src = {
+  "url" : "https://github.com/ROCm/rocprofiler-register",
+  "type" : "git",
+  "version" : "rocm-6.2.x",
+  "version_name" : "6.2.x",
+  "shallow_clone" : false,
+  "submodules" : true
+}
+
+var opencl_icd_loader_src = {
+  "url" : "https://github.com/KhronosGroup/OpenCL-ICD-Loader",
+  "type" : "git",
+  "version" : "main",
+  "version_name" : "main",
+  "shallow_clone" : false
+}
+
+var opencl_headers_src = {
+  "url" : "https://github.com/KhronosGroup/OpenCL-Headers",
+  "type" : "git",
+  "version" : "main",
+  "version_name" : "main",
+  "shallow_clone" : false
+}
+
 # Is this the wrong place for this? Maybe...
 var hipcc_src = {
   "type" : "subcomponent"
@@ -60,3 +85,6 @@ add_sources ("hipamd", hipamd_src)
 add_sources ("hip", hip_src)
 add_sources ("hipcc", hipcc_src)
 add_sources ("composable_kernel", composable_kernel_src)
+add_sources ("rocprofiler_register", rocprofiler_register_src)
+add_sources ("opencl_icd_loader", opencl_icd_loader_src)
+add_sources ("opencl_headers", opencl_headers_src)
