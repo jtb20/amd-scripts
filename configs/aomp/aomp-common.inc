@@ -12,7 +12,7 @@ func rocr_runtime_conditional_deps() {
 }
 
 add_components hwloc rocsmilib llvm comgr device_libs
-add_components rocm_cmake roct_thunk_interface
+add_components rocm_cmake roct_thunk_interface rocminfo
 add_components rocr_runtime_unpatch rocr_runtime hipamd openmp_examples
 
 set_configure_key ("llvm", "projects", :| clang lld clang-tools-extra

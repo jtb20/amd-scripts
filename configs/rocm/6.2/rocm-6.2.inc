@@ -70,6 +70,14 @@ var hipcc_src = {
   "subdir" : "amd/hipcc"
 }
 
+var rocminfo_src = {
+  "url" : "https://github.com/ROCm/rocminfo",
+  "type" : "git",
+  "version" : "rocm-6.2.x",
+  "version_name" : "6.2.x",
+  "shallow_clone" : false
+}
+
 var composable_kernel_src = {
   "url" : "https://github.com/ROCm/composable_kernel.git",
   "type" : "git",
@@ -88,3 +96,4 @@ add_sources ("composable_kernel", composable_kernel_src)
 add_sources ("rocprofiler_register", rocprofiler_register_src)
 add_sources ("opencl_icd_loader", opencl_icd_loader_src)
 add_sources ("opencl_headers", opencl_headers_src)
+add_sources ("rocminfo", rocminfo_src)
