@@ -50,7 +50,8 @@ append_configure_opts ("llvm", :| -DLLVM_BUILD_LLVM_DYLIB=ON
                                   -DLIBOMPTARGET_ENABLE_DEBUG=ON
                                   -DLIBOMPTARGET_AMDGCN_GFXLIST=$[ConfigureOpts.llvm.gfxlist=>join(';')]
                                   -DLIBOMP_HWLOC_INSTALL_DIR=$[get_objdir ("hwloc")]
-                                  -DLIBOMP_SHARED_LINKER_FLAGS=-Wl,--disable-new-dtags |)
+                                  -DLIBOMP_SHARED_LINKER_FLAGS=-Wl,--disable-new-dtags
+                                  -DLLVM_VERSION_SUFFIX=_AOMP_STANDALONE |)
 
 # set_build_tool ("rocm_cmake", "Unix Makefiles")
 # set_build_tool ("rocr_runtime", "Unix Makefiles")
