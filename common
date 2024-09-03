@@ -363,7 +363,7 @@ proc elaborate_tests() {
   add_task clean_test_dirs
   for comp in (Testsuites) {
     for testsuite in (Testsuites[comp]) {
-      var testsuite_nodash = testsuite->replace('-', '_')
+      var testsuite_nodash = testsuite=>replace('-', '_')
       add_task test_${comp}_${testsuite_nodash}
     }
   }
