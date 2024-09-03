@@ -96,7 +96,7 @@ proc test_misc_sollve_vv {
             cd $Obj/tests {
               find . -name "*${SelectTests}*" -iname "*.[cf]*" -print0 | \
                 read --all (&TestNamesS)
-              var TestNames = TestNamesS=>split(b'\y00')
+              var TestNames = TestNamesS=>trimEnd(b'\y00')=>split(b'\y00')
             }
             rm -f selecttests.log selecttests.sum
             for Test in (TestNames) {

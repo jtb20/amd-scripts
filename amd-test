@@ -167,7 +167,7 @@ ERRORs: $Errors
 
 proc print_result_summary() {
   for test in (GatheredTestResults) {
-    var SumFile = test->replace(".json", ".sum")
+    var SumFile = test=>replace(".json", ".sum")
     summarise_one_test $SumFile
   }
   write """=== TOTALS ===
