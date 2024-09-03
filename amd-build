@@ -3,7 +3,6 @@
 
 const ScriptName = "amd-build"
 
-source --builtin args.ysh
 source $_this_dir/common
 
 var CurrentLogFile

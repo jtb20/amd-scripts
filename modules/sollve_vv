@@ -93,53 +93,60 @@ proc test_misc_sollve_vv {
             rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           * {
-            if ! test --exists bin {
-              mkdir -p bin
+            cd $Obj/tests {
+              find . -name "*${SelectTests}*" -iname "*.[cf]*" -print0 | \
+                read --all (&TestNamesS)
+              var TestNames = TestNamesS=>split(b'\y00')
             }
-            # This isn't a glob, exactly.  It needs to identify an individual
-            # test case.  The run_sollve.sh script just compiles the test, and
-            # doesn't attempt to run it (so we do that here instead).
-            try > singletest.log {
-              rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh $SelectTests
-            }
-            var MakeStatus = _status
-            var TestSrc = null
-            var TestBin = null
-            var SourcePattern = / 'Source file:' s+ <capture .* as Src> /
-            var GoodBin = / 'Binary' s+ <capture .* as Bin> ' exists!' /
-            var BadBin = / 'Expected binary' s+ <capture .* as Bin> s+ 'does NOT exist!' /
-            cat singletest.log | while read n {
-              if (n ~ SourcePattern) {
-                setvar TestSrc = _group('Src')
-              } elif (n ~ GoodBin) {
-                setvar TestBin = _group('Bin')
-              } elif (n ~ BadBin) {
-                setvar MakeStatus = 1
+            rm -f selecttests.log selecttests.sum
+            for Test in (TestNames) {
+              # run_sollve.sh takes the name of a single test, not a glob.  The
+              # script just compiles the test, and doesn't attempt to run it (so
+              # we do that here instead).
+              try > singletest.log {
+                rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh $(basename $Test)
               }
-            }
-            rm -f singletest.sum
-            if (TestSrc === null) {
-              cat singletest.log >&2
-              # This probably means an individual test wasn't found.
-              error "Test source pattern not found"
-            }
-            var TestSrcRel = TestSrc=>trimStart(Obj++"/")
-            if (MakeStatus === 0) {
-              write "PASS: $TestSrcRel compile" >> singletest.sum
-            } else {
-              write "FAIL: $TestSrcRel compile" >> singletest.sum
-            }
-            if (TestBin === null) {
-              write "SKIPPED: $TestSrcRel run" >> singletest.sum
-            } else {
-              try {
-                $TestBin
+              var MakeStatus = _status
+              var TestSrc = null
+              var TestBin = null
+              var SourcePattern = / 'Source file:' s+ <capture .* as Src> /
+              var GoodBin = / 'Binary' s+ <capture .* as Bin> ' exists!' /
+              var BadBin = / 'Expected binary' s+ <capture .* as Bin> s+ 'does NOT exist!' /
+              cat singletest.log | while read n {
+                if (n ~ SourcePattern) {
+                  setvar TestSrc = _group('Src')
+                } elif (n ~ GoodBin) {
+                  setvar TestBin = _group('Bin')
+                } elif (n ~ BadBin) {
+                  setvar MakeStatus = 1
+                }
               }
-              if (_status === 0) {
-                write "PASS: $TestSrcRel run" >> singletest.sum
+              rm -f singletest.sum
+              if (TestSrc === null) {
+                cat singletest.log >&2
+                # This probably means an individual test wasn't found.
+                error "Test source pattern not found"
+              }
+              var TestSrcRel = TestSrc=>trimStart(Obj++"/")
+              if (MakeStatus === 0) {
+                write "PASS: $TestSrcRel compile" >> singletest.sum
               } else {
-                write "FAIL: $TestSrcRel run" >> singletest.sum
+                write "FAIL: $TestSrcRel compile" >> singletest.sum
               }
+              if (TestBin === null) {
+                write "SKIPPED: $TestSrcRel run" >> singletest.sum
+              } else {
+                try {
+                  $TestBin
+                }
+                if (_status === 0) {
+                  write "PASS: $TestSrcRel run" >> singletest.sum
+                } else {
+                  write "FAIL: $TestSrcRel run" >> singletest.sum
+                }
+              }
+              cat singletest.log >> selecttests.log
+              cat singletest.sum >> selecttests.sum
             }
           }
         }
@@ -210,12 +217,12 @@ proc save_results_misc_sollve_vv (; files) {
   var FoundResults = false
 
   cd $Obj {
-    if test --exists singletest.sum {
+    if test --exists selecttests.sum {
       # The run_sollve.sh script has support for building a single test, but
       # does not populate the JSON, etc. result files in that case.  So this
       # script does it manually instead.
-      cp -f singletest.log $TESTRESULTSDIR/sollve.log
-      cp -f singletest.sum $TESTRESULTSDIR/sollve.sum
+      cp -f selecttests.log $TESTRESULTSDIR/sollve.log
+      cp -f selecttests.sum $TESTRESULTSDIR/sollve.sum
       setvar FoundResults = true
       # FIXME: ysh control flow.
       return

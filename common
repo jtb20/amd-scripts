@@ -578,7 +578,7 @@ proc add_optional_modules() {
 #
 # unset @(unset_varlist)
 proc unset_varlist() {
-  var current=$(env -0)=>split(b'\y00')
+  var current=$(env -0)=>trimEnd(b'\y00')=>split(b'\y00')
   var bashfunc = / 'BASH_FUNC_' .* /
   var kv = / <capture (w|'_')+ (alnum|'_')* as key> '=' <capture dot* as value> /
   var env_whitelist = :| _ PATH HOME TERM LANG PWD OLDPWD USER LOGNAME SHELL

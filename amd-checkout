@@ -2,42 +2,45 @@
 
 const ScriptName = "amd-checkout"
 
-source --builtin args.ysh
 source $_this_dir/common
+
+proc try_git_update (;; srcdir, destname, url, branch) {
+  try {
+    var remotes = @(git remote show)
+    if (remotes=>indexOf("origin") < 0) {
+      error "'origin' not found in remotes"
+    }
+    var remote = 'origin'
+    var rem_url = $(git remote get-url $remote)
+    var current = $(git branch --show-current)
+    if (rem_url !== url) {
+      error "Remote url '$rem_url' is not '$url'"
+    } elif (current !== branch) {
+      error "Wrong branch '$current' checked out here, wanted '$branch'"
+    } else {
+      write "Already checked out $url @ $branch"
+      var modifications = $(git status --porcelain)
+      if (modifications !== "") {
+        error "Local modifications in '$srcdir/$destname'"
+      }
+      var localcommits = $(git log $remote/$branch..HEAD)
+      if (localcommits !== "") {
+        error "Local commits in '$srcdir/$destname'"
+      }
+    }
+  }
+  if (_status === 0) {
+    write "Attempting 'git pull --rebase'..."
+    git pull --rebase
+  } else {
+    write "Couldn't update: $[_error.message]"
+  }
+}
 
 proc git_checkout (;; srcdir, destname, url, branch, shallow, submods) {
   if test --dir "$srcdir/$destname" {
     cd "$srcdir/$destname" {
-      try {
-        var remotes = @(git remote show)
-        if (remotes=>indexOf("origin") < 0) {
-          error "'origin' not found in remotes"
-        }
-        var remote = 'origin'
-        var rem_url = $(git remote get-url $remote)
-        var current = $(git branch --show-current)
-        if (rem_url !== url) {
-          error "Remote url '$rem_url' is not '$url'"
-        } elif (current !== branch) {
-          error "Wrong branch '$current' checked out here, wanted '$branch'"
-        } else {
-          write "Already checked out $url @ $branch"
-          var modifications = $(git status --porcelain)
-          if (modifications !== "") {
-            error "Local modifications in '$srcdir/$destname'"
-          }
-          var localcommits = $(git log $remote/$branch..HEAD)
-          if (localcommits !== "") {
-            error "Local commits in '$srcdir/$destname'"
-          }
-        }
-      }
-      if (_status === 0) {
-        write "Attempting 'git pull --rebase'..."
-        git pull --rebase
-      } else {
-        write "Couldn't update: $[_error.message]"
-      }
+      try_git_update (srcdir=srcdir, destname=destname, url=url, branch=branch)
     } 
   } else {
     cd $srcdir {
@@ -117,6 +120,11 @@ proc setup_worktree (;; srcdir, parent, comp, tobranch) {
   if ! test --dir "$srcdir/$todir" {
     cd "$srcdir/$fromdir" {
       git worktree add "$srcdir/$todir" $tobranch
+    }
+  } else {
+    cd "$srcdir/$todir" {
+      try_git_update (srcdir=srcdir, destname=todir, url=Sources[parent].url,
+                      branch=tobranch)
     }
   }
 }

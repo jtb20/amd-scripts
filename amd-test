@@ -2,7 +2,6 @@
 
 const ScriptName = "amd-test"
 
-source --builtin args.ysh
 source $_this_dir/common
 
 #proc get_test_options() {
