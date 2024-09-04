@@ -1,0 +1,68 @@
+func get_ovo_src() {
+  return (get_src_default ("ovo"))
+}
+
+func ovo_dependencies() {
+  return ([])
+}
+
+proc ovo_tasks {
+  # No tasks!
+  true
+}
+
+proc test_misc_ovo() {
+  var Source = get_srcdir ("ovo")
+  var Obj = get_objdir ("ovo")
+  var GPUs = get_amd_gpus()
+
+  write "Found GPUs: $[GPUs=>join(",")]"
+
+  copy_dir $Source $Obj
+
+  shvar AOMP_GPU="$[GPUs[0]]" \
+        PATH="$INSTALLDIR/bin:$PATH" \
+        CXX=clang++ \
+        FC=flang \
+        FFLAGS="-O2 -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$[GPUs[0]]" \
+        CXXFLAGS="-O2 -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$[GPUs[0]]" \
+        OMP_TARGET_OFFLOAD=mandatory \
+        MAKEFLAGS="-j32" {
+    export AOMP_GPU
+    export PATH
+    export CXX
+    export FC
+    export FFLAGS
+    export CXXFLAGS
+    export OMP_TARGET_OFFLOAD
+    export MAKEFLAGS
+    cd $Obj {
+      try {
+        rocm_env ./ovo.sh run
+        rocm_env ./ovo.sh report --summary
+      }
+      if (_error.code === 0) {
+        write "Success."
+      } else {
+        write "Failure."
+      }
+    }
+  }
+}
+
+proc clean_results_misc_ovo () {
+  var Obj = get_objdir ("ovo")
+  cd $Obj {
+    rm -f ovo.run.log*
+  }
+}
+
+proc save_results_misc_ovo (; files) {
+  var Obj = get_objdir ("ovo")
+  var FoundResults = false
+  
+  if (FoundResults) {
+    call files->setValue (:| ovo.sum |)
+  }
+}
+

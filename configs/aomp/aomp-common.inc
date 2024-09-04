@@ -1,19 +1,12 @@
 
 # Define conditional deps before adding their associated component.
 func llvm_conditional_deps() {
-  return (:| roct_thunk_interface @llvm_more_conditional_deps rocr_runtime_patch
-             hwloc |)
-}
-
-func rocr_runtime_conditional_deps() {
-  # Make sure we don't have the patch applied for the LLVM (runtimes) build
-  # before we build rocr_runtime separately.
-  return (:| rocr_runtime_unpatch |)
+  return (:| roct_thunk_interface @llvm_more_conditional_deps hwloc |)
 }
 
 add_components hwloc rocsmilib llvm comgr device_libs
 add_components rocm_cmake roct_thunk_interface rocminfo
-add_components rocr_runtime_unpatch rocr_runtime hipamd openmp_examples
+add_components rocr_runtime hipamd openmp_examples
 
 set_configure_key ("llvm", "projects", :| clang lld clang-tools-extra
                                           flang |)
@@ -29,8 +22,17 @@ set_configure_key ("llvm", "gfxlist", :| gfx700 gfx701 gfx801 gfx803 gfx900
                                          gfx1035 gfx1036 gfx1100 gfx1101
                                          gfx1102 gfx1103 |)
 
-
-set_configure_key ("rocr_runtime", "aomp_patch", true)
+func select_hsa_runtime() {
+  var SrcSubdir
+  try > /dev/null 2>&1 {
+    setvar SrcSubdir = "$[get_srcdir("hsa_runtime")]/opensrc/hsa-runtime"
+  }
+  if (_error.code === 0) {
+    return (SrcSubdir)
+  } else {
+    return ("$[get_srcdir("rocr_runtime")]/src")
+  }
+}
 
 append_configure_opts ("llvm", :| -DLLVM_BUILD_LLVM_DYLIB=ON
                                   -DLLVM_LINK_LLVM_DYLIB=ON
@@ -44,7 +46,7 @@ append_configure_opts ("llvm", :| -DLLVM_BUILD_LLVM_DYLIB=ON
                                   -DLIBOMP_USE_HWLOC=ON
                                   -DLLVM_EXTERNAL_PROJECTS=rocm-device-libs
                                   -DLLVM_EXTERNAL_ROCM_DEVICE_LIBS_SOURCE_DIR=$[get_srcdir ("device_libs")]
-                                  -DLIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH=$[get_srcdir ("rocr_runtime")]/src
+                                  -DLIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH=$[select_hsa_runtime ()]
                                   -DLIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH=$[get_srcdir ("roct_thunk_interface")]
                                   -DLIBOMP_COPY_EXPORTS=OFF
                                   -DLIBOMPTARGET_ENABLE_DEBUG=ON
@@ -61,7 +63,7 @@ append_configure_opts ("llvm", :| -DLLVM_BUILD_LLVM_DYLIB=ON
 # for testing.
 # Other suites have their own repos (so must be listed as components), and
 # must also be added separately as testsuites below.
-add_components aomp sollve_vv nekbone openmpapps
+add_components aomp sollve_vv nekbone openmpapps ovo
 
 #set_configure_opts ("device_libs",
 #                    :| -DCLANG_OPTIONS_APPEND="-Xclang;-mamdgpu-precise-memory-op" |)
@@ -78,7 +80,7 @@ add_testsuites llvm llvm clang flang lld compiler_rt libcxx libcxxabi \
 add_testsuites aomp examples smoke smoke_fails smoke_limbo \
                     hip_openmp usm llnl omp5 openmpapps
 
-add_testsuites misc sollve_vv nekbone
+add_testsuites misc sollve_vv nekbone ovo
 
 proc add_optional_module (Mod) {
   case (Mod) {
