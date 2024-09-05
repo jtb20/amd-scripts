@@ -38,13 +38,6 @@ var hip_src = {
   "shallow_clone" : false
 }
 
-# Is this the wrong place for this? Maybe...
-var hipcc_src = {
-  "type" : "subcomponent"
-  "parent" : "llvm"
-  "subdir" : "amd/hipcc"
-}
-
 var rocminfo_src = {
   "url" : "https://github.com/ROCm/rocminfo",
   "type" : "git",
@@ -66,6 +59,5 @@ add_sources ("roct_thunk_interface", roct_thunk_interface_src)
 add_sources ("rocr_runtime", rocr_runtime_src)
 add_sources ("hipamd", hipamd_src)
 add_sources ("hip", hip_src)
-add_sources ("hipcc", hipcc_src)
 add_sources ("composable_kernel", composable_kernel_src)
 add_sources ("rocminfo", rocminfo_src)

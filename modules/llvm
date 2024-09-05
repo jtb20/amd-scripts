@@ -31,7 +31,12 @@ proc configure_llvm() {
 }
 
 proc build_llvm() {
-  hsakmt_DIR=$INSTALLDIR/lib/cmake/hsakmt cmake_build llvm
+  if ('hsakmt_build_hack' in ConfigureOpts.llvm and
+      ConfigureOpts.llvm.hsakmt_build_hack) {
+    hsakmt_DIR=$INSTALLDIR/lib/cmake/hsakmt cmake_build llvm
+  } else {
+    cmake_build llvm
+  }
 }
 
 proc install_llvm() {
