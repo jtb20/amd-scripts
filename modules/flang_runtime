@@ -32,6 +32,7 @@ proc configure_flang_runtime() {
       -DFLANG_BUILD_RUNTIME=ON \
       -DOPENMP_BUILD_DIR=$OpenMPBuildRuntimeSrc \
       -DFLANG_INCLUDE_TESTS=OFF \
+      -DFLANG_LIBOMP=$INSTALLDIR/lib/libomp.so \
       $Src
   }
 }

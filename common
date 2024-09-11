@@ -24,6 +24,9 @@ var GithubUsername=""
 var OptionalModules=[]
 var CleanInstallDir=false
 var NoBWrap = false
+var GPURunOpts = []
+var GPUOffset = null
+var GPUDevices = []
 var TASKLIST=[]
 var TASKARR=()
 
@@ -136,6 +139,20 @@ proc parse_args(; argv) {
 """
           exec $SHELL
         }
+      }
+
+      --gpurun=* {
+        setglobal GPURunOpts = argv[opt]=>trimStart('--gpurun=')=>shSplit()
+      }
+
+      --gpu-offset {
+        setvar opt += 1
+        setglobal GPUOffset = argv[opt]
+      }
+
+      --gpu-devices {
+        setvar opt += 1
+        setglobal GPUDevices = GPUDevices ++ split(argv[opt], ',')
       }
 
       -* {
@@ -657,6 +674,23 @@ proc hide_git {
   }
 }
 
+proc gpu_opts {
+  if (GPURunOpts !== [] or GPUOffset or GPUDevices !== []) {
+    if (GPUOffset) {
+      var GPURUN_DEVICE_BIAS = "$GPUOffset"
+      export GPURUN_DEVICE_BIAS
+    }
+    if (GPUDevices !== []) {
+      var ROCR_VISIBLE_DEVICES = "$[GPUDevices=>join(',')]"
+      export ROCR_VISIBLE_DEVICES
+    }
+    export AOMP=$INSTALLDIR
+    $INSTALLDIR/bin/gpurun @GPURunOpts @ARGV
+  } else {
+    @ARGV
+  }
+}
+
 func get_ccache_cache_dir() {
   var QueryPattern = / .* 'cache_dir = ' <capture .* as dirname> /
   var All = @(ccache --show-config)
@@ -743,3 +777,4 @@ source "$SCRIPTDIR/modules/opencl_icd_loader"
 source "$SCRIPTDIR/modules/opencl_headers"
 source "$SCRIPTDIR/modules/llvm_amd_staging"
 source "$SCRIPTDIR/modules/ovo"
+source "$SCRIPTDIR/modules/aomp_extras"

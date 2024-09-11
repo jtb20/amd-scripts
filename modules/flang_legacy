@@ -22,7 +22,7 @@ proc configure_flang_legacy() {
       -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
       -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
       -DCMAKE_CXX_STANDARD=17 \
-      -DBUILD_SHARED_LIBS=ON \
+      -DBUILD_SHARED_LIBS=OFF \
       $Src
   }
 }

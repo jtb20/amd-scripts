@@ -39,7 +39,7 @@ proc default_configure_opts_hwloc() {
   var SMILib = get_objdir ("rocsmilib")
   set_configure_opts ("hwloc", :| --with-pic=yes
                                   --enable-static=yes
-                                  --enable-shared=no
+                                  --enable-shared=yes
                                   --disable-io
                                   --disable-libudev
                                   --disable-libxml2

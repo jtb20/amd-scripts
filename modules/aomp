@@ -208,6 +208,7 @@ proc test_aomp_smoke {
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("smoke")
   var Obj = get_objdir ("smoke")
+  var GPUs = get_amd_gpus ()
   # These tests write into their source directory.  Copy to obj dir and
   # run from there.
   rm -rf $Obj
@@ -217,15 +218,22 @@ proc test_aomp_smoke {
   cd $Obj/test/smoke {
     shvar AOMP=$INSTALLDIR \
           LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
-          AOMP_PARALLEL_SMOKE=1 {
+          AOMP_PARALLEL_SMOKE=1 \
+          AOMP_GPU="$[GPUs[0]]" \
+          SHELL=/bin/bash {
       export AOMP
       export LD_LIBRARY_PATH
       export AOMP_PARALLEL_SMOKE
+      export AOMP_GPU
+      # In case SHELL is set by some other login shell (tcsh, ...), reset it
+      # here.  Otherwise e.g. "flock -c ..." uses the wrong shell inside
+      # check_smoke.sh.
+      export SHELL
       if (SelectTests !== null) {
         select_smoke_tests (SelectTests)
         export AOMP_PARALLEL_SMOKE=0
       }
-      CLEANUP=0 ./check_smoke.sh
+      CLEANUP=0 gpu_opts ./check_smoke.sh
       ./check_smoke.sh gatherdata
     }
   }

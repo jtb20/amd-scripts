@@ -1,0 +1,43 @@
+#!/usr/bin/env ysh
+
+proc clean_aomp_extras() {
+  clean_component aomp_extras
+}
+
+func get_aomp_extras_src() {
+  return (get_src_default ("aomp_extras"))
+}
+
+proc configure_aomp_extras() {
+  var Build = get_objdir("aomp_extras")
+  var BuildType = get_build_type("aomp_extras")
+  var DevLibs = get_objdir("device_libs")
+  var Src = get_srcdir("aomp_extras")
+  var Tool = get_build_tool("aomp_extras")
+  var Cfg = ConfigureOpts.aomp_extras
+  cd $Build {
+    shvar AOMP=$INSTALLDIR {
+      export AOMP
+      cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+        -DCMAKE_BUILD_TYPE=$BuildType \
+        -DCMAKE_PREFIX_PATH=$DevLibs \
+        @[Cfg.cfg] $Src
+    }
+  }
+}
+
+proc build_aomp_extras() {
+  cmake_build aomp_extras
+}
+
+proc install_aomp_extras() {
+  cmake_install aomp_extras
+}
+
+func aomp_extras_dependencies() {
+  return (:| llvm device_libs |)
+}
+
+proc aomp_extras_tasks {
+  standard_tasks aomp_extras
+}

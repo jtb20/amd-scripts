@@ -125,3 +125,13 @@ var llvm_legacy_src = {
 }
 
 add_sources ("llvm_legacy", llvm_legacy_src)
+
+var aomp_extras_src = {
+  "url" : "https://github.com/ROCm/aomp-extras",
+  "type" : "git",
+  "version" : "aomp-dev",
+  "version_name" : "aomp_dev",
+  "shallow_clone" : false
+}
+
+add_sources ("aomp_extras", aomp_extras_src)

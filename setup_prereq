@@ -14,7 +14,7 @@ OIL_TARBALL="oils-for-unix-0.23.0.tar.gz"
 OIL_URL="https://www.oilshell.org/download/$OIL_TARBALL"
 
 READLINE_TARBALL="readline-8.2.tar.gz"
-READLINE_URL="ftp://ftp.gnu.org/gnu/readline/$READLINE_TARBALL"
+READLINE_URL="http://ftp.gnu.org/gnu/readline/$READLINE_TARBALL"
 
 if ! [ "$DOWNLOAD" ] || ! [ "$PREFIX" ] || ! [ "$BUILD" ]; then
   echo "Empty DOWNLOAD/PREFIX/BUILD, please fix."

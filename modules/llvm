@@ -43,12 +43,22 @@ proc install_llvm() {
   cmake_install llvm
 }
 
+proc install_filecheck_llvm() {
+  var BuildDir = get_objdir("llvm")
+  # This is a weird hack.  The AOMP test/Makefile.defs fragment wants to see
+  # a copy of FileCheck in $AOMP/bin/FileCheck, otherwise falls back to a set
+  # of heuristics to try to locate the binary elsewhere.  Those heuristics can
+  # fail, so make sure to use our own version.
+  install $BuildDir/bin/FileCheck $INSTALLDIR/bin/FileCheck
+}
+
 func llvm_dependencies() {
   return ([])
 }
 
 proc llvm_tasks() {
   standard_tasks llvm
+  add_tasks llvm install_filecheck
 }
 
 proc default_configure_opts_llvm() {
