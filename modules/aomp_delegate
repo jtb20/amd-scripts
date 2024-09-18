@@ -1,0 +1,174 @@
+func get_x_symlinks_src() {
+  return (".")
+}
+
+func x_symlinks_dependencies() {
+  return ([])
+}
+
+proc setup_x_symlinks {
+  var AMDSMISrc = get_srcdir('rocsmilib')
+  var AOMPSrc = get_srcdir('aomp')
+  var AOMPExtrasSrc = get_srcdir('aomp_extras')
+  var ClrSrc = get_srcdir('hipamd')
+  var FlangSrc = get_srcdir('flang')
+  var HipSrc = get_srcdir('hip')
+  #var HipFortSrc = get_srcdir('hipfort')
+  var LLVMSrc = get_srcdir('llvm')
+  var ROCDbgApiSrc = get_srcdir('rocm_dbgapi')
+  var ROCGDBSrc = get_srcdir('rocgdb')
+  var ROCMCmakeSrc = get_srcdir('rocm_cmake')
+  var ROCMInfoSrc = get_srcdir('rocminfo')
+  var ROCProfilerSrc = get_srcdir('rocprofiler')
+  var ROCProfilerRegisterSrc = get_srcdir('rocprofiler_register')
+  var ROCRRuntimeSrc = get_srcdir('rocr_runtime')
+  #var ROCTracerSrc = get_srcdir('roctracer')
+  var ROCTThunkIntfSrc = get_srcdir('roct_thunk_interface')
+  var AOMP_VERSION = ConfigureOpts.aomp_delegate.aomp_version
+  var AOMP_REPOS = ConfigureOpts.aomp_delegate.aomp_repos
+
+  if ! test --exists $AOMP_REPOS {
+    mkdir -p $AOMP_REPOS
+  }
+
+  ln -sf $AMDSMISrc $AOMP_REPOS/amdsmi
+  ln -sf $AOMPSrc $AOMP_REPOS/aomp
+  ln -sf $AOMPExtrasSrc $AOMP_REPOS/aomp-extras
+  ln -sf $ClrSrc $AOMP_REPOS/clr
+  ln -sf $FlangSrc $AOMP_REPOS/flang
+  ln -sf $HipSrc $AOMP_REPOS/hip
+  #ln -sf $HipFortSrc $AOMP_REPOS/hipfort
+  ln -sf $LLVMSrc $AOMP_REPOS/llvm-project
+  ln -sf $ROCDbgApiSrc $AOMP_REPOS/ROCdbgapi
+  ln -sf $ROCGDBSrc $AOMP_REPOS/ROCgdb
+  ln -sf $ROCMCmakeSrc $AOMP_REPOS/rocm-cmake
+  ln -sf $ROCMInfoSrc $AOMP_REPOS/rocminfo
+  ln -sf $AMDSMISrc $AOMP_REPOS/rocm_smi_lib
+  ln -sf $ROCProfilerSrc $AOMP_REPOS/rocprofiler
+  ln -sf $ROCProfilerRegisterSrc $AOMP_REPOS/rocprofiler-register
+  ln -sf $ROCRRuntimeSrc $AOMP_REPOS/rocr-runtime
+  #ln -sf $ROCTracerSrc $AOMP_REPOS/roctracer
+  ln -sf $ROCTThunkIntfSrc $AOMP_REPOS/roct-thunk-interface
+}
+
+proc x_symlinks_tasks {
+  add_tasks x_symlinks setup
+}
+
+proc aomp_delegate_gen(Comp) {
+  var CompName = Comp=>replace('-','_')
+  eval """
+  proc build_x_${CompName} {
+    var AOMPSrc = get_srcdir('aomp')
+    \$AOMPSrc/bin/build_$Comp.sh
+  }
+  proc install_x_${CompName} {
+    var AOMPSrc = get_srcdir('aomp')
+    \$AOMPSrc/bin/build_$Comp.sh install
+  }
+  proc x_${CompName}_tasks {
+    add_tasks x_${CompName} build install
+  }
+  """
+}
+
+func aomp_delegate_getsrc() {
+  return ('.')
+}
+
+func x_prereq_dependencies() {
+  return (:| x_symlinks |)
+}
+
+func x_project_dependencies() {
+  return (:| x_prereq |)
+}
+
+func x_rocprofiler_register_dependencies() {
+  return (:| x_project |)
+}
+
+func x_roct_dependencies() {
+  return (:| x_rocprofiler_register |)
+}
+
+func x_rocr_dependencies() {
+  return (:| x_roct |)
+}
+
+func x_openmp_dependencies() {
+  return (:| x_rocr |)
+}
+
+func x_offload_dependencies() {
+  return (:| x_openmp |)
+}
+
+func x_extras_dependencies() {
+  return (:| x_offload |)
+}
+
+func x_comgr_dependencies() {
+  return (:| x_extras |)
+}
+
+func x_rocminfo_dependencies() {
+  return (:| x_comgr |)
+}
+
+func x_rocm_smi_lib_dependencies() {
+  return (:| x_rocminfo |)
+}
+
+func x_amdsmi_dependencies() {
+  return (:| x_rocm_smi_lib |)
+}
+
+func x_flang_legacy_dependencies() {
+  return (:| x_amdsmi |)
+}
+
+func x_pgmath_dependencies() {
+  return (:| x_flang_legacy |)
+}
+
+func x_flang_dependencies() {
+  return (:| x_pgmath |)
+}
+
+func x_flang_runtime_dependencies() {
+  return (:| x_flang |)
+}
+
+func x_hipcc_dependencies() {
+  return (:| x_flang_runtime |)
+}
+
+func x_hipamd_dependencies() {
+  return (:| x_hipcc |)
+}
+
+func x_rocdbgapi_dependencies() {
+  return (:| x_hipamd |)
+}
+
+func x_rocgdb_dependencies() {
+  return (:| x_rocdbgapi |)
+}
+
+func x_roctracer_dependencies() {
+  return (:| x_rocgdb |)
+}
+
+func x_rocprofiler_dependencies() {
+  return (:| x_roctracer |)
+}
+
+for Comp in prereq project rocprofiler-register roct rocr openmp offload \
+            extras comgr rocminfo rocm_smi_lib amdsmi flang-legacy pgmath \
+            flang flang_runtime hipcc hipamd rocdbgapi rocgdb roctracer \
+            rocprofiler {
+  var CompName = Comp=>replace('-','_')
+  aomp_delegate_gen $Comp
+  eval "var get_x_${CompName}_src = aomp_delegate_getsrc"
+}

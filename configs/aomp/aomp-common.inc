@@ -51,7 +51,7 @@ append_configure_opts ("llvm", :| -DLLVM_BUILD_LLVM_DYLIB=ON
                                   -DLIBOMP_COPY_EXPORTS=OFF
                                   -DLIBOMPTARGET_ENABLE_DEBUG=ON
                                   -DLIBOMPTARGET_AMDGCN_GFXLIST=$[ConfigureOpts.llvm.gfxlist=>join(';')]
-                                  -DLIBOMP_HWLOC_INSTALL_DIR=$[get_objdir ("hwloc")]
+                                  -DLIBOMP_HWLOC_INSTALL_DIR=$INSTALLDIR
                                   -DLIBOMP_SHARED_LINKER_FLAGS=-Wl,--disable-new-dtags
                                   -DLLVM_VERSION_SUFFIX=_AOMP_STANDALONE |)
 

@@ -61,7 +61,7 @@ proc unpack_tar (;; srcdir, destname, tarfile, strip) {
 
 proc do_md5sum(filename) {
   try {
-    var md5 = $(md5sum $filename)=>split()[0]
+    var md5 = $(md5sum $filename)=>shSplit()[0]
   }
   if (_status === 0) {
     write -- $md5

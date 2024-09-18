@@ -21,7 +21,7 @@ proc install_rocgdb() {
 }
 
 func rocgdb_dependencies() {
-  return (:| hipcc rocm_dbgapi llvm |)
+  return (:| hipcc rocm_dbgapi gmp mpfr llvm |)
 }
 
 proc rocgdb_tasks() {
@@ -43,5 +43,7 @@ proc default_configure_opts_rocgdb() {
                                    --with-lzma
                                    --with-rocm-dbgapi=$INSTALLDIR
                                    --with-amd-dbgapi
+                                   --with-gmp=$INSTALLDIR
+                                   --with-mpfr=$INSTALLDIR
                                    PKG_CONFIG_PATH=$INSTALLDIR/share/pkgconfig |)
 }

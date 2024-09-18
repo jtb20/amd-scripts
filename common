@@ -29,6 +29,9 @@ var GPUOffset = null
 var GPUDevices = []
 var TASKLIST=[]
 var TASKARR=()
+var BindHomebrew = false
+var BwrapExtraOpts = []
+var BwrapUnshareNet = true
 
 proc show_vars {
   write "HIP_CLANG_PATH: $HIP_CLANG_PATH"
@@ -127,6 +130,10 @@ proc parse_args(; argv) {
         setglobal NoBWrap = true
       }
 
+      -H | --bind-homebrew {
+        setglobal BindHomebrew = true
+      }
+
       -C | --clean {
         setglobal CleanInstallDir = true
       }
@@ -134,10 +141,10 @@ proc parse_args(; argv) {
       --shell {
         if (NoBWrap) {
           write """
-*** This is a bubble-wrapped shell, unless you explicitly specified
-*** -B/--no-bwrap on the command line.  Exit with ctrl-D.
-"""
-          exec $SHELL
+          *** This is a bubble-wrapped shell, unless you explicitly specified
+          *** -B/--no-bwrap on the command line.  Exit with ctrl-D.
+          """
+          debian_chroot='bwrap' exec $SHELL
         }
       }
 
@@ -437,7 +444,7 @@ func cmake_ccache_option(comp) {
       return (:| -DCMAKE_C_COMPILER_LAUNCHER=$ccache_bin
                  -DCMAKE_CXX_COMPILER_LAUNCHER=$ccache_bin |)
     } else {
-      error "No ccache binary in PATH"
+      return ([])
     }
   } else {
     return ([])
@@ -452,7 +459,7 @@ func autotools_ccache_option(comp) {
     if (_status === 0) {
       return (:| CC="$ccache_bin gcc" CXX="$ccache_bin g++" |)
     } else {
-      error "No ccache binary in PATH"
+      return ([])
     }
   } else {
     return ([])
@@ -471,12 +478,21 @@ proc print_tasks {
 func sanitize_path(path) {
   var parts=split(path, ':')
   var new_parts=[]
-  for part in (parts) {
-    if (part !~ "/homebrew/") {
-      call new_parts->append(part)
-    }
+  var BrewBinDir=''
+  try {
+    var Brew=$(which brew)
+    setvar BrewBinDir=$(dirname $Brew)
   }
-  return (join(new_parts, ':'))
+  if (BrewBinDir === '') {
+    return (path)
+  } else {
+    for part in (parts) {
+      if ! test $part -ef $BrewBinDir {
+        call new_parts->append(part)
+      }
+    }
+    return (join(new_parts, ':'))
+  }
 }
 
 proc do_task_number (; num) {
@@ -693,6 +709,12 @@ proc gpu_opts {
 
 func get_ccache_cache_dir() {
   var QueryPattern = / .* 'cache_dir = ' <capture .* as dirname> /
+  try > /dev/null {
+    which ccache
+  }
+  if (_error.code !== 0) {
+    return (null)
+  }
   var All = @(ccache --show-config)
   for Line in (All) {
     if (Line ~ QueryPattern) {
@@ -700,6 +722,18 @@ func get_ccache_cache_dir() {
     }
   }
   error "Failed to find ccache cache dir"
+}
+
+# This isn't exactly robust, but it'll do.
+
+func homebrew_bin(Binary) {
+  return ($(which $Binary) ~ '/homebrew/');
+}
+
+func homebrew_bind(Binary) {
+  var WhichBin = $(which $Binary)
+  var RealBinary = $(readlink -f $WhichBin)
+  return (:| --bind $RealBinary /opt/homebrew/bin/$Binary |)
 }
 
 proc do_bwrap {
@@ -710,18 +744,48 @@ proc do_bwrap {
   if test --exists /usr/lib/cmake {
     setvar HideUsrLibCMake=:| --tmpfs /usr/lib/cmake |
   }
+  var CCacheDirOpt = []
+  if (CCacheDir) {
+    setvar CCacheDirOpt = :| --bind $CCacheDir $CCacheDir |
+  }
+
+  # This awkward little bit is because not all systems have bwrap/ccache
+  # installed, but a full Homebrew installation interferes too much with builds
+  # (i.e. it might include its own 'pkg-config' but we want to use the system
+  # one instead).  Just pluck out the bits we need and hook them up inside the
+  # tmpfs /opt mount.
+  var HomebrewBinds = []
+  if (BindHomebrew) {
+    for Bin in bwrap ccache makeinfo {
+      if (homebrew_bin (Bin)) {
+        setvar HomebrewBinds = HomebrewBinds ++ homebrew_bind (Bin)
+      }
+    }
+    export PATH=/opt/homebrew/bin:$PATH
+  }
+
+  var NetSharingOpt = []
+  if (BwrapUnshareNet) {
+    setvar NetSharingOpt = :| --unshare-net |
+  } else {
+    setvar NetSharingOpt = :| --share-net --ro-bind /etc/resolv.conf /etc/resolv.conf |
+  }
 
   bwrap --ro-bind / / \
         --bind /tmp /tmp \
-        --bind $CCacheDir $CCacheDir \
+        @BwrapExtraOpts \
+        @CCacheDirOpt \
         --bind $RealWD $RealWD \
         --bind /run/user /run/user \
         --tmpfs /opt \
+        --dir /opt/homebrew \
+        --dir /opt/homebrew/bin \
         @HideUsrLibCMake \
+        @HomebrewBinds \
         --dev /dev \
         --proc /proc \
         --unshare-pid \
-        --unshare-net \
+        @NetSharingOpt \
         --die-with-parent \
         @ARGV
 }
@@ -778,3 +842,4 @@ source "$SCRIPTDIR/modules/opencl_headers"
 source "$SCRIPTDIR/modules/llvm_amd_staging"
 source "$SCRIPTDIR/modules/ovo"
 source "$SCRIPTDIR/modules/aomp_extras"
+source "$SCRIPTDIR/modules/aomp_delegate"
