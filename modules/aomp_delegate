@@ -55,15 +55,36 @@ proc x_symlinks_tasks {
   add_tasks x_symlinks setup
 }
 
+func get_x_python_mods_src() {
+  return ('.')
+}
+
+func x_python_mods_dependencies() {
+  return (:| x_symlinks |)
+}
+
+proc setup_x_python_mods() {
+  # Without this dynamic scope, we don't see the redefined PATH from our caller.
+  shopt -s dynamic_scope {
+    pip3 install --user CppHeaderParser barectf lxml ply
+  }
+}
+
+proc x_python_mods_tasks {
+  add_tasks x_python_mods setup
+}
+
 proc aomp_delegate_gen(Comp) {
   var CompName = Comp=>replace('-','_')
   eval """
   proc build_x_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
+    export AOMP=\$INSTALLDIR
     \$AOMPSrc/bin/build_$Comp.sh
   }
   proc install_x_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
+    export AOMP=\$INSTALLDIR
     \$AOMPSrc/bin/build_$Comp.sh install
   }
   proc x_${CompName}_tasks {
@@ -145,7 +166,7 @@ func x_hipcc_dependencies() {
 }
 
 func x_hipamd_dependencies() {
-  return (:| x_hipcc |)
+  return (:| x_hipcc x_python_mods |)
 }
 
 func x_rocdbgapi_dependencies() {
