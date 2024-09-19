@@ -95,7 +95,7 @@ proc add_optional_module (Mod) {
 
     # Optional components
     flang_legacy {
-      add_components flang_legacy flang flang_runtime
+      add_components flang_legacy flang flang_runtime hipfort
     }
 
     openmp_legacy {
@@ -110,6 +110,14 @@ proc add_optional_module (Mod) {
 
     rocgdb {
       add_components rocgdb
+    }
+
+    roctracer {
+      add_components roctracer
+    }
+
+    rocprofiler {
+      add_components rocprofiler
     }
 
     composable_kernel {

@@ -1,0 +1,12 @@
+func get_hipfort_src() {
+  return (get_src_default ("hipfort"))
+}
+
+func hipfort_dependencies() {
+  return ([])
+}
+
+proc hipfort_tasks() {
+  # No tasks yet!
+  :
+}

@@ -38,6 +38,14 @@ var hip_src = {
   "shallow_clone" : false
 }
 
+var hipfort_src = {
+  "url" : "https://github.com/ROCm/hipfort",
+  "type" : "git",
+  "version" : "release/rocm-rel-6.2",
+  "version_name" : "rel-6.2",
+  "shallow_clone" : false
+}
+
 var rocprofiler_register_src = {
   "url" : "https://github.com/ROCm/rocprofiler-register",
   "type" : "git",
@@ -45,6 +53,22 @@ var rocprofiler_register_src = {
   "version_name" : "6.2.x",
   "shallow_clone" : false,
   "submodules" : true
+}
+
+var rocprofiler_src = {
+  "url" : "https://github.com/ROCm/rocprofiler",
+  "type" : "git",
+  "version" : "rocm-6.2.x",
+  "version_name" : "6.2.x",
+  "shallow_clone" : false
+}
+
+var roctracer_src = {
+  "url" : "https://github.com/ROCm/roctracer",
+  "type" : "git",
+  "version" : "rocm-6.2.x",
+  "version_name" : "6.2.x",
+  "shallow_clone" : false
 }
 
 var opencl_icd_loader_src = {
@@ -84,8 +108,11 @@ add_sources ("roct_thunk_interface", roct_thunk_interface_src)
 add_sources ("rocr_runtime", rocr_runtime_src)
 add_sources ("hipamd", hipamd_src)
 add_sources ("hip", hip_src)
+add_sources ("hipfort", hipfort_src)
 add_sources ("composable_kernel", composable_kernel_src)
 add_sources ("rocprofiler_register", rocprofiler_register_src)
 add_sources ("opencl_icd_loader", opencl_icd_loader_src)
 add_sources ("opencl_headers", opencl_headers_src)
 add_sources ("rocminfo", rocminfo_src)
+add_sources ("roctracer", roctracer_src)
+add_sources ("rocprofiler", rocprofiler_src)

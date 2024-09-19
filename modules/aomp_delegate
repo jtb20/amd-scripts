@@ -13,7 +13,7 @@ proc setup_x_symlinks {
   var ClrSrc = get_srcdir('hipamd')
   var FlangSrc = get_srcdir('flang')
   var HipSrc = get_srcdir('hip')
-  #var HipFortSrc = get_srcdir('hipfort')
+  var HipFortSrc = get_srcdir('hipfort')
   var LLVMSrc = get_srcdir('llvm')
   var ROCDbgApiSrc = get_srcdir('rocm_dbgapi')
   var ROCGDBSrc = get_srcdir('rocgdb')
@@ -22,7 +22,7 @@ proc setup_x_symlinks {
   var ROCProfilerSrc = get_srcdir('rocprofiler')
   var ROCProfilerRegisterSrc = get_srcdir('rocprofiler_register')
   var ROCRRuntimeSrc = get_srcdir('rocr_runtime')
-  #var ROCTracerSrc = get_srcdir('roctracer')
+  var ROCTracerSrc = get_srcdir('roctracer')
   var ROCTThunkIntfSrc = get_srcdir('roct_thunk_interface')
   var AOMP_VERSION = ConfigureOpts.aomp_delegate.aomp_version
   var AOMP_REPOS = ConfigureOpts.aomp_delegate.aomp_repos
@@ -31,24 +31,24 @@ proc setup_x_symlinks {
     mkdir -p $AOMP_REPOS
   }
 
-  ln -sf $AMDSMISrc $AOMP_REPOS/amdsmi
-  ln -sf $AOMPSrc $AOMP_REPOS/aomp
-  ln -sf $AOMPExtrasSrc $AOMP_REPOS/aomp-extras
-  ln -sf $ClrSrc $AOMP_REPOS/clr
-  ln -sf $FlangSrc $AOMP_REPOS/flang
-  ln -sf $HipSrc $AOMP_REPOS/hip
-  #ln -sf $HipFortSrc $AOMP_REPOS/hipfort
-  ln -sf $LLVMSrc $AOMP_REPOS/llvm-project
-  ln -sf $ROCDbgApiSrc $AOMP_REPOS/ROCdbgapi
-  ln -sf $ROCGDBSrc $AOMP_REPOS/ROCgdb
-  ln -sf $ROCMCmakeSrc $AOMP_REPOS/rocm-cmake
-  ln -sf $ROCMInfoSrc $AOMP_REPOS/rocminfo
-  ln -sf $AMDSMISrc $AOMP_REPOS/rocm_smi_lib
-  ln -sf $ROCProfilerSrc $AOMP_REPOS/rocprofiler
-  ln -sf $ROCProfilerRegisterSrc $AOMP_REPOS/rocprofiler-register
-  ln -sf $ROCRRuntimeSrc $AOMP_REPOS/rocr-runtime
-  #ln -sf $ROCTracerSrc $AOMP_REPOS/roctracer
-  ln -sf $ROCTThunkIntfSrc $AOMP_REPOS/roct-thunk-interface
+  ln -sfT $AMDSMISrc $AOMP_REPOS/amdsmi
+  ln -sfT $AOMPSrc $AOMP_REPOS/aomp
+  ln -sfT $AOMPExtrasSrc $AOMP_REPOS/aomp-extras
+  ln -sfT $ClrSrc $AOMP_REPOS/clr
+  ln -sfT $FlangSrc $AOMP_REPOS/flang
+  ln -sfT $HipSrc $AOMP_REPOS/hip
+  ln -sfT $HipFortSrc $AOMP_REPOS/hipfort
+  ln -sfT $LLVMSrc $AOMP_REPOS/llvm-project
+  ln -sfT $ROCDbgApiSrc $AOMP_REPOS/ROCdbgapi
+  ln -sfT $ROCGDBSrc $AOMP_REPOS/ROCgdb
+  ln -sfT $ROCMCmakeSrc $AOMP_REPOS/rocm-cmake
+  ln -sfT $ROCMInfoSrc $AOMP_REPOS/rocminfo
+  ln -sfT $AMDSMISrc $AOMP_REPOS/rocm_smi_lib
+  ln -sfT $ROCProfilerSrc $AOMP_REPOS/rocprofiler
+  ln -sfT $ROCProfilerRegisterSrc $AOMP_REPOS/rocprofiler-register
+  ln -sfT $ROCRRuntimeSrc $AOMP_REPOS/rocr-runtime
+  ln -sfT $ROCTracerSrc $AOMP_REPOS/roctracer
+  ln -sfT $ROCTThunkIntfSrc $AOMP_REPOS/roct-thunk-interface
 }
 
 proc x_symlinks_tasks {
