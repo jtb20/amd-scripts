@@ -29,7 +29,7 @@ proc install_rocsmilib() {
 }
 
 func rocsmilib_dependencies() {
-  return (:| llvm |)
+  return ([])
 }
 
 proc rocsmilib_tasks() {

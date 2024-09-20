@@ -103,6 +103,22 @@ var composable_kernel_src = {
   "shallow_clone" : false
 }
 
+var aqlprofile_src = {
+  "url" : "ssh://gerritgit/hsa/ec/aqlprofile",
+  "type" : "git",
+  "version" : "release/rocm-rel-6.2",
+  "version_name" : "rel-6.2",
+  "shallow_clone" : false
+}
+
+var rocprofiler_sdk_src = {
+  "url" : "https://github.com/ROCm/rocprofiler-sdk",
+  "type" : "git",
+  "version" : "rocm-6.2.x",
+  "version_name" : "6.2.x",
+  "shallow_clone" : false
+}
+
 add_sources ("rocm_cmake", rocm_cmake_src)
 add_sources ("roct_thunk_interface", roct_thunk_interface_src)
 add_sources ("rocr_runtime", rocr_runtime_src)
@@ -116,3 +132,5 @@ add_sources ("opencl_headers", opencl_headers_src)
 add_sources ("rocminfo", rocminfo_src)
 add_sources ("roctracer", roctracer_src)
 add_sources ("rocprofiler", rocprofiler_src)
+add_sources ("aqlprofile", aqlprofile_src)
+add_sources ("rocprofiler_sdk", rocprofiler_sdk_src)

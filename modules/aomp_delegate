@@ -69,7 +69,8 @@ proc setup_x_python_mods() {
   # and that just throws an error about using an externally-managed
   # environment).
   shopt -s dynamic_scope {
-    pip3 install --user CppHeaderParser barectf lxml ply
+    pip3 install --ignore-installed --user barectf==3.1.2 PyYAML==5.3.1
+    pip3 install --user CppHeaderParser argparse wheel lit lxml pandas
   }
 }
 
@@ -159,11 +160,6 @@ setvar DelegatedCompName["device_libs"          ] = "x_libdevice";
 
 func translate_x_deps(Comp) {
   eval "var Deps = ${Comp}_dependencies ()"
-  if (Comp === 'rocr_runtime' or Comp === 'roct_thunk_interface') {
-    # For the delegated build, these components want to build with the "new"
-    # clang (or the version install in /opt/rocm, which we're hiding).
-    append llvm (Deps)
-  }
   var NewDeps = []
   for D in (Deps) {
     case (D) {
@@ -196,11 +192,11 @@ func x_rocprofiler_register_dependencies() {
 }
 
 func x_roct_dependencies() {
-  return (translate_x_deps('roct_thunk_interface'))
+  return (translate_x_deps('roct_thunk_interface') ++ ['x_project'])
 }
 
 func x_rocr_dependencies() {
-  return (translate_x_deps('rocr_runtime'))
+  return (translate_x_deps('rocr_runtime') ++ ['x_project'])
 }
 
 func x_openmp_dependencies() {
@@ -224,11 +220,11 @@ func x_rocminfo_dependencies() {
 }
 
 func x_rocm_smi_lib_dependencies() {
-  return (translate_x_deps('rocsmilib'))
+  return (translate_x_deps('rocsmilib') ++ ['x_project'])
 }
 
 func x_amdsmi_dependencies() {
-  return (translate_x_deps('rocsmilib'))
+  return (translate_x_deps('rocsmilib') ++ ['x_project'])
 }
 
 func x_llvm_legacy_dependencies() {
