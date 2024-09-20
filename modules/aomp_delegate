@@ -64,7 +64,10 @@ func x_python_mods_dependencies() {
 }
 
 proc setup_x_python_mods() {
-  # Without this dynamic scope, we don't see the redefined PATH from our caller.
+  # Without this dynamic scope, we don't see the redefined PATH from our
+  # caller (so e.g. we pick up pip3 from homebrew, rather than the system one,
+  # and that just throws an error about using an externally-managed
+  # environment).
   shopt -s dynamic_scope {
     pip3 install --user CppHeaderParser barectf lxml ply
   }
@@ -74,13 +77,41 @@ proc x_python_mods_tasks {
   add_tasks x_python_mods setup
 }
 
-proc aomp_delegate_gen(Comp) {
+func get_x_prereq_src() {
+  return ('.')
+}
+
+proc setup_x_prereq {
+  var AOMPSrc = get_srcdir('aomp')
+  export AOMP=$INSTALLDIR
+  $AOMPSrc/bin/build_prereq.sh
+}
+
+proc x_prereq_tasks {
+  add_tasks x_prereq setup
+}
+
+func x_prereq_dependencies() {
+  return (:| x_symlinks |)
+}
+
+proc aomp_delegate_gen(Comp, ConfigureTool) {
   var CompName = Comp=>replace('-','_')
+  var InstallWord = 'install'
+  if (Comp === 'llvm-legacy') {
+    # No install step for llvm-legacy!
+    setvar InstallWord = ''
+  }
   eval """
+  proc ${ConfigureTool}_x_${CompName} {
+    var AOMPSrc = get_srcdir('aomp')
+    export AOMP=\$INSTALLDIR
+    \$AOMPSrc/bin/build_$Comp.sh $ConfigureTool
+  }
   proc build_x_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
     export AOMP=\$INSTALLDIR
-    \$AOMPSrc/bin/build_$Comp.sh
+    \$AOMPSrc/bin/build_$Comp.sh no$ConfigureTool
   }
   proc install_x_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
@@ -88,7 +119,7 @@ proc aomp_delegate_gen(Comp) {
     \$AOMPSrc/bin/build_$Comp.sh install
   }
   proc x_${CompName}_tasks {
-    add_tasks x_${CompName} build install
+    add_tasks x_${CompName} $ConfigureTool build $InstallWord
   }
   """
 }
@@ -97,99 +128,170 @@ func aomp_delegate_getsrc() {
   return ('.')
 }
 
-func x_prereq_dependencies() {
-  return (:| x_symlinks |)
+var DelegatedCompName = {}
+
+# Big dict literals crash ysh 0.23.0 (https://github.com/oils-for-unix/oils/issues/2078)
+# FIXME: Refactor again when that's fixed.
+setvar DelegatedCompName["llvm"                 ] = "x_project";
+setvar DelegatedCompName["rocprofiler_register" ] = "x_rocprofiler_register";
+setvar DelegatedCompName["roct_thunk_interface" ] = "x_roct";
+setvar DelegatedCompName["rocr_runtime"         ] = "x_rocr";
+setvar DelegatedCompName["openmp"               ] = "x_openmp";
+setvar DelegatedCompName["offload"              ] = "x_offload";
+setvar DelegatedCompName["aomp_extras"          ] = "x_extras";
+setvar DelegatedCompName["comgr"                ] = "x_comgr";
+setvar DelegatedCompName["rocminfo"             ] = "x_rocminfo";
+setvar DelegatedCompName["rocsmilib"            ] = "x_rocm_smi_lib";
+setvar DelegatedCompName["amdsmi"               ] = "x_amdsmi";
+setvar DelegatedCompName["llvm_legacy"          ] = "x_llvm_legacy";
+setvar DelegatedCompName["flang_legacy"         ] = "x_flang_legacy";
+setvar DelegatedCompName["pgmath"               ] = "x_pgmath";
+setvar DelegatedCompName["flang"                ] = "x_flang";
+setvar DelegatedCompName["flang_runtime"        ] = "x_flang_runtime";
+setvar DelegatedCompName["hipcc"                ] = "x_hipcc";
+setvar DelegatedCompName["hipamd"               ] = "x_hipamd";
+setvar DelegatedCompName["rocm_dbgapi"          ] = "x_rocdbgapi";
+setvar DelegatedCompName["rocgdb"               ] = "x_rocgdb";
+setvar DelegatedCompName["roctracer"            ] = "x_roctracer";
+setvar DelegatedCompName["rocprofiler"          ] = "x_rocprofiler";
+setvar DelegatedCompName["rocm_cmake"           ] = "x_rocm_cmake";
+setvar DelegatedCompName["device_libs"          ] = "x_libdevice";
+
+func translate_x_deps(Comp) {
+  eval "var Deps = ${Comp}_dependencies ()"
+  if (Comp === 'rocr_runtime' or Comp === 'roct_thunk_interface') {
+    # For the delegated build, these components want to build with the "new"
+    # clang (or the version install in /opt/rocm, which we're hiding).
+    append llvm (Deps)
+  }
+  var NewDeps = []
+  for D in (Deps) {
+    case (D) {
+      rocm_cmake | device_libs | hwloc | hip | gmp | mpfr | \
+      aqlprofile | rocprofiler_sdk {
+        # We don't need to build these explicitly with the delegated build.
+        :
+      }
+      hipamd {
+        append "$[DelegatedCompName[D]]" (NewDeps)
+        append x_python_mods (NewDeps)
+      }
+      * {
+        append "$[DelegatedCompName[D]]" (NewDeps)
+      }
+    }
+  }
+  # They all need these ones...
+  append x_symlinks (NewDeps)
+  append x_prereq (NewDeps)
+  return (NewDeps)
 }
 
 func x_project_dependencies() {
-  return (:| x_prereq |)
+  return (translate_x_deps('llvm'))
 }
 
 func x_rocprofiler_register_dependencies() {
-  return (:| x_project |)
+  return (translate_x_deps('rocprofiler_register'))
 }
 
 func x_roct_dependencies() {
-  return (:| x_rocprofiler_register |)
+  return (translate_x_deps('roct_thunk_interface'))
 }
 
 func x_rocr_dependencies() {
-  return (:| x_roct |)
+  return (translate_x_deps('rocr_runtime'))
 }
 
 func x_openmp_dependencies() {
-  return (:| x_rocr |)
+  return (translate_x_deps('openmp'))
 }
 
 func x_offload_dependencies() {
-  return (:| x_openmp |)
+  return (translate_x_deps('offload'))
 }
 
 func x_extras_dependencies() {
-  return (:| x_offload |)
+  return (translate_x_deps('aomp_extras'))
 }
 
 func x_comgr_dependencies() {
-  return (:| x_extras |)
+  return (translate_x_deps('comgr'))
 }
 
 func x_rocminfo_dependencies() {
-  return (:| x_comgr |)
+  return (translate_x_deps('rocminfo'))
 }
 
 func x_rocm_smi_lib_dependencies() {
-  return (:| x_rocminfo |)
+  return (translate_x_deps('rocsmilib'))
 }
 
 func x_amdsmi_dependencies() {
-  return (:| x_rocm_smi_lib |)
+  return (translate_x_deps('rocsmilib'))
+}
+
+func x_llvm_legacy_dependencies() {
+  return (translate_x_deps('llvm_legacy'))
 }
 
 func x_flang_legacy_dependencies() {
-  return (:| x_amdsmi |)
+  return (translate_x_deps('flang_legacy'))
 }
 
 func x_pgmath_dependencies() {
-  return (:| x_flang_legacy |)
+  return (translate_x_deps('pgmath'))
 }
 
 func x_flang_dependencies() {
-  return (:| x_pgmath |)
+  return (translate_x_deps('flang'))
 }
 
 func x_flang_runtime_dependencies() {
-  return (:| x_flang |)
+  return (translate_x_deps('flang_runtime'))
 }
 
 func x_hipcc_dependencies() {
-  return (:| x_flang_runtime |)
+  return (translate_x_deps('hipcc'))
 }
 
 func x_hipamd_dependencies() {
-  return (:| x_hipcc x_python_mods |)
+  return (translate_x_deps('hipamd'))
 }
 
 func x_rocdbgapi_dependencies() {
-  return (:| x_hipamd |)
+  return (translate_x_deps('rocm_dbgapi'))
 }
 
 func x_rocgdb_dependencies() {
-  return (:| x_rocdbgapi |)
+  return (translate_x_deps('rocgdb'))
 }
 
 func x_roctracer_dependencies() {
-  return (:| x_rocgdb |)
+  return (translate_x_deps('roctracer'))
 }
 
 func x_rocprofiler_dependencies() {
-  return (:| x_roctracer |)
+  return (translate_x_deps('rocprofiler'))
 }
 
-for Comp in prereq project rocprofiler-register roct rocr openmp offload \
-            extras comgr rocminfo rocm_smi_lib amdsmi flang-legacy pgmath \
-            flang flang_runtime hipcc hipamd rocdbgapi rocgdb roctracer \
-            rocprofiler {
+func x_rocm_cmake_dependencies() {
+  return (translate_x_deps('rocm_cmake'))
+}
+
+func x_libdevice_dependencies() {
+  return (translate_x_deps('device_libs'))
+}
+
+for Comp in project rocprofiler-register roct rocr openmp offload \
+            extras comgr rocminfo rocm_smi_lib amdsmi llvm-legacy flang-legacy \
+            pgmath flang flang_runtime hipcc hipamd rocdbgapi rocgdb roctracer \
+            rocprofiler rocm-cmake libdevice {
   var CompName = Comp=>replace('-','_')
-  aomp_delegate_gen $Comp
+  var ConfTool = 'cmake'
+  if (Comp === 'rocgdb') {
+    setvar ConfTool = 'configure'
+  }
+  aomp_delegate_gen $Comp $ConfTool
   eval "var get_x_${CompName}_src = aomp_delegate_getsrc"
 }

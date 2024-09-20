@@ -39,7 +39,7 @@ proc install_offload() {
 }
 
 func offload_dependencies() {
-  return (:| llvm device_libs comgr |)
+  return (:| llvm device_libs comgr rocr_runtime |)
 }
 
 proc offload_tasks {

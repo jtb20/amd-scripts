@@ -32,7 +32,7 @@ proc install_hipcc() {
 }
 
 func hipcc_dependencies() {
-  return ([])
+  return (:| llvm |)
 }
 
 proc hipcc_tasks {
