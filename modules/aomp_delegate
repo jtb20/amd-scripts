@@ -106,16 +106,22 @@ proc aomp_delegate_gen(Comp, ConfigureTool) {
   eval """
   proc ${ConfigureTool}_x_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
+    export BUILD_TYPE="\$[get_build_type("x_${CompName}")]"
+    export AOMP_USE_NINJA=1
     export AOMP=\$INSTALLDIR
     \$AOMPSrc/bin/build_$Comp.sh $ConfigureTool
   }
   proc build_x_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
+    export BUILD_TYPE="\$[get_build_type("x_${CompName}")]"
+    export AOMP_USE_NINJA=1
     export AOMP=\$INSTALLDIR
     \$AOMPSrc/bin/build_$Comp.sh no$ConfigureTool
   }
   proc install_x_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
+    export BUILD_TYPE="\$[get_build_type("x_${CompName}")]"
+    export AOMP_USE_NINJA=1
     export AOMP=\$INSTALLDIR
     \$AOMPSrc/bin/build_$Comp.sh install
   }
