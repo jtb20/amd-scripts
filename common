@@ -32,6 +32,7 @@ var TASKARR=()
 var BindHomebrew = false
 var BwrapExtraOpts = []
 var BwrapUnshareNet = true
+var ToolsRoot = null
 
 proc show_vars {
   write "HIP_CLANG_PATH: $HIP_CLANG_PATH"
@@ -85,11 +86,11 @@ func in_list(item, inlist) {
 }
 
 func has_proc (procname) {
-  var t = null
-  try > /dev/null 2>&1 {
-    setvar t = "$(type -t $procname)"
+  try {
+    var P = getVar(procname)
+    return (type(P) === 'Proc')
   }
-  return (_status === 0 and t === 'function')
+  return (false)
 }
 
 proc clear_error () {
@@ -128,6 +129,15 @@ proc parse_args(; argv) {
 
       -B | --no-bwrap {
         setglobal NoBWrap = true
+      }
+
+      -T | --toolsroot {
+        setvar opt += 1
+        setglobal ToolsRoot = argv[opt]
+      }
+
+      --share-net {
+        setglobal BwrapUnshareNet = false
       }
 
       -H | --bind-homebrew {
@@ -299,6 +309,9 @@ proc set_build(; comp, tgt) {
 }
 
 proc append_configure_opts(; comp, opts) {
+  if ('cfg' not in ConfigureOpts[comp]) {
+    setglobal ConfigureOpts[comp].cfg = []
+  }
   setglobal ConfigureOpts[comp].cfg = ConfigureOpts[comp].cfg ++ opts
 }
 
@@ -768,26 +781,65 @@ proc do_bwrap {
   if (BwrapUnshareNet) {
     setvar NetSharingOpt = :| --unshare-net |
   } else {
-    setvar NetSharingOpt = :| --share-net --ro-bind /etc/resolv.conf /etc/resolv.conf |
+    setvar NetSharingOpt = :| --share-net |
   }
 
-  bwrap --ro-bind / / \
-        --bind /tmp /tmp \
-        @BwrapExtraOpts \
-        @CCacheDirOpt \
-        --bind $RealWD $RealWD \
-        --bind /run/user /run/user \
-        --tmpfs /opt \
-        --dir /opt/homebrew \
-        --dir /opt/homebrew/bin \
-        @HideUsrLibCMake \
-        @HomebrewBinds \
-        --dev /dev \
-        --proc /proc \
-        --unshare-pid \
-        @NetSharingOpt \
-        --die-with-parent \
-        @ARGV
+  var HostSpecificOpts = []
+  if test --exists $HOME/.config/amd-scripts/bwrap-opts {
+    setvar HostSpecificOpts = $(cat $HOME/.config/amd-scripts/bwrap-opts)=>shSplit()
+  }
+
+  if (ToolsRoot) {
+    # This bit is for rocm-dbgapi's cmake stuff.
+    var PCIIdsOpt = []
+    if test --dir /usr/share/misc {
+      setvar PCIIdsOpt = :| --bind /usr/share/misc /usr/share/misc |
+    } elif test --dir /usr/share/hwdata {
+      setvar PCIIdsOpt = :| --bind /usr/share/hwdata /usr/share/hwdata |
+    }
+    bwrap --tmpfs / \
+          --bind /tmp /tmp \
+          @BwrapExtraOpts \
+          @CCacheDirOpt \
+          --bind $HOME $HOME \
+          --bind $RealWD $RealWD \
+          --tmpfs /opt \
+          --dev /dev \
+          --proc /proc \
+          --bind /run /run \
+          --ro-bind $ToolsRoot/bin /bin \
+          --ro-bind /etc /etc \
+          --ro-bind $ToolsRoot/lib /lib \
+          --ro-bind $ToolsRoot/lib64 /lib64 \
+          --ro-bind $ToolsRoot/sbin /sbin \
+          --ro-bind $ToolsRoot/usr /usr \
+          --ro-bind $ToolsRoot/etc/alternatives /etc/alternatives \
+          --unshare-pid \
+          @NetSharingOpt \
+          @PCIIdsOpt \
+          @HostSpecificOpts \
+          --die-with-parent \
+          @ARGV
+  } else {
+    bwrap --ro-bind / / \
+          --bind /tmp /tmp \
+          @BwrapExtraOpts \
+          @CCacheDirOpt \
+          --bind $RealWD $RealWD \
+          --bind /run/user /run/user \
+          --tmpfs /opt \
+          --dir /opt/homebrew \
+          --dir /opt/homebrew/bin \
+          @HideUsrLibCMake \
+          @HomebrewBinds \
+          --dev /dev \
+          --proc /proc \
+          --unshare-pid \
+          @NetSharingOpt \
+          @HostSpecificOpts \
+          --die-with-parent \
+          @ARGV
+  }
 }
 
 # Loading these on demand is a bit awkward. Never mind, just load them all

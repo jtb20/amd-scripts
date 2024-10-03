@@ -14,7 +14,7 @@ proc configure_rocsmilib() {
   var Tool = get_build_tool("rocsmilib")
   var BuildType = get_build_type("rocsmilib")
   cd $Build {
-    cmake --trace -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
       $Src
   }

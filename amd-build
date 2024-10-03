@@ -13,7 +13,7 @@ maybe_mkdir $INSTALLDIR
 
 parse_args (ARGV)
 
-eval (load_config)
+call io->eval (load_config)
 
 add_optional_modules
 
