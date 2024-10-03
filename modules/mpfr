@@ -27,3 +27,8 @@ func mpfr_dependencies() {
 proc mpfr_tasks() {
   standard_tasks mpfr
 }
+
+
+proc default_configure_opts_mpfr() {
+  set_configure_opts ("mpfr", :| --with-gmp=$INSTALLDIR |)
+}
