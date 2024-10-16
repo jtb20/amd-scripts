@@ -22,6 +22,7 @@ var BuildOpts={}
 const DefaultParallelism=32
 var GithubUsername=""
 var OptionalModules=[]
+var RemovedFeatures=[]
 var CleanInstallDir=false
 var NoBWrap = false
 var GPURunOpts = []
@@ -85,6 +86,16 @@ func in_list(item, inlist) {
   return (inlist=>indexOf(item) >= 0)
 }
 
+func list_remove(thelist, ...items) {
+  var newlist = []
+  for E in (thelist) {
+    if (not in_list (E, items)) {
+      call newlist->append(E)
+    }
+  }
+  return (newlist)
+}
+
 func has_proc (procname) {
   try {
     var P = getVar(procname)
@@ -125,6 +136,11 @@ proc parse_args(; argv) {
       -A | --add {
         setvar opt += 1
         setglobal OptionalModules = OptionalModules ++ split(argv[opt], ',')
+      }
+
+      -R | --remove {
+        setvar opt += 1
+        setglobal RemovedFeatures = RemovedFeatures ++ split(argv[opt], ',')
       }
 
       -B | --no-bwrap {
@@ -279,7 +295,11 @@ func get_objdir (component) {
 }
 
 func get_installdir (component) {
-  return ("$INSTALLDIR/$component")
+  try {
+    var getinstdir_fn = lookup_func("get_${component}_install")
+    return ("$INSTALLDIR/$[getinstdir_fn ()]")
+  }
+  return ("$INSTALLDIR")
 }
 
 proc set_configure_opts(; comp, opts) {
@@ -613,6 +633,20 @@ proc add_optional_modules() {
   try {
     for Mod in (OptionalModules) {
       add_optional_module $Mod
+    }
+  }
+  if (_error.code !== 0 and "message" in _error) {
+    error "$[_error.message]"
+  }
+}
+
+proc remove_optional_features() {
+  if (len(RemovedFeatures) > 0 and not has_proc ("remove_optional_feature")) {
+    error "No removable features for this config"
+  }
+  try {
+    for Feat in (RemovedFeatures) {
+      remove_optional_feature $Feat
     }
   }
   if (_error.code !== 0 and "message" in _error) {

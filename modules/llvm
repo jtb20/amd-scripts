@@ -21,7 +21,8 @@ proc configure_llvm() {
     cmake -G $Tool @CCache_opt \
           -DLLVM_ENABLE_PROJECTS=$[join(Cfg.projects, ';')] \
           -DLLVM_TARGETS_TO_BUILD=$[join(Cfg.targets, ';')] \
-          -DCMAKE_BUILD_TYPE=$BuildType -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+          -DCMAKE_BUILD_TYPE=$BuildType \
+          -DCMAKE_INSTALL_PREFIX=$[get_installdir ('llvm')] \
           @[Cfg.cfg] -DLLVM_ENABLE_RUNTIMES=$[join(Cfg.runtimes, ';')] \
           $Src/llvm
   }
@@ -76,6 +77,7 @@ proc default_configure_opts_llvm() {
                                  -DCLANG_DEFAULT_LINKER=lld
                                  -DLLVM_PARALLEL_LINK_JOBS=8
                                  -DLLVM_USE_SPLIT_DWARF=TRUE
+                                 -DLLVM_PARALLEL_LINK_JOBS=2
                                  @LLDOpts |)
 }
 

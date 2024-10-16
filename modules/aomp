@@ -270,7 +270,7 @@ proc test_aomp_smoke_fails {
   ln -sf $AOMP_Src/test/smoke/Makefile.rules $Obj/test/smoke
   cd $Obj/test/smoke-fails {
     shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu:$INSTALLDIR/lib \
           AOMP_PARALLEL_SMOKE=1 {
       export AOMP
       export LD_LIBRARY_PATH

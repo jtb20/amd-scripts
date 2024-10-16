@@ -16,6 +16,7 @@ parse_args (ARGV)
 call io->eval (load_config)
 
 add_optional_modules
+remove_optional_features
 
 elaborate_tasks
 
