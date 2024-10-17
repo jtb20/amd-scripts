@@ -6,6 +6,15 @@ func get_llvm_src() {
   return ("llvm-project-$version_name")
 }
 
+func get_llvm_install() {
+  if ('append_install_dir' in ConfigureOpts.llvm and
+      ConfigureOpts.llvm.append_install_dir) {
+    return (ConfigureOpts.llvm.append_install_dir)
+  } else {
+    return (".")
+  }
+}
+
 proc clean_llvm() {
   clean_component llvm
 }

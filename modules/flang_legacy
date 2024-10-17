@@ -17,10 +17,10 @@ proc configure_flang_legacy() {
   var Tool = get_build_tool("flang_legacy")
   var LLVMCfg = ConfigureOpts["llvm"]
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$[get_installdir('llvm')] \
       -DCMAKE_BUILD_TYPE=$BuildType \
-      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
-      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DCMAKE_C_COMPILER=$[get_installdir('llvm')]/bin/clang \
+      -DCMAKE_CXX_COMPILER=$[get_installdir('llvm')]/bin/clang++ \
       -DCMAKE_CXX_STANDARD=17 \
       -DBUILD_SHARED_LIBS=OFF \
       $Src

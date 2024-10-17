@@ -35,7 +35,7 @@ proc test_misc_sollve_vv {
   ln -sf $(which true) $Obj/tmpbin/git
   cd $Obj {
     var Parts = Obj=>split("/")
-    shvar AOMP=$INSTALLDIR \
+    shvar AOMP=$[get_installdir('llvm')] \
           AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
           AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
           PATH=$Obj/tmpbin:$PATH \

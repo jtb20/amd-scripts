@@ -15,9 +15,9 @@ proc configure_llvm_legacy() {
   var Tool = get_build_tool("llvm_legacy")
   # We probably want to support the same targets as the non-legacy LLVM.
   var LLVMCfg = ConfigureOpts["llvm"]
-  var LLVMVersionMajor=$($INSTALLDIR/bin/clang --version | grep -oP '(?<=clang version )[0-9]+')
+  var LLVMVersionMajor=$($[get_installdir('llvm')]/bin/clang --version | grep -oP '(?<=clang version )[0-9]+')
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$[get_installdir('llvm')] \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DLLVM_ENABLE_PROJECTS=clang \
       -DLLVM_TARGETS_TO_BUILD=$[join(LLVMCfg.targets, ';')] \

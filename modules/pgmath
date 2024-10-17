@@ -9,7 +9,7 @@ func get_pgmath_src() {
 }
 
 func pgmath_get_clang_includes() {
-  var Includes = glob("$INSTALLDIR/lib/clang/*/include")
+  var Includes = glob("$[get_installdir('llvm')]/lib/clang/*/include")
   if (len(Includes) !== 1) {
     error "Expected a single Clang include dir, found $[len(Includes)]"
   }
@@ -24,15 +24,15 @@ proc configure_pgmath() {
   var LLVMCfg = ConfigureOpts["llvm"]
   var CompIncDir = pgmath_get_clang_includes ()
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$[get_installdir('llvm')] \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DLLVM_ENABLE_ASSERTIONS=ON \
-      -DLLVM_CONFIG=$INSTALLDIR/bin/llvm-config \
-      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
-      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DLLVM_CONFIG=$[get_installdir('llvm')]/bin/llvm-config \
+      -DCMAKE_C_COMPILER=$[get_installdir('llvm')]/bin/clang \
+      -DCMAKE_CXX_COMPILER=$[get_installdir('llvm')]/bin/clang++ \
       -DCMAKE_C_FLAGS="${CFLAGS:-} -I$CompIncDir" \
       -DCMAKE_CXX_FLAGS="${CXXFLAGS:-} -I$CompIncDir" \
-      -DCMAKE_Fortran_COMPILER=$INSTALLDIR/bin/flang \
+      -DCMAKE_Fortran_COMPILER=$[get_installdir('llvm')]/bin/flang \
       -DLLVM_TARGETS_TO_BUILD=$[join(LLVMCfg.targets, ';')] \
       -DFLANG_OPENMP_GPU_AMD=ON \
       -DFLANG_OPENMP_GPU_NVIDIA=ON \

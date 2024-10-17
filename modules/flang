@@ -18,12 +18,12 @@ proc configure_flang() {
   var LLVMCfg = ConfigureOpts["llvm"]
   var CompIncDir = "$Src/runtime/libpgmath/lib/common"
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$[get_installdir('llvm')] \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DLLVM_ENABLE_ASSERTIONS=ON \
-      -DLLVM_CONFIG=$INSTALLDIR/bin/llvm-config \
-      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
-      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DLLVM_CONFIG=$[get_installdir('llvm')]/bin/llvm-config \
+      -DCMAKE_C_COMPILER=$[get_installdir('llvm')]/bin/clang \
+      -DCMAKE_CXX_COMPILER=$[get_installdir('llvm')]/bin/clang++ \
       -DCMAKE_C_FLAGS="${CFLAGS:-} -I$CompIncDir" \
       -DCMAKE_CXX_FLAGS="${CXXFLAGS:-} -I$CompIncDir" \
       -DCMAKE_Fortran_COMPILER=gfortran \

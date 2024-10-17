@@ -13,11 +13,11 @@ proc configure_rocgdb() {
 }
 
 proc build_rocgdb() {
-  LD_LIBRARY_PATH=$INSTALLDIR/lib:${LD_LIBRARY_PATH:-} standard_build rocgdb
+  LD_LIBRARY_PATH=$INSTALLDIR/lib:$[get_installdir('llvm')]/lib:${LD_LIBRARY_PATH:-} standard_build rocgdb
 }
 
 proc install_rocgdb() {
-  LD_LIBRARY_PATH=$INSTALLDIR/lib:${LD_LIBRARY_PATH:-} standard_install rocgdb
+  LD_LIBRARY_PATH=$INSTALLDIR/lib:$[get_installdir('llvm')]/lib:${LD_LIBRARY_PATH:-} standard_install rocgdb
 }
 
 func rocgdb_dependencies() {

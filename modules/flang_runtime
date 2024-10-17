@@ -11,6 +11,7 @@ func get_flang_runtime_src() {
 proc configure_flang_runtime() {
   var Build = get_objdir("flang_runtime")
   var LLVM_Build = get_objdir("llvm")
+  var LLVM_Inst = get_installdir('llvm')
   var BuildType = get_build_type("flang_runtime")
   var Src = get_srcdir("flang_runtime")
   var Tool = get_build_tool("flang_runtime")
@@ -18,21 +19,21 @@ proc configure_flang_runtime() {
   var CompIncDir = "$Src/runtime/libpgmath/lib/common"
   var OpenMPBuildRuntimeSrc = "$LLVM_Build/runtimes/runtimes-bins/openmp/runtime/src"
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$LLVM_Inst \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DLLVM_ENABLE_ASSERTIONS=ON \
-      -DLLVM_CONFIG=$INSTALLDIR/bin/llvm-config \
-      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
-      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DLLVM_CONFIG=$LLVM_Inst/bin/llvm-config \
+      -DCMAKE_C_COMPILER=$LLVM_Inst/bin/clang \
+      -DCMAKE_CXX_COMPILER=$LLVM_Inst/bin/clang++ \
       -DCMAKE_C_FLAGS="${CFLAGS:-} -I$CompIncDir" \
       -DCMAKE_CXX_FLAGS="${CXXFLAGS:-} -I$CompIncDir" \
-      -DCMAKE_Fortran_COMPILER=$INSTALLDIR/bin/flang \
+      -DCMAKE_Fortran_COMPILER=$LLVM_Inst/bin/flang \
       -DLLVM_TARGETS_TO_BUILD=$[join(LLVMCfg.targets, ';')] \
       -DLLVM_INSTALL_RUNTIME=ON \
       -DFLANG_BUILD_RUNTIME=ON \
       -DOPENMP_BUILD_DIR=$OpenMPBuildRuntimeSrc \
       -DFLANG_INCLUDE_TESTS=OFF \
-      -DFLANG_LIBOMP=$INSTALLDIR/lib/libomp.so \
+      -DFLANG_LIBOMP=$LLVM_Inst/lib/libomp.so \
       $Src
   }
 }

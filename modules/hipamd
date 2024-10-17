@@ -25,7 +25,7 @@ proc configure_hipamd() {
       -DCMAKE_HIP_ARCHITECTURES=OFF \
       -DHIP_ENABLE_ROCPROFILER_REGISTER=ON \
       -DROCM_PATH=$INSTALLDIR \
-      -DHIP_LLVM_ROOT=$INSTALLDIR \
+      -DHIP_LLVM_ROOT=$[get_installdir('llvm')] \
       -DCLR_BUILD_HIP=ON \
       -DCLR_BUILD_OCL=ON \
       -DHIPCC_BIN_DIR=$HipCCBuild \
