@@ -224,17 +224,15 @@ proc save_results_misc_sollve_vv (; files) {
       cp -f selecttests.log $TESTRESULTSDIR/sollve.log
       cp -f selecttests.sum $TESTRESULTSDIR/sollve.sum
       setvar FoundResults = true
-      # FIXME: ysh control flow.
-      return
+    } else {
+      for Dir in results_report* {
+        sollve_json_to_sum ("$Dir/results.json")
+        setvar FoundResults = true
+      } > $TESTRESULTSDIR/sollve.sum
+      for Dir in results_report* {
+        sollve_json_to_log ("$Dir/results.json", Obj)
+      } > $TESTRESULTSDIR/sollve.log
     }
-
-    for Dir in results_report* {
-      sollve_json_to_sum ("$Dir/results.json")
-      setvar FoundResults = true
-    } > $TESTRESULTSDIR/sollve.sum
-    for Dir in results_report* {
-      sollve_json_to_log ("$Dir/results.json", Obj)
-    } > $TESTRESULTSDIR/sollve.log
   }
 
   if (FoundResults) {

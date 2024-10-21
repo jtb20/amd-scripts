@@ -111,6 +111,7 @@ proc add_optional_module (Mod) {
     # Optional components
     flang_legacy {
       add_components flang_legacy flang flang_runtime hipfort
+      add_testsuites flang legacy
     }
 
     openmp_legacy {

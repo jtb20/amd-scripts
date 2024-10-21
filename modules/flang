@@ -10,7 +10,7 @@ func get_flang_src() {
 
 proc configure_flang() {
   var Build = get_objdir("flang")
-  #var LLVM_Build = get_objdir("llvm")
+  var LLVM_Build = get_objdir("llvm")
   #var DevLibs_Build = get_objdir("device_libs")
   var BuildType = get_build_type("flang")
   var Src = get_srcdir("flang")
@@ -31,7 +31,9 @@ proc configure_flang() {
       -DFLANG_OPENMP_GPU_AMD=ON \
       -DFLANG_OPENMP_GPU_NVIDIA=ON \
       -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
-      -DFLANG_INCLUDE_TESTS=OFF \
+      -DFLANG_INCLUDE_TESTS=ON \
+      -DLLVM_EXTERNAL_LIT=$[get_srcdir('llvm')]/llvm/utils/lit/lit.py \
+      -DTARGET_TRIPLE=amdgcn-amd-amdhsa \
       $Src
   }
 }
@@ -50,4 +52,41 @@ func flang_dependencies() {
 
 proc flang_tasks {
   standard_tasks flang
+}
+
+proc clean_results_flang_legacy () {
+  var Build = get_objdir('flang')
+  rm -f $Build/test/testresults.json
+}
+
+proc test_flang_legacy () {
+  var Build = get_objdir('flang')
+  var LLVM_Build = get_objdir('llvm')
+  cd $Build {
+    try {
+      ln -sf $LLVM_Build/bin/FileCheck $Build/bin
+      ln -sf $LLVM_Build/bin/count $Build/bin
+      ln -sf $LLVM_Build/bin/not $Build/bin
+      if (SelectTests !== null) {
+        # This is a regex, not a glob, like the regular LLVM tests.
+        LIT_FILTER=$SelectTests LIT_OPTS="-o testresults.json" ninja -k 0 check-flang
+      } else {
+        LIT_OPTS="-o testresults.json" ninja -k 0 check-flang
+      }
+    }
+  }
+  if (_error.code === 0) {
+    write "Success."
+  } else {
+    write "Failure."
+  }
+}
+
+proc save_results_flang_legacy (; files) {
+  var Build = get_objdir('flang')
+  var ResultFile = "$Build/test/testresults.json"
+    if test --exists $ResultFile {
+      cp $ResultFile $TESTRESULTSDIR/flang-legacy.json
+      call files->setValue (:| flang-legacy.json |)
+    }
 }
