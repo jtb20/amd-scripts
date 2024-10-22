@@ -13,12 +13,15 @@ proc configure_device_libs() {
   var Src = get_srcdir("device_libs")
   var BuildType = get_build_type("device_libs")
   var LLVM_Build = get_objdir("llvm")
+  var LLVM_Inst = get_installdir('llvm')
   var Tool = get_build_tool("device_libs")
   var Cfg_opts = get_configure_opts("device_libs")
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-      -DCMAKE_PREFIX_PATH=$LLVM_Build \
+    fix_path cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_PREFIX_PATH="$LLVM_Build;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
+      -DLLVM_DIR=$LLVM_Inst \
+      -DCMAKE_INSTALL_LIBDIR=lib \
       @Cfg_opts \
       $Src
   }

@@ -54,8 +54,6 @@ proc test_gcc_libgomp(; options) {
     #write_dejagnu_site_file
     var pass_opts = :| --target_board=unix/-foffload-options=-march=gfx90a | \
                     ++ options
-    make -k check RUNTESTFLAGS="$[join(pass_opts, ' ')]"
-    # Is this better?
-    # eval "make -k check RUNTESTFLAGS=\"@pass_opts\""
+    make -k check RUNTESTFLAGS=$(printf '%q ' @pass_opts)
   }
 }

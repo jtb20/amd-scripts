@@ -15,9 +15,11 @@ proc configure_hipamd() {
   var BuildType = get_build_type("hipamd")
   var Src = get_srcdir("hipamd")
   var Tool = get_build_tool("hipamd")
+  var LLVM_Inst = get_installdir('llvm')
   cd $Build {
     rocm_env cmake -G $Tool \
       -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_PREFIX_PATH="$INSTALLDIR;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DHIP_COMMON_DIR=$HipSrc \
       -DHIP_PLATFORM=amd \

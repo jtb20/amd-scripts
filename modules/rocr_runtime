@@ -17,6 +17,7 @@ proc configure_rocr_runtime() {
   var BuildType = get_build_type("rocr_runtime")
   var Src = get_srcdir("rocr_runtime")
   var Tool = get_build_tool("rocr_runtime")
+  var LLVM_Inst = get_installdir('llvm')
   var SrcSubdir = Src
   if ("$(basename $Src)" !== "hsa-runtime") {
     # There are two arrangements for the rocr_runtime component -- as a
@@ -28,10 +29,9 @@ proc configure_rocr_runtime() {
     setvar SrcSubdir = "$Src/src"
   }
   cd $Build {
-    # PATH=$INSTALLDIR/bin:$[sanitize_path (PATH)]
-    cmake -G $Tool \
+    fix_path cmake -G $Tool \
       -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DCMAKE_PREFIX_PATH="$INSTALLDIR;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DIMAGE_SUPPORT=OFF \
       $SrcSubdir
