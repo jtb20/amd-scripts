@@ -1,12 +1,19 @@
-func get_x_symlinks_src() {
+# Build using the official AOMP scripts ("delegating" to them).
+
+# Build tasks in this file are mostly auto-generated, using an "ao" prefix
+# to distinguish them from components that don't use the wrapped scripts.
+# We don't use "aomp" because that causes name conflicts with the
+# aomp/aomp_extras modules.
+
+func get_ao_symlinks_src() {
   return (".")
 }
 
-func x_symlinks_dependencies() {
+func ao_symlinks_dependencies() {
   return ([])
 }
 
-proc setup_x_symlinks {
+proc setup_ao_symlinks {
   var AMDSMISrc = get_srcdir('rocsmilib')
   var AOMPSrc = get_srcdir('aomp')
   var AOMPExtrasSrc = get_srcdir('aomp_extras')
@@ -51,19 +58,19 @@ proc setup_x_symlinks {
   ln -sfT $ROCTThunkIntfSrc $AOMP_REPOS/roct-thunk-interface
 }
 
-proc x_symlinks_tasks {
-  add_tasks x_symlinks setup
+proc ao_symlinks_tasks {
+  add_tasks ao_symlinks setup
 }
 
-func get_x_python_mods_src() {
+func get_ao_python_mods_src() {
   return ('.')
 }
 
-func x_python_mods_dependencies() {
-  return (:| x_symlinks |)
+func ao_python_mods_dependencies() {
+  return (:| ao_symlinks |)
 }
 
-proc setup_x_python_mods() {
+proc setup_ao_python_mods() {
   # Without this dynamic scope, we don't see the redefined PATH from our
   # caller (so e.g. we pick up pip3 from homebrew, rather than the system one,
   # and that just throws an error about using an externally-managed
@@ -74,61 +81,92 @@ proc setup_x_python_mods() {
   }
 }
 
-proc x_python_mods_tasks {
-  add_tasks x_python_mods setup
+proc ao_python_mods_tasks {
+  add_tasks ao_python_mods setup
 }
 
-func get_x_prereq_src() {
+func get_ao_prereq_src() {
   return ('.')
 }
 
-proc setup_x_prereq {
+proc setup_ao_prereq {
   var AOMPSrc = get_srcdir('aomp')
   export AOMP=$INSTALLDIR
   $AOMPSrc/bin/build_prereq.sh
 }
 
-proc x_prereq_tasks {
-  add_tasks x_prereq setup
+proc ao_prereq_tasks {
+  add_tasks ao_prereq setup
 }
 
-func x_prereq_dependencies() {
-  return (:| x_symlinks |)
+func ao_prereq_dependencies() {
+  return (:| ao_symlinks |)
 }
 
-proc aomp_delegate_gen(Comp, ConfigureTool) {
+func aomp_delegate_gen(Comp, ConfigureTool) {
   var CompName = Comp=>replace('-','_')
   var InstallWord = 'install'
+  var Procs = {}
   if (Comp === 'llvm-legacy') {
     # No install step for llvm-legacy!
     setvar InstallWord = ''
   }
+  var BuildOptions = """
+    if (not ConfigureOpts.aomp_delegate.build_cuda) {
+      export AOMP_BUILD_CUDA=0
+    }
+    if (not ConfigureOpts.aomp_delegate.build_debug) {
+      export AOMP_BUILD_DEBUG=0
+    }
+    if (not ConfigureOpts.aomp_delegate.build_perf) {
+      export AOMP_BUILD_PERF=0
+    }
+    if (not ConfigureOpts.aomp_delegate.build_sanitizer) {
+      export AOMP_BUILD_SANITIZER=0
+    }
+    if (not ConfigureOpts.aomp_delegate.flang_legacy) {
+      export AOMP_SKIP_FLANG=1
+    }
+    if (not ConfigureOpts.aomp_delegate.flang_new) {
+      export AOMP_SKIP_FLANG_NEW=1
+    }
+  """
   eval """
-  proc ${ConfigureTool}_x_${CompName} {
+  proc ${ConfigureTool}_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    export BUILD_TYPE="\$[get_build_type("x_${CompName}")]"
+    export BUILD_TYPE="\$[get_build_type("ao_${CompName}")]"
     export AOMP_USE_NINJA=1
     export AOMP=\$INSTALLDIR
+    $BuildOptions
     \$AOMPSrc/bin/build_$Comp.sh $ConfigureTool
   }
-  proc build_x_${CompName} {
+  proc build_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    export BUILD_TYPE="\$[get_build_type("x_${CompName}")]"
+    export BUILD_TYPE="\$[get_build_type("ao_${CompName}")]"
     export AOMP_USE_NINJA=1
     export AOMP=\$INSTALLDIR
+    $BuildOptions
     \$AOMPSrc/bin/build_$Comp.sh no$ConfigureTool
   }
-  proc install_x_${CompName} {
+  proc install_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    export BUILD_TYPE="\$[get_build_type("x_${CompName}")]"
+    export BUILD_TYPE="\$[get_build_type("ao_${CompName}")]"
     export AOMP_USE_NINJA=1
     export AOMP=\$INSTALLDIR
+    $BuildOptions
     \$AOMPSrc/bin/build_$Comp.sh install
   }
-  proc x_${CompName}_tasks {
-    add_tasks x_${CompName} $ConfigureTool build $InstallWord
+  proc ao_${CompName}_tasks {
+    add_tasks ao_${CompName} $ConfigureTool build $InstallWord
   }
   """
+  setvar Procs["${ConfigureTool}_ao_${CompName}"] = getVar("${ConfigureTool}_ao_${CompName}")
+  setvar Procs["build_ao_${CompName}"] = getVar("build_ao_${CompName}")
+  if (InstallWord !== '') {
+    setvar Procs["install_ao_${CompName}"] = getVar("install_ao_${CompName}")
+  }
+  setvar Procs["ao_${CompName}_tasks"] = getVar("ao_${CompName}_tasks")
+  return (Procs)
 }
 
 func aomp_delegate_getsrc() {
@@ -139,32 +177,32 @@ var DelegatedCompName = {}
 
 # Big dict literals crash ysh 0.23.0 (https://github.com/oils-for-unix/oils/issues/2078)
 # FIXME: Refactor again when that's fixed.
-setvar DelegatedCompName["llvm"                 ] = "x_project";
-setvar DelegatedCompName["rocprofiler_register" ] = "x_rocprofiler_register";
-setvar DelegatedCompName["roct_thunk_interface" ] = "x_roct";
-setvar DelegatedCompName["rocr_runtime"         ] = "x_rocr";
-setvar DelegatedCompName["openmp"               ] = "x_openmp";
-setvar DelegatedCompName["offload"              ] = "x_offload";
-setvar DelegatedCompName["aomp_extras"          ] = "x_extras";
-setvar DelegatedCompName["comgr"                ] = "x_comgr";
-setvar DelegatedCompName["rocminfo"             ] = "x_rocminfo";
-setvar DelegatedCompName["rocsmilib"            ] = "x_rocm_smi_lib";
-setvar DelegatedCompName["amdsmi"               ] = "x_amdsmi";
-setvar DelegatedCompName["llvm_legacy"          ] = "x_llvm_legacy";
-setvar DelegatedCompName["flang_legacy"         ] = "x_flang_legacy";
-setvar DelegatedCompName["pgmath"               ] = "x_pgmath";
-setvar DelegatedCompName["flang"                ] = "x_flang";
-setvar DelegatedCompName["flang_runtime"        ] = "x_flang_runtime";
-setvar DelegatedCompName["hipcc"                ] = "x_hipcc";
-setvar DelegatedCompName["hipamd"               ] = "x_hipamd";
-setvar DelegatedCompName["rocm_dbgapi"          ] = "x_rocdbgapi";
-setvar DelegatedCompName["rocgdb"               ] = "x_rocgdb";
-setvar DelegatedCompName["roctracer"            ] = "x_roctracer";
-setvar DelegatedCompName["rocprofiler"          ] = "x_rocprofiler";
-setvar DelegatedCompName["rocm_cmake"           ] = "x_rocm_cmake";
-setvar DelegatedCompName["device_libs"          ] = "x_libdevice";
+setvar DelegatedCompName["llvm"                 ] = "ao_project";
+setvar DelegatedCompName["rocprofiler_register" ] = "ao_rocprofiler_register";
+setvar DelegatedCompName["roct_thunk_interface" ] = "ao_roct";
+setvar DelegatedCompName["rocr_runtime"         ] = "ao_rocr";
+setvar DelegatedCompName["openmp"               ] = "ao_openmp";
+setvar DelegatedCompName["offload"              ] = "ao_offload";
+setvar DelegatedCompName["aomp_extras"          ] = "ao_extras";
+setvar DelegatedCompName["comgr"                ] = "ao_comgr";
+setvar DelegatedCompName["rocminfo"             ] = "ao_rocminfo";
+setvar DelegatedCompName["rocsmilib"            ] = "ao_rocm_smi_lib";
+setvar DelegatedCompName["amdsmi"               ] = "ao_amdsmi";
+setvar DelegatedCompName["llvm_legacy"          ] = "ao_llvm_legacy";
+setvar DelegatedCompName["flang_legacy"         ] = "ao_flang_legacy";
+setvar DelegatedCompName["pgmath"               ] = "ao_pgmath";
+setvar DelegatedCompName["flang"                ] = "ao_flang";
+setvar DelegatedCompName["flang_runtime"        ] = "ao_flang_runtime";
+setvar DelegatedCompName["hipcc"                ] = "ao_hipcc";
+setvar DelegatedCompName["hipamd"               ] = "ao_hipamd";
+setvar DelegatedCompName["rocm_dbgapi"          ] = "ao_rocdbgapi";
+setvar DelegatedCompName["rocgdb"               ] = "ao_rocgdb";
+setvar DelegatedCompName["roctracer"            ] = "ao_roctracer";
+setvar DelegatedCompName["rocprofiler"          ] = "ao_rocprofiler";
+setvar DelegatedCompName["rocm_cmake"           ] = "ao_rocm_cmake";
+setvar DelegatedCompName["device_libs"          ] = "ao_libdevice";
 
-func translate_x_deps(Comp) {
+func translate_aomp_deps(Comp) {
   eval "var Deps = ${Comp}_dependencies ()"
   var NewDeps = []
   for D in (Deps) {
@@ -176,7 +214,7 @@ func translate_x_deps(Comp) {
       }
       hipamd {
         append "$[DelegatedCompName[D]]" (NewDeps)
-        append x_python_mods (NewDeps)
+        append ao_python_mods (NewDeps)
       }
       * {
         append "$[DelegatedCompName[D]]" (NewDeps)
@@ -184,105 +222,105 @@ func translate_x_deps(Comp) {
     }
   }
   # They all need these ones...
-  append x_symlinks (NewDeps)
-  append x_prereq (NewDeps)
+  append ao_symlinks (NewDeps)
+  append ao_prereq (NewDeps)
   return (NewDeps)
 }
 
-func x_project_dependencies() {
-  return (translate_x_deps('llvm'))
+func ao_project_dependencies() {
+  return (translate_aomp_deps('llvm'))
 }
 
-func x_rocprofiler_register_dependencies() {
-  return (translate_x_deps('rocprofiler_register'))
+func ao_rocprofiler_register_dependencies() {
+  return (translate_aomp_deps('rocprofiler_register'))
 }
 
-func x_roct_dependencies() {
-  return (translate_x_deps('roct_thunk_interface') ++ ['x_project'])
+func ao_roct_dependencies() {
+  return (translate_aomp_deps('roct_thunk_interface') ++ ['ao_project'])
 }
 
-func x_rocr_dependencies() {
-  return (translate_x_deps('rocr_runtime') ++ ['x_project'])
+func ao_rocr_dependencies() {
+  return (translate_aomp_deps('rocr_runtime') ++ ['ao_project'])
 }
 
-func x_openmp_dependencies() {
-  return (translate_x_deps('openmp'))
+func ao_openmp_dependencies() {
+  return (translate_aomp_deps('openmp'))
 }
 
-func x_offload_dependencies() {
-  return (translate_x_deps('offload'))
+func ao_offload_dependencies() {
+  return (translate_aomp_deps('offload'))
 }
 
-func x_extras_dependencies() {
-  return (translate_x_deps('aomp_extras'))
+func ao_extras_dependencies() {
+  return (translate_aomp_deps('aomp_extras'))
 }
 
-func x_comgr_dependencies() {
-  return (translate_x_deps('comgr'))
+func ao_comgr_dependencies() {
+  return (translate_aomp_deps('comgr'))
 }
 
-func x_rocminfo_dependencies() {
-  return (translate_x_deps('rocminfo'))
+func ao_rocminfo_dependencies() {
+  return (translate_aomp_deps('rocminfo'))
 }
 
-func x_rocm_smi_lib_dependencies() {
-  return (translate_x_deps('rocsmilib') ++ ['x_project'])
+func ao_rocm_smi_lib_dependencies() {
+  return (translate_aomp_deps('rocsmilib') ++ ['ao_project'])
 }
 
-func x_amdsmi_dependencies() {
-  return (translate_x_deps('rocsmilib') ++ ['x_project'])
+func ao_amdsmi_dependencies() {
+  return (translate_aomp_deps('rocsmilib') ++ ['ao_project'])
 }
 
-func x_llvm_legacy_dependencies() {
-  return (translate_x_deps('llvm_legacy'))
+func ao_llvm_legacy_dependencies() {
+  return (translate_aomp_deps('llvm_legacy'))
 }
 
-func x_flang_legacy_dependencies() {
-  return (translate_x_deps('flang_legacy'))
+func ao_flang_legacy_dependencies() {
+  return (translate_aomp_deps('flang_legacy'))
 }
 
-func x_pgmath_dependencies() {
-  return (translate_x_deps('pgmath'))
+func ao_pgmath_dependencies() {
+  return (translate_aomp_deps('pgmath'))
 }
 
-func x_flang_dependencies() {
-  return (translate_x_deps('flang'))
+func ao_flang_dependencies() {
+  return (translate_aomp_deps('flang'))
 }
 
-func x_flang_runtime_dependencies() {
-  return (translate_x_deps('flang_runtime'))
+func ao_flang_runtime_dependencies() {
+  return (translate_aomp_deps('flang_runtime'))
 }
 
-func x_hipcc_dependencies() {
-  return (translate_x_deps('hipcc'))
+func ao_hipcc_dependencies() {
+  return (translate_aomp_deps('hipcc'))
 }
 
-func x_hipamd_dependencies() {
-  return (translate_x_deps('hipamd'))
+func ao_hipamd_dependencies() {
+  return (translate_aomp_deps('hipamd'))
 }
 
-func x_rocdbgapi_dependencies() {
-  return (translate_x_deps('rocm_dbgapi'))
+func ao_rocdbgapi_dependencies() {
+  return (translate_aomp_deps('rocm_dbgapi'))
 }
 
-func x_rocgdb_dependencies() {
-  return (translate_x_deps('rocgdb'))
+func ao_rocgdb_dependencies() {
+  return (translate_aomp_deps('rocgdb'))
 }
 
-func x_roctracer_dependencies() {
-  return (translate_x_deps('roctracer'))
+func ao_roctracer_dependencies() {
+  return (translate_aomp_deps('roctracer'))
 }
 
-func x_rocprofiler_dependencies() {
-  return (translate_x_deps('rocprofiler'))
+func ao_rocprofiler_dependencies() {
+  return (translate_aomp_deps('rocprofiler'))
 }
 
-func x_rocm_cmake_dependencies() {
-  return (translate_x_deps('rocm_cmake'))
+func ao_rocm_cmake_dependencies() {
+  return (translate_aomp_deps('rocm_cmake'))
 }
 
-func x_libdevice_dependencies() {
-  return (translate_x_deps('device_libs'))
+func ao_libdevice_dependencies() {
+  return (translate_aomp_deps('device_libs'))
 }
 
 for Comp in project rocprofiler-register roct rocr openmp offload \
@@ -294,6 +332,9 @@ for Comp in project rocprofiler-register roct rocr openmp offload \
   if (Comp === 'rocgdb') {
     setvar ConfTool = 'configure'
   }
-  aomp_delegate_gen $Comp $ConfTool
-  eval "var get_x_${CompName}_src = aomp_delegate_getsrc"
+  var Procs = aomp_delegate_gen(Comp, ConfTool)
+  for Name in (Procs) {
+    call setVar(Name, Procs[Name])
+  }
+  call setVar("get_ao_${CompName}_src", aomp_delegate_getsrc)
 }
