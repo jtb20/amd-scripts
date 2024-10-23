@@ -3,6 +3,7 @@
 
 const ScriptName = "amd-build"
 
+source $_this_dir/utils
 source $_this_dir/common
 
 var CurrentLogFile

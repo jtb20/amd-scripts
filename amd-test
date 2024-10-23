@@ -2,6 +2,7 @@
 
 const ScriptName = "amd-test"
 
+source $_this_dir/utils
 source $_this_dir/common
 
 #proc get_test_options() {

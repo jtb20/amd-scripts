@@ -1,0 +1,67 @@
+#!/usr/bin/env ysh
+
+proc maybe_mkdir (where) {
+  if ! test --dir $where {
+    mkdir -p $where
+  }
+}
+
+func dir_empty (where) {
+  cd $where {
+    # shopt "dotglob" appears to be unimplemented. This'll do.
+    var files=glob("*")++glob(".*")
+    return (len(files) === 2)
+  }
+}
+
+proc copy_dir (Src, Dest) {
+  write "Copying directory $Src to $Dest..."
+  if test --dir $Dest {
+    rm -rf -- $Dest
+  }
+  if test --exists $Dest {
+    error "$Dest exists and is not a directory, stopping"
+  }
+  mkdir -p $(dirname $Dest)
+  cp -a $Src $Dest
+}
+
+func lookup_func(name) {
+  var fn = getVar(name)
+  if (type(fn) === "Func") {
+    return (fn)
+  } else {
+    error "Not a function: $name"
+  }
+}
+
+proc time_now {
+  date +"%H:%M:%S"
+}
+
+func in_list(item, inlist) {
+  return (inlist=>indexOf(item) >= 0)
+}
+
+func list_remove(thelist, ...items) {
+  var newlist = []
+  for E in (thelist) {
+    if (not in_list (E, items)) {
+      call newlist->append(E)
+    }
+  }
+  return (newlist)
+}
+
+func has_proc (procname) {
+  try {
+    var P = getVar(procname)
+    return (type(P) === 'Proc')
+  }
+  return (false)
+}
+
+proc clear_error () {
+  setglobal _error.message = null
+  setglobal _error.code = 0
+}

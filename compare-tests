@@ -1,0 +1,417 @@
+#!/usr/bin/env ysh
+
+source $_this_dir/utils
+
+func gather_sumfiles(Dir) {
+  var Sumfiles={}
+  cd $Dir {
+    find . -name '*.sum' -printf '%P\000' | while read -0 sumfile {
+      setvar Sumfiles[sumfile] = null
+    }
+  }
+  return (Sumfiles)
+}
+
+var UseColour = true
+
+proc start_colour(; Name) {
+  if (not UseColour) {
+    return
+  }
+  case (Name) {
+    # These are also bold and underlined, eh.
+    'red' {
+      write -n b'\y1b[31;1;4m'
+    }
+    'green' {
+      write -n b'\y1b[32;1;4m'
+    }
+    'yellow' {
+      write -n b'\y1b[33;1;4m'
+    }
+    'bold' {
+      write -n b'\y1b[1m'
+    }
+  }
+}
+
+proc reset_colour() {
+  if (not UseColour) {
+    return
+  }
+  write -n b'\y1b[0m'
+}
+
+proc one_side_only(; FirstName, First, Second, WroteSomething) {
+  var Results=[]
+  for F in (First) {
+    if (F not in Second) {
+      append $F (Results)
+    }
+  }
+  if (len(Results) > 0) {
+    start_colour ('bold')
+    write "Only in $FirstName dir: $[join(Results, ', ')]"
+    reset_colour
+    call WroteSomething->setValue (true)
+  }
+}
+
+func read_sumfile(Dir, File) {
+  var Running_exp_file = / %start 'Running' s+ <capture .+ as expfile> /
+  var ResultLine = / <capture [upper]+ as result> ':' s+ <capture .+ as testname> /
+  var Results = {}
+  while read --raw-line (&Res) {
+    if (Res ~ Running_exp_file) {
+      #write "Found expfile line: $[_group('expfile')]"
+      :
+    } elif (Res ~ ResultLine) {
+      #write "Found result '$[_group('result')]' for '$[_group('testname')]'"
+      var ThisResult = _group('result')
+      var ThisTest = _group('testname')
+      if (ThisTest in Results) {
+        start_colour ('yellow')
+        write "WARNING: Duplicate test name! '$ThisTest' (ignoring)"
+        reset_colour
+      } else {
+        setvar Results[ThisTest] = ThisResult
+      }
+    }
+  } < "$Dir/$File"
+  return (Results)
+}
+
+const SEVERE = 0
+const TROUBLESOME = 1
+const NEUTRAL = 2
+const FINE = 3
+const GOOD = 4
+const UNCATEGORIZED = 5
+const NOCHANGE = -1
+
+# Possible results are: PASS XPASS FAIL XFAIL SKIPPED ERROR UNSUPPORTED
+
+# Categorize transitions.  This is a bit fuzzy, but that's OK because it is
+# mostly just to sort results for the user.
+
+func categorize_transition(From, To) {
+  if (From === To) {
+    return (NOCHANGE)
+  }
+  case (From) {
+    PASS {
+      case (To) {
+        XPASS {
+          return (NEUTRAL)
+        }
+        FAIL | ERROR {
+          return (SEVERE)
+        }
+        XFAIL | SKIPPED | UNSUPPORTED {
+          return (TROUBLESOME)
+        }
+        * {
+          return (UNCATEGORIZED)
+        }
+      }
+    }
+    XPASS {
+      case (To) {
+        PASS {
+          return (FINE)
+        }
+        XFAIL | FAIL | ERROR | SKIPPED | UNSUPPORTED {
+          return (TROUBLESOME)
+        }
+        * {
+          return (UNCATEGORIZED)
+        }
+      }
+    }
+    FAIL {
+      case (To) {
+        PASS {
+          return (GOOD)
+        }
+        XPASS {
+          return (FINE)
+        }
+        XFAIL {
+          return (NEUTRAL)
+        }
+        ERROR | SKIPPED | UNSUPPORTED {
+          return (TROUBLESOME)
+        }
+        * {
+          return (UNCATEGORIZED)
+        }
+      }
+    }
+    XFAIL {
+      case (To) {
+        PASS {
+          return (GOOD)
+        }
+        XPASS {
+          return (FINE)
+        }
+        SKIPPED | UNSUPPORTED {
+          return (NEUTRAL)
+        }
+        FAIL | ERROR {
+          return (TROUBLESOME)
+        }
+        * {
+          return (UNCATEGORIZED)
+        }
+      }
+    }
+    SKIPPED {
+      case (To) {
+        PASS {
+          return (GOOD)
+        }
+        XPASS | XFAIL {
+          return (FINE)
+        }
+        FAIL | ERROR {
+          return (TROUBLESOME)
+        }
+        UNSUPPORTED {
+          return (NEUTRAL)
+        }
+        * {
+          return (UNCATEGORIZED)
+        }
+      }
+    }
+    UNSUPPORTED {
+      case (To) {
+        PASS {
+          return (GOOD)
+        }
+        XPASS | XFAIL {
+          return (FINE)
+        }
+        FAIL | ERROR {
+          return (TROUBLESOME)
+        }
+        SKIPPED {
+          return (NEUTRAL)
+        }
+        * {
+          return (UNCATEGORIZED)
+        }
+      }
+    }
+    ERROR {
+      case (To) {
+        PASS {
+          return (GOOD)
+        }
+        XPASS | XFAIL | SKIPPED | UNSUPPORTED {
+          return (FINE)
+        }
+        FAIL {
+          return (NEUTRAL)
+        }
+        * {
+          return (UNCATEGORIZED)
+        }
+      }
+    }
+    * {
+      return (UNCATEGORIZED)
+    }
+  }
+}
+
+func categorize_new(Res) {
+  case (Res) {
+    PASS {
+      return (GOOD)
+    }
+    XPASS | XFAIL {
+      return (FINE)
+    }
+    FAIL | ERROR {
+      return (SEVERE)
+    }
+    SKIPPED | UNSUPPORTED {
+      return (NEUTRAL)
+    }
+    * {
+      return (UNCATEGORIZED)
+    }
+  }
+}
+
+func categorize_disappearance(Res) {
+  case (Res) {
+    ERROR | SKIPPED | UNSUPPORTED {
+      return (NEUTRAL)
+    }
+    PASS | XPASS | XFAIL | FAIL {
+      return (TROUBLESOME)
+    }
+    * {
+      return (UNCATEGORIZED)
+    }
+  }
+}
+
+func new_category_lists() {
+  return ([[], [], [], [], [], []])
+}
+
+var TransitionLists = {}
+var MissingLists = {}
+var NewLists = {}
+
+proc write_list(; List) {
+  for L in (List) {
+    write -- "$L"
+  }
+}
+
+# This is a bit grim.  We're using a global variable so we can jam a value
+# into the block evaluated below.  There might be a nicer way of doing this
+# in the future...
+var SumFile
+
+proc write_stanza(; Sums, Colour, Title;; Block) {
+  for S in (Sums) {
+    setglobal SumFile=S
+    { call io->eval (Block) } | read --all (&Content)
+    if (len(Content) > 0) {
+      start_colour (Colour)
+      write -- "$Title in $S:"
+      reset_colour
+      write
+      write -- "$Content"
+      write
+    }
+  }
+}
+
+if ! test -t 1 {
+  setglobal UseColour = false
+}
+
+var PosArgs = 0
+
+case (ARGV[0]) {
+  -c | --color | --colour {
+    setglobal UseColour = true
+    setglobal PosArgs += 1
+  }
+}
+
+if (len(ARGV) !== 2 + PosArgs) {
+  error "Usage: $0 [-c|--colour] <testresults-old> <testresults-new>"
+}
+
+var LHS_Dir = ARGV[PosArgs]
+var RHS_Dir = ARGV[PosArgs + 1]
+
+if ! test --dir $LHS_Dir {
+  error "$LHS_Dir is not a directory"
+}
+
+if ! test --dir $RHS_Dir {
+  error "$RHS_Dir is not a directory"
+}
+
+var LHS = gather_sumfiles(LHS_Dir)
+var RHS = gather_sumfiles(RHS_Dir)
+
+var WroteSomething = false
+
+one_side_only ('LHS', LHS, RHS, &WroteSomething)
+one_side_only ('RHS', RHS, LHS, &WroteSomething)
+
+if (WroteSomething) {
+  write
+}
+
+var MatchedSums = []
+
+for S in (LHS) {
+  if (S in RHS) {
+    var LHS_Results = read_sumfile (LHS_Dir, S)
+    var RHS_Results = read_sumfile (RHS_Dir, S)
+    setvar LHS[S] = LHS_Results
+    setvar RHS[S] = RHS_Results
+    append $S (MatchedSums)
+  }
+}
+
+for S in (MatchedSums) {
+  var Category
+  setvar TransitionLists[S] = new_category_lists()
+  setvar MissingLists[S] = new_category_lists()
+  setvar NewLists[S] = new_category_lists()
+  for Test, LHS_Result in (LHS[S]) {
+    if (Test in RHS[S]) {
+      var RHS_Result = RHS[S][Test]
+      setvar Category = categorize_transition (LHS_Result, RHS_Result)
+      if (Category > NOCHANGE) {
+        append "$LHS_Result->$RHS_Result: $Test" (TransitionLists[S][Category])
+      }
+    } else {
+      setvar Category = categorize_disappearance (LHS_Result)
+      if (Category > NOCHANGE) {
+        append "$LHS_Result: $Test" (MissingLists[S][Category])
+      }
+    }
+  }
+  for Test in (RHS[S]) {
+    if (Test not in LHS[S]) {
+      var RHS_Result = RHS[S][Test]
+      setvar Category = categorize_new (RHS_Result)
+      if (Category > NOCHANGE) {
+        append "$RHS_Result: $Test" (NewLists[S][Category])
+      }
+    }
+  }
+}
+
+write_stanza (MatchedSums, 'red', "Regressions") {
+  for P in ([SEVERE, TROUBLESOME]) {
+    write_list (TransitionLists[SumFile][P])
+  }
+}
+
+write_stanza (MatchedSums, 'red', "New tests that fail") {
+  for P in ([SEVERE, TROUBLESOME]) {
+    write_list (NewLists[SumFile][P])
+  }
+}
+
+write_stanza (MatchedSums, 'yellow', "Old tests that disappeared") {
+  for P in ([GOOD, FINE, NEUTRAL, TROUBLESOME, SEVERE, UNCATEGORIZED]) {
+    write_list (MissingLists[SumFile][P])
+  }
+}
+
+write_stanza (MatchedSums, 'green', "Progressions") {
+  for P in ([GOOD, FINE]) {
+    write_list (TransitionLists[SumFile][P])
+  }
+}
+
+write_stanza (MatchedSums, 'green', "New tests that pass") {
+  write_list (NewLists[SumFile][GOOD])
+}
+
+write_stanza (MatchedSums, 'yellow', "Other new tests") {
+  for P in ([FINE, NEUTRAL]) {
+    write_list (NewLists[SumFile][P])
+  }
+}
+
+write_stanza (MatchedSums, 'yellow', "Other changes") {
+  for P in ([NEUTRAL, UNCATEGORIZED]) {
+    write_list (TransitionLists[SumFile][P])
+  }
+}
