@@ -298,17 +298,32 @@ if ! test -t 1 {
   setglobal UseColour = false
 }
 
+proc usage() {
+  write "Usage: $0 [-c|--colour] <testresults-old> <testresults-new>"
+  exit 0
+}
+
 var PosArgs = 0
+
+if (len (ARGV) < 2) {
+  usage
+}
 
 case (ARGV[0]) {
   -c | --color | --colour {
     setglobal UseColour = true
     setglobal PosArgs += 1
   }
+  -h | --help {
+    usage
+  }
+  * {
+    error "Unknown option '$[ARGV[0]]'"
+  }
 }
 
 if (len(ARGV) !== 2 + PosArgs) {
-  error "Usage: $0 [-c|--colour] <testresults-old> <testresults-new>"
+  usage
 }
 
 var LHS_Dir = ARGV[PosArgs]
