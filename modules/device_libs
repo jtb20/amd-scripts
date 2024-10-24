@@ -17,7 +17,7 @@ proc configure_device_libs() {
   var Tool = get_build_tool("device_libs")
   var Cfg_opts = get_configure_opts("device_libs")
   cd $Build {
-    fix_path cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_PREFIX_PATH="$LLVM_Build;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DLLVM_DIR=$LLVM_Inst \

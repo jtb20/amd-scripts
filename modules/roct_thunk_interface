@@ -14,7 +14,7 @@ proc configure_roct_thunk_interface() {
   var Src = get_srcdir("roct_thunk_interface")
   var Tool = get_build_tool("roct_thunk_interface")
   cd $Build {
-    fix_path cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_PREFIX_PATH=$INSTALLDIR/lib/cmake \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DCMAKE_INSTALL_LIBDIR=$INSTALLDIR/lib \

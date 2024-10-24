@@ -29,7 +29,7 @@ proc configure_rocr_runtime() {
     setvar SrcSubdir = "$Src/src"
   }
   cd $Build {
-    fix_path cmake -G $Tool \
+    cmake -G $Tool \
       -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_PREFIX_PATH="$INSTALLDIR;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
