@@ -55,7 +55,7 @@ proc test_misc_sollve_vv {
       export SKIP_SOLLVE51
       export SKIP_SOLLVE52
       if (len(SOLLVEFlags) > 0) {
-        var MY_SOLLVE_FLAGS = SOLLVEFlags=>join(' ')
+        var MY_SOLLVE_FLAGS = shell_quote_args(SOLLVEFlags)
         setvar MY_SOLLVE_FLAGS = "$MY_SOLLVE_FLAGS --offload-arch=$[GPUs[0]]"
         write -- "MY_SOLLVE_FLAGS: $MY_SOLLVE_FLAGS"
         export MY_SOLLVE_FLAGS

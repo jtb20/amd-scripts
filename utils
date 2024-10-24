@@ -65,3 +65,10 @@ proc clear_error () {
   setglobal _error.message = null
   setglobal _error.code = 0
 }
+
+# Take an array of arguments and return a string with arguments escaped
+# suitably for passing to an underlying shell as a space-separated string.
+
+func shell_quote_args(ArgArray) {
+  return ($(printf '%q ' @ArgArray))
+}
