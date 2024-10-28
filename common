@@ -538,7 +538,16 @@ proc do_tasks (; todo) {
 
 func get_amd_gpus() {
   var LocalGPUs = []
-  var List = @(rocm_agent_enumerator 2> /dev/null)
+  try {
+    var RAE = $(which rocm_agent_enumerator)
+  }
+  if (_error.code !== 0) {
+    setvar RAE = "$INSTALLDIR/bin/rocm_agent_enumerator"
+    if ! test --exists $RAE {
+      error "No rocm_agent_enumerator found"
+    }
+  }
+  var List = @($RAE 2> /dev/null)
   for GPU in (List) {
     if (GPU !== "gfx000") {
       call LocalGPUs->append(GPU)

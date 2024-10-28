@@ -35,11 +35,12 @@ proc test_misc_sollve_vv {
   ln -sf $(which true) $Obj/tmpbin/git
   cd $Obj {
     var Parts = Obj=>split("/")
-    shvar AOMP=$[get_installdir('llvm')] \
+    var LLVM_Inst = get_installdir('llvm')
+    shvar AOMP=$LLVM_Inst \
           AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
           AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
           PATH=$Obj/tmpbin:$PATH \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib:$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+          LD_LIBRARY_PATH=$LLVM_Inst/lib:$LLVM_Inst/lib/x86_64-unknown-linux-gnu \
           SKIP_SOLLVE45=0 \
           SKIP_SOLLVE50=0 \
           SKIP_SOLLVE51=0 \
