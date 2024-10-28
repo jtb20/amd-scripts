@@ -317,7 +317,10 @@ case (ARGV[0]) {
   -h | --help {
     usage
   }
-  * {
+  -- {
+    setglobal PosArgs += 1
+  }
+  -* {
     error "Unknown option '$[ARGV[0]]'"
   }
 }
