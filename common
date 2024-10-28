@@ -639,12 +639,13 @@ proc unset_varlist() {
 # you want to access the system's /opt/rocm.
 
 proc rocm_env {
+  var LLVM_Inst = get_installdir('llvm')
   if (ARGV[0] === '--system') {
-    shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:$INSTALLDIR/lib/x86_64-unknown-linux-gnu:/opt/rocm/lib/llvm/lib:/opt/rocm/lib:${LD_LIBRARY_PATH:-}" \
+    shvar LD_LIBRARY_PATH="$LLVM_Inst/lib:$LLVM_Inst/lib/x86_64-unknown-linux-gnu:/opt/rocm/lib/llvm/lib:/opt/rocm/lib:${LD_LIBRARY_PATH:-}" \
           HIP_CLANG_PATH=$INSTALLDIR/bin \
           ROCM_PATH=/opt/rocm \
           HIP_PATH=/opt/rocm \
-          LLVM_PATH=$INSTALLDIR {
+          LLVM_PATH=$LLVM_Inst {
       export LD_LIBRARY_PATH
       export ROCM_PATH
       export HIP_PATH
@@ -653,11 +654,11 @@ proc rocm_env {
       @[ARGV[1:]]
     }
   } else {
-    shvar LD_LIBRARY_PATH="$INSTALLDIR/lib:${LD_LIBRARY_PATH:-}" \
-          HIP_CLANG_PATH=$INSTALLDIR/bin \
+    shvar LD_LIBRARY_PATH="$LLVM_Inst/lib:$LLVM_Inst/lib/x86_64-unknown-linux-gnu:${LD_LIBRARY_PATH:-}" \
+          HIP_CLANG_PATH=$LLVM_Inst/bin \
           ROCM_PATH=$INSTALLDIR \
           HIP_PATH=$INSTALLDIR \
-          LLVM_PATH=$INSTALLDIR {
+          LLVM_PATH=$LLVM_Inst {
       export LD_LIBRARY_PATH
       export ROCM_PATH
       export HIP_PATH
