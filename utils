@@ -61,6 +61,15 @@ func has_proc (procname) {
   return (false)
 }
 
+func have_binary (Binary) {
+  try > /dev/null 2>&1 {
+    if type -t $Binary {
+      return (true)
+    }
+  }
+  return (false)
+}
+
 proc clear_error () {
   setglobal _error.message = null
   setglobal _error.code = 0

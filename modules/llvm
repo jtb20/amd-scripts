@@ -73,7 +73,7 @@ proc llvm_tasks() {
 
 proc default_configure_opts_llvm() {
   var LLDOpts = []
-  if (len(glob("ld.lld*")) > 0) {
+  if (have_binary ('ld.lld')) {
     # Opportunistically use lld if we find it (for linking LLVM libs/binaries
     # themselves).  This should probably be a build option (like Ninja, ccache
     # usage).

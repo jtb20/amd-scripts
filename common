@@ -719,15 +719,57 @@ func get_ccache_cache_dir() {
   error "Failed to find ccache cache dir"
 }
 
-# This isn't exactly robust, but it'll do.
+# Check if $Binary is from Homebrew -- by checking if the binary is in the
+# same dir as the 'brew' binary.
 
-func homebrew_bin(Binary) {
-  return ($(which $Binary) ~ '/homebrew/');
+func homebrew_bin_p(Binary) {
+  try {
+    var Brew = $(which brew)
+    var BrewBinDir = $(dirname $Brew)
+    var WhichBin = $(which $Binary)
+    var BinDir = $(dirname $WhichBin)
+    if test $BinDir -ef $BrewBinDir {
+      return (true)
+    }
+  }
+  return (false)
+}
+
+func find_homebrew_llvm_bin(Binary) {
+  try {
+    var BrewBin = $(which brew)
+    var BrewDir = $(dirname $BrewBin)
+    var OptDir = $(readlink -f "$BrewDir/../opt")
+    cd $OptDir {
+      var LLVMs = glob('llvm@*')
+      var BiggestLLVM = $(write -- @LLVMs | sort -r -n -t '@' -k 2 | head -n 1)
+      return ("$OptDir/$BiggestLLVM/bin/$Binary")
+    }
+  }
+  return (null)
+}
+
+func homebrew_llvm_bin_p(Binary) {
+  var FoundBin = find_homebrew_llvm_bin(Binary)
+  if (FoundBin === null) {
+    return (false)
+  }
+  if test --exists $FoundBin {
+    return (true)
+  } else {
+    return (false)
+  }
 }
 
 func homebrew_bind(Binary) {
   var WhichBin = $(which $Binary)
   var RealBinary = $(readlink -f $WhichBin)
+  return (:| --bind $RealBinary /opt/homebrew/bin/$Binary |)
+}
+
+func homebrew_llvm_bind(Binary) {
+  var FoundBin = find_homebrew_llvm_bin(Binary)
+  var RealBinary = $(readlink -f $FoundBin)
   return (:| --bind $RealBinary /opt/homebrew/bin/$Binary |)
 }
 
@@ -751,9 +793,11 @@ proc do_bwrap {
   # tmpfs /opt mount.
   var HomebrewBinds = []
   if (BindHomebrew) {
-    for Bin in bwrap ccache makeinfo {
-      if (homebrew_bin (Bin)) {
+    for Bin in bwrap ccache makeinfo ld.lld {
+      if (homebrew_bin_p (Bin)) {
         setvar HomebrewBinds = HomebrewBinds ++ homebrew_bind (Bin)
+      } elif (homebrew_llvm_bin_p (Bin)) {
+        setvar HomebrewBinds = HomebrewBinds ++ homebrew_llvm_bind (Bin)
       }
     }
     export PATH=/opt/homebrew/bin:$PATH
