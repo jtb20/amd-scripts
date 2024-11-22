@@ -25,24 +25,18 @@ proc test_misc_nekbone() {
   var GPUs = get_amd_gpus()
   #var CompileOpts = '-x f77 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -mcpu=$(AOMP_GPU) ${G_OPT}'
   copy_dir $Source $Obj/Nekbone
-  shvar CaseDir=$Obj/Nekbone/test/nek_gpu1 \
-        NekSrc=$Obj/Nekbone/src {
+  with-env CaseDir=$Obj/Nekbone/test/nek_gpu1 \
+           NekSrc=$Obj/Nekbone/src {
     sed -e "s@^CASEDIR:=.*@CASEDIR:=$CaseDir@" -e "s@^S:=.*@S:=$NekSrc@" \
       < $Source/test/nek_gpu1/makefile.aomp \
       > $Obj/Nekbone/test/nek_gpu1/makefile.aomp
   }
-  shvar AOMP=$INSTALLDIR \
-        AOMP_REPOS_TEST=$Obj \
-        LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
-        VERBOSE=1 \
-        FLANG=flang \
-        AOMP_GPU=$[GPUs[0]] {
-    export AOMP
-    export AOMP_REPOS_TEST
-    export LD_LIBRARY_PATH
-    export VERBOSE
-    export FLANG
-    export AOMP_GPU
+  with-env AOMP=$INSTALLDIR \
+           AOMP_REPOS_TEST=$Obj \
+           LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+           VERBOSE=1 \
+           FLANG=flang \
+           AOMP_GPU=$[GPUs[0]] {
 
     try {
       $AOMP_Src/bin/run_nekbone.sh

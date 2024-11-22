@@ -36,15 +36,13 @@ proc configure_roctracer() {
 }
 
 proc build_roctracer() {
-  shvar HIPCC_COMPILE_FLAGS_APPEND="--rocm-path=$INSTALLDIR" {
-    export HIPCC_COMPILE_FLAGS_APPEND
+  with-env HIPCC_COMPILE_FLAGS_APPEND="--rocm-path=$INSTALLDIR" {
     rocm_env cmake_build roctracer
   }
 }
 
 proc install_roctracer() {
-  shvar HIPCC_COMPILE_FLAGS_APPEND="--rocm-path=$INSTALLDIR" {
-    export HIPCC_COMPILE_FLAGS_APPEND
+  with-env HIPCC_COMPILE_FLAGS_APPEND="--rocm-path=$INSTALLDIR" {
     rocm_env cmake_install roctracer
   }
 }

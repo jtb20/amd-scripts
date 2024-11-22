@@ -81,3 +81,53 @@ proc clear_error () {
 func shell_quote_args(ArgArray) {
   return ($(printf '%q ' @ArgArray))
 }
+
+# Quote a string suitable for consumption by ysh itself, e.g. by "eval".
+
+func ysh_quote_string(Arg) {
+  return ("$(pp value (str(Arg)))"=>trimStart(/ '(Str)' s* /))
+}
+
+# Evaluate a block with a set of modified environment variables.  Call like:
+#   with-env PATH=/foo/bar ARGS="-a -b -c" {
+#     commands
+#   }
+
+proc with-env(...vars;;;block) {
+  forkwait {
+    var idx = 0
+    while (idx < len(vars)) {
+      case (vars[idx]) {
+        *=* {
+          var parts = vars[idx].split('=', count=1)
+          setglobal ENV[parts[0]]=parts[1]
+        }
+        -u {
+          setvar idx += 1
+          call first(ENV)->erase(vars[idx])
+        }
+        * {
+          error "syntax error: $[vars[idx]]"
+        }
+      }
+      setvar idx += 1
+    }
+    call io->eval (block)
+  }
+}
+
+# Prepend a set of paths to final argument, which names a colon-separated
+# PATH-like shell variable. E.g:
+#
+# setglobal ENV.PATH=$(prepend_path "/usr/floop/bin" PATH)
+# setglobal ENV.LD_LIBRARY_PATH=$(prepend_path "/usr/floop/lib" "/usr/local/floop/lib" LD_LIBRARY_PATH)
+
+proc prepend_path(...NewPaths) {
+  var Path = ENV=>get(NewPaths[-1])
+  setvar NewPaths = NewPaths[0:-1]
+  if (Path) {
+    write -- "$[NewPaths.join(':')]:$Path"
+  } else {
+    write -- "$[NewPaths.join(':')]"
+  }
+}

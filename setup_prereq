@@ -10,7 +10,7 @@ DOWNLOAD="$(readlink -f "$DOWNLOAD")"
 PREFIX="$(readlink -f "$PREFIX")"
 BUILD="$(readlink -f "$BUILD")"
 
-OIL_TARBALL="oils-for-unix-0.23.0.tar.gz"
+OIL_TARBALL="oils-for-unix-0.24.0.tar.gz"
 OIL_URL="https://www.oilshell.org/download/$OIL_TARBALL"
 
 READLINE_TARBALL="readline-8.2.tar.gz"

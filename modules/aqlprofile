@@ -15,7 +15,7 @@ proc configure_aqlprofile() {
   var Tool = get_build_tool("aqlprofile")
   var GPUList = join(ConfigureOpts.llvm.gfxlist, ',')
   cd $Build {
-    shvar HIPCC_COMPILE_FLAGS_APPEND="--rocm-path=$INSTALLDIR --offload-arch=$GPUList" {
+    with-env HIPCC_COMPILE_FLAGS_APPEND="--rocm-path=$INSTALLDIR --offload-arch=$GPUList" {
       rocm_env cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
         -DCMAKE_BUILD_TYPE=$BuildType \
         -DCMAKE_MODULE_PATH=$Src/cmake_modules \

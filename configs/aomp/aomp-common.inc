@@ -4,7 +4,7 @@ func llvm_conditional_deps() {
   return (:| roct_thunk_interface @llvm_more_conditional_deps hwloc |)
 }
 
-add_components hwloc rocsmilib llvm comgr device_libs
+add_components hwloc rocsmilib llvm comgr device_libs aomp_extras
 add_components rocm_cmake roct_thunk_interface rocminfo
 add_components rocr_runtime hipamd openmp_examples
 
@@ -57,7 +57,7 @@ proc set_aomp_common_llvm_opts () {
                                     -DLLVM_VERSION_SUFFIX=_AOMP_STANDALONE |)
 
   if (ConfigureOpts.llvm.append_install_dir) {
-    var rocmdevicelib_loc_new="$[ConfigureOpts.llvm.append_install_dir]/$AOMP_MAJOR_VERSION/lib/amdgcn"
+    var rocmdevicelib_loc_new="$[ConfigureOpts.llvm.append_install_dir]/lib/clang/$AOMP_MAJOR_VERSION/lib/amdgcn"
     append_configure_opts ("llvm", :| -DLIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH=$[get_srcdir ("device_libs")]
                                       -DROCM_DEVICE_LIBS_INSTALL_PREFIX_PATH=$INSTALLDIR
                                       -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC=$rocmdevicelib_loc_new
@@ -148,7 +148,6 @@ proc add_optional_module (Mod) {
       error "Unknown optional module: $Mod"
     }
   }
-  set_aomp_common_llvm_opts
 }
 
 proc remove_optional_feature(Feat) {
@@ -168,6 +167,10 @@ proc remove_optional_feature(Feat) {
       error "Unknown removable feature: $Feat"
     }
   }
+}
+
+proc modify_config_defaults() {
+  set_aomp_common_llvm_opts
 }
 
 # Eek, the Ninja build tool option doesn't work for this one.

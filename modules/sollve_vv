@@ -36,28 +36,19 @@ proc test_misc_sollve_vv {
   cd $Obj {
     var Parts = Obj=>split("/")
     var LLVM_Inst = get_installdir('llvm')
-    shvar AOMP=$LLVM_Inst \
-          AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
-          AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
-          PATH=$Obj/tmpbin:$PATH \
-          SKIP_SOLLVE45=0 \
-          SKIP_SOLLVE50=0 \
-          SKIP_SOLLVE51=0 \
-          SKIP_SOLLVE52=0 \
-          MY_SOLLVE_FLAGS="" {
-      export AOMP
-      export AOMP_REPOS_TEST
-      export AOMP_SOLVV_REPO_NAME
-      export PATH
-      export SKIP_SOLLVE45
-      export SKIP_SOLLVE50
-      export SKIP_SOLLVE51
-      export SKIP_SOLLVE52
+    with-env AOMP=$LLVM_Inst \
+             AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
+             AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
+             PATH=$Obj/tmpbin:$PATH \
+             SKIP_SOLLVE45=0 \
+             SKIP_SOLLVE50=0 \
+             SKIP_SOLLVE51=0 \
+             SKIP_SOLLVE52=0 \
+             MY_SOLLVE_FLAGS="" {
       if (len(SOLLVEFlags) > 0) {
         var MY_SOLLVE_FLAGS = shell_quote_args(SOLLVEFlags)
-        setvar MY_SOLLVE_FLAGS = "$MY_SOLLVE_FLAGS --offload-arch=$[GPUs[0]]"
-        write -- "MY_SOLLVE_FLAGS: $MY_SOLLVE_FLAGS"
-        export MY_SOLLVE_FLAGS
+        setglobal ENV.MY_SOLLVE_FLAGS = "$[ENV.MY_SOLLVE_FLAGS] --offload-arch=$[GPUs[0]]"
+        write -- "MY_SOLLVE_FLAGS: $[ENV.MY_SOLLVE_FLAGS]"
       } else {
         write "No special flags"
       }
@@ -68,27 +59,27 @@ proc test_misc_sollve_vv {
         # 4.5/5.0/5.1/5.2 "testsuites", instead?
         case (SelectTests) {
           "4.5" {
-            export SKIP_SOLLVE50=1
-            export SKIP_SOLLVE51=1
-            export SKIP_SOLLVE52=1
+            setglobal ENV.SKIP_SOLLVE50=1
+            setglobal ENV.SKIP_SOLLVE51=1
+            setglobal ENV.SKIP_SOLLVE52=1
             rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           "5.0" {
-            export SKIP_SOLLVE45=1
-            export SKIP_SOLLVE51=1
-            export SKIP_SOLLVE52=1
+            setglobal ENV.SKIP_SOLLVE45=1
+            setglobal ENV.SKIP_SOLLVE51=1
+            setglobal ENV.SKIP_SOLLVE52=1
             rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           "5.1" {
-            export SKIP_SOLLVE45=1
-            export SKIP_SOLLVE50=1
-            export SKIP_SOLLVE52=1
+            setglobal ENV.SKIP_SOLLVE45=1
+            setglobal ENV.SKIP_SOLLVE50=1
+            setglobal ENV.SKIP_SOLLVE52=1
             rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           "5.2" {
-            export SKIP_SOLLVE45=1
-            export SKIP_SOLLVE50=1
-            export SKIP_SOLLVE51=1
+            setglobal ENV.SKIP_SOLLVE45=1
+            setglobal ENV.SKIP_SOLLVE50=1
+            setglobal ENV.SKIP_SOLLVE51=1
             rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
           }
           * {

@@ -54,12 +54,13 @@ proc install_llvm() {
 }
 
 proc install_filecheck_llvm() {
-  var BuildDir = get_objdir("llvm")
+  var BuildDir = get_objdir('llvm')
+  var InstDir = get_installdir('llvm')
   # This is a weird hack.  The AOMP test/Makefile.defs fragment wants to see
   # a copy of FileCheck in $AOMP/bin/FileCheck, otherwise falls back to a set
   # of heuristics to try to locate the binary elsewhere.  Those heuristics can
   # fail, so make sure to use our own version.
-  install $BuildDir/bin/FileCheck $INSTALLDIR/bin/FileCheck
+  install $BuildDir/bin/FileCheck $InstDir/bin/FileCheck
 }
 
 func llvm_dependencies() {
@@ -73,7 +74,7 @@ proc llvm_tasks() {
 
 proc default_configure_opts_llvm() {
   var LLDOpts = []
-  if (have_binary ('ld.lld')) {
+  if (false and have_binary ('ld.lld')) {
     # Opportunistically use lld if we find it (for linking LLVM libs/binaries
     # themselves).  This should probably be a build option (like Ninja, ccache
     # usage).

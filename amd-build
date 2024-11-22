@@ -14,10 +14,11 @@ maybe_mkdir $INSTALLDIR
 
 parse_args (ARGV)
 
-call io->eval (load_config)
+source $CONFIGDIR/$ActiveCfg
 
 add_optional_modules
 remove_optional_features
+modify_defaults
 
 elaborate_tasks
 

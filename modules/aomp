@@ -107,14 +107,10 @@ proc test_aomp_examples {
   rm -rf $Obj
   copy_dir $Source $Obj
   cd $Obj {
-    shvar AOMP=$INSTALLDIR \
-          LLVM_INSTALL_DIR=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
-          LIST="fortran hip openmp" {
-      export AOMP
-      export LLVM_INSTALL_DIR
-      export LD_LIBRARY_PATH
-      export LIST
+    with-env AOMP=$INSTALLDIR \
+             LLVM_INSTALL_DIR=$INSTALLDIR \
+             LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+             LIST="fortran hip openmp" {
       ./check_examples.sh
     }
   }
@@ -216,22 +212,17 @@ proc test_aomp_smoke {
   ln -sf $AOMP_Src/bin $Obj/bin
   ln -sf $AOMP_Src/test/Makefile.defs $Obj/test
   cd $Obj/test/smoke {
-    shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
-          AOMP_PARALLEL_SMOKE=1 \
-          AOMP_GPU="$[GPUs[0]]" \
-          SHELL=/bin/bash {
-      export AOMP
-      export LD_LIBRARY_PATH
-      export AOMP_PARALLEL_SMOKE
-      export AOMP_GPU
-      # In case SHELL is set by some other login shell (tcsh, ...), reset it
-      # here.  Otherwise e.g. "flock -c ..." uses the wrong shell inside
-      # check_smoke.sh.
-      export SHELL
+    # In case SHELL is set by some other login shell (tcsh, ...), reset it
+    # here.  Otherwise e.g. "flock -c ..." uses the wrong shell inside
+    # check_smoke.sh.
+    with-env AOMP=$INSTALLDIR \
+             LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+             AOMP_PARALLEL_SMOKE=1 \
+             AOMP_GPU="$[GPUs[0]]" \
+             SHELL=/bin/bash {
       if (SelectTests !== null) {
         select_smoke_tests (SelectTests)
-        export AOMP_PARALLEL_SMOKE=0
+        setglobal ENV.AOMP_PARALLEL_SMOKE=0
       }
       CLEANUP=0 gpu_opts ./check_smoke.sh
       ./check_smoke.sh gatherdata
@@ -269,15 +260,12 @@ proc test_aomp_smoke_fails {
   mkdir -p $Obj/test/smoke
   ln -sf $AOMP_Src/test/smoke/Makefile.rules $Obj/test/smoke
   cd $Obj/test/smoke-fails {
-    shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu:$INSTALLDIR/lib \
-          AOMP_PARALLEL_SMOKE=1 {
-      export AOMP
-      export LD_LIBRARY_PATH
-      export AOMP_PARALLEL_SMOKE
+    with-env AOMP=$INSTALLDIR \
+             LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu:$INSTALLDIR/lib \
+             AOMP_PARALLEL_SMOKE=1 {
       if (SelectTests !== null) {
         select_smoke_tests (SelectTests)
-        export AOMP_PARALLEL_SMOKE=0
+        setglobal ENV.AOMP_PARALLEL_SMOKE=0
       }
       ./check_smoke_fails.sh
       ./check_smoke_fails.sh gatherdata
@@ -319,15 +307,12 @@ proc test_aomp_smoke_limbo {
     ln -sf $AOMP_Src/test/smoke/check_smoke.sh $Obj/test/smoke
   }
   cd $Obj/test/smoke-limbo {
-    shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
-          AOMP_PARALLEL_SMOKE=1 {
-      export AOMP
-      export LD_LIBRARY_PATH
-      export AOMP_PARALLEL_SMOKE
+    with-env AOMP=$INSTALLDIR \
+            LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+            AOMP_PARALLEL_SMOKE=1 {
       if (SelectTests !== null) {
         select_smoke_tests (SelectTests)
-        export AOMP_PARALLEL_SMOKE=0
+        setglobal ENV.AOMP_PARALLEL_SMOKE=0
       }
       ./check_smoke_limbo.sh
       ./check_smoke_limbo.sh gatherdata
@@ -361,15 +346,12 @@ proc test_aomp_smoke_dev {
   ln -sf $AOMP_Src/bin $Obj/bin
   ln -sf $AOMP_Src/test/Makefile.defs $Obj/test
   cd $Obj/test/smoke-dev {
-    shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
-          AOMP_PARALLEL_SMOKE=1 {
-      export AOMP
-      export LD_LIBRARY_PATH
-      export AOMP_PARALLEL_SMOKE
+    with-env AOMP=$INSTALLDIR \
+             LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+             AOMP_PARALLEL_SMOKE=1 {
       if (SelectTests !== null) {
         select_smoke_tests (SelectTests)
-        export AOMP_PARALLEL_SMOKE=0
+        setglobal ENV.AOMP_PARALLEL_SMOKE=0
       }
       ./check_smoke_dev.sh
       ./check_smoke_dev.sh gatherdata
@@ -400,10 +382,8 @@ proc test_aomp_hip_openmp {
   copy_dir $Source $Obj/hip-openmp
   ln -sf $AOMP_Src/test/Makefile.defs $Obj
   cd $Obj/hip-openmp {
-    shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
-      export AOMP
-      export LD_LIBRARY_PATH
+    with-env AOMP=$INSTALLDIR \
+             LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
 
       if (SelectTests !== null) {
         error "No test selection support for hip_openmp"
@@ -459,10 +439,8 @@ proc test_aomp_usm {
   copy_dir $Source $Obj/usm
   ln -sf $AOMP_Src/test/Makefile.defs $Obj
   cd $Obj/usm {
-    shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
-      export AOMP
-      export LD_LIBRARY_PATH
+    with-env AOMP=$INSTALLDIR \
+             LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
 
       if (SelectTests !== null) {
         select_smoke_tests (SelectTests)
@@ -497,10 +475,8 @@ proc test_aomp_omp5 {
   copy_dir $Source $Obj/omp5
   ln -sf $AOMP_Src/test/Makefile.defs $Obj
   cd $Obj/omp5 {
-    shvar AOMP=$INSTALLDIR \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
-      export AOMP
-      export LD_LIBRARY_PATH
+    with-env AOMP=$INSTALLDIR \
+             LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
 
       if (SelectTests !== null) {
         select_smoke_tests (SelectTests)
@@ -546,16 +522,11 @@ proc test_aomp_llnl {
   var LibDir = "$INSTALLDIR/lib/x86_64-unknown-linux-gnu"
   sed -i "s,LIBS = \"\",LIBS = \" -L$LibDir\"," $Obj/test.py
   cd $Obj {
-    shvar PATH=$[sanitize_path (PATH)] \
-          AOMP=$INSTALLDIR \
-          AOMP_GPU=$[GPUs[0]] \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
-          BLOG_DATE=today {
-      export PATH
-      export AOMP
-      export AOMP_GPU
-      export LD_LIBRARY_PATH
-      export BLOG_DATE
+    with-env PATH=$[sanitize_path (PATH)] \
+             AOMP=$INSTALLDIR \
+             AOMP_GPU=$[GPUs[0]] \
+             LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+             BLOG_DATE=today {
 
       if (SelectTests !== null) {
         # !!! The check_LLNL.sh script adds
@@ -655,12 +626,9 @@ proc test_aomp_openmpapps {
   var GPUs = get_amd_gpus ()
   copy_dir $Source $Obj
   cd $Obj {
-    shvar AOMP=$INSTALLDIR \
-          AOMP_GPU=$[GPUs[0]] \
-          LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
-      export AOMP
-      export AOMP_GPU
-      export LD_LIBRARY_PATH
+    with-env AOMP=$INSTALLDIR \
+             AOMP_GPU=$[GPUs[0]] \
+             LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu {
 
       # This one has a malformed shebang line... and can fail.  Catch that then.
       try {

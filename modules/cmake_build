@@ -6,7 +6,7 @@ proc cmake_build(comp) {
   cd $BuildDir {
     if (Tool === "Ninja") {
       setvar Parallelism_opt = :| -j${Parallelism} | if (Parallelism) else ()
-      ninja @Parallelism_opt
+      ninja -v @Parallelism_opt
     } else {
       setvar Parallelism_opt = :| -j${Parallelism} | if (Parallelism) else \
                                :| -j${DefaultParallelism} |

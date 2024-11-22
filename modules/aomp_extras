@@ -16,13 +16,11 @@ proc configure_aomp_extras() {
   var Tool = get_build_tool("aomp_extras")
   var Cfg = ConfigureOpts.aomp_extras
   cd $Build {
-    shvar AOMP=$INSTALLDIR {
-      export AOMP
-      cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-        -DCMAKE_BUILD_TYPE=$BuildType \
-        -DCMAKE_PREFIX_PATH=$DevLibs \
-        @[Cfg.cfg] $Src
-    }
+    AOMP=$INSTALLDIR cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_PREFIX_PATH=$DevLibs \
+      -DAOMP_VERSION_STRING="AOMP_$AOMP_MAJOR_VERSION" \
+      @[Cfg.cfg] $Src
   }
 }
 
@@ -40,4 +38,8 @@ func aomp_extras_dependencies() {
 
 proc aomp_extras_tasks {
   standard_tasks aomp_extras
+}
+
+proc default_configure_opts_aomp_extras () {
+  set_configure_opts ('aomp_extras', [])
 }

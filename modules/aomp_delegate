@@ -71,13 +71,14 @@ func ao_python_mods_dependencies() {
 }
 
 proc setup_ao_python_mods() {
-  # Without this dynamic scope, we don't see the redefined PATH from our
-  # caller (so e.g. we pick up pip3 from homebrew, rather than the system one,
-  # and that just throws an error about using an externally-managed
-  # environment).
-  shopt -s dynamic_scope {
-    pip3 install --ignore-installed --user barectf==3.1.2 PyYAML==5.3.1
-    pip3 install --user CppHeaderParser argparse wheel lit lxml pandas
+  var Cond=false
+  if (Cond) {
+    pip3 install --user setuptools==70.0.0
+  }
+  pip3 install --ignore-installed --user barectf==3.1.2 PyYAML==5.3.1
+  pip3 install --user CppHeaderParser argparse wheel lit lxml
+  if (not Cond) {
+    pip3 install --user pandas
   }
 }
 
@@ -91,8 +92,7 @@ func get_ao_prereq_src() {
 
 proc setup_ao_prereq {
   var AOMPSrc = get_srcdir('aomp')
-  export AOMP=$INSTALLDIR
-  $AOMPSrc/bin/build_prereq.sh
+  AOMP=$INSTALLDIR $AOMPSrc/bin/build_prereq.sh
 }
 
 proc ao_prereq_tasks {
@@ -113,48 +113,54 @@ func aomp_delegate_gen(Comp, ConfigureTool) {
   }
   var BuildOptions = """
     if (not ConfigureOpts.aomp_delegate.build_cuda) {
-      export AOMP_BUILD_CUDA=0
+      append "AOMP_BUILD_CUDA=0" (WithEnv)
     }
     if (not ConfigureOpts.aomp_delegate.build_debug) {
-      export AOMP_BUILD_DEBUG=0
+      append "AOMP_BUILD_DEBUG=0" (WithEnv)
     }
     if (not ConfigureOpts.aomp_delegate.build_perf) {
-      export AOMP_BUILD_PERF=0
+      append "AOMP_BUILD_PERF=0" (WithEnv)
     }
     if (not ConfigureOpts.aomp_delegate.build_sanitizer) {
-      export AOMP_BUILD_SANITIZER=0
+      append "AOMP_BUILD_SANITIZER=0" (WithEnv)
     }
     if (not ConfigureOpts.aomp_delegate.flang_legacy) {
-      export AOMP_SKIP_FLANG=1
+      append "AOMP_SKIP_FLANG=1" (WithEnv)
     }
     if (not ConfigureOpts.aomp_delegate.flang_new) {
-      export AOMP_SKIP_FLANG_NEW=1
+      append "AOMP_SKIP_FLANG_NEW=1" (WithEnv)
     }
   """
   eval """
   proc ${ConfigureTool}_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    export BUILD_TYPE="\$[get_build_type("ao_${CompName}")]"
-    export AOMP_USE_NINJA=1
-    export AOMP=\$INSTALLDIR
+    var WithEnv = :| BUILD_TYPE=\"\$[get_build_type("ao_${CompName}")]\"
+                     AOMP_USE_NINJA=1
+                     AOMP=\$INSTALLDIR |
     $BuildOptions
-    \$AOMPSrc/bin/build_$Comp.sh $ConfigureTool
+    with-env @WithEnv {
+      \$AOMPSrc/bin/build_$Comp.sh $ConfigureTool
+    }
   }
   proc build_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    export BUILD_TYPE="\$[get_build_type("ao_${CompName}")]"
-    export AOMP_USE_NINJA=1
-    export AOMP=\$INSTALLDIR
+    var WithEnv = :| BUILD_TYPE=\"\$[get_build_type("ao_${CompName}")]\"
+                     AOMP_USE_NINJA=1
+                     AOMP=\$INSTALLDIR |
     $BuildOptions
-    \$AOMPSrc/bin/build_$Comp.sh no$ConfigureTool
+    with-env @WithEnv {
+      \$AOMPSrc/bin/build_$Comp.sh no$ConfigureTool
+    }
   }
   proc install_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    export BUILD_TYPE="\$[get_build_type("ao_${CompName}")]"
-    export AOMP_USE_NINJA=1
-    export AOMP=\$INSTALLDIR
+    var WithEnv = :| BUILD_TYPE=\"\$[get_build_type("ao_${CompName}")]\"
+                     AOMP_USE_NINJA=1
+                     AOMP=\$INSTALLDIR |
     $BuildOptions
-    \$AOMPSrc/bin/build_$Comp.sh install
+    with-env @WithEnv {
+      \$AOMPSrc/bin/build_$Comp.sh install
+    }
   }
   proc ao_${CompName}_tasks {
     add_tasks ao_${CompName} $ConfigureTool build $InstallWord

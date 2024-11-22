@@ -36,11 +36,11 @@ var BwrapUnshareNet = true
 var ToolsRoot = null
 
 proc show_vars {
-  write "HIP_CLANG_PATH: $HIP_CLANG_PATH"
-  write "ROCM_PATH: $ROCM_PATH"
-  write "HIP_PATH: $HIP_PATH"
-  write "LLVM_PATH: $LLVM_PATH"
-  write "PATH: $PATH"
+  write "HIP_CLANG_PATH: $[ENV.HIP_CLANG_PATH]"
+  write "ROCM_PATH: $[ENV.ROCM_PATH]"
+  write "HIP_PATH: $[ENV.HIP_PATH]"
+  write "LLVM_PATH: $[ENV.LLVM_PATH]"
+  write "PATH: $[ENV.PATH]"
 }
 
 proc parse_args(; argv) {
@@ -104,7 +104,7 @@ proc parse_args(; argv) {
           *** This is a bubble-wrapped shell, unless you explicitly specified
           *** -B/--no-bwrap on the command line.  Exit with ctrl-D.
           """
-          debian_chroot='bwrap' exec $SHELL
+          debian_chroot='bwrap' exec $[ENV.SHELL]
         }
       }
 
@@ -150,6 +150,8 @@ proc parse_args(; argv) {
   #setglobal GithubUsername = args.ghuser
   if (ActiveCfg === null) {
     error "Please specify a config file (from configs/*.cfg)"
+  } elif ! test $CONFIGDIR/$ActiveCfg {
+    error "No such config: $ActiveCfg"
   }
 }
 
@@ -299,16 +301,6 @@ proc set_build_type(; comp, build_type) {
 proc set_build_parallelism(; comp, procs) {
   set_build_key (comp, "parallelism", procs)
 }
-
-# We want to source configs at the top level so we can define funcs and procs
-# in them.  "Call" this with eval, i.e. 'eval (load_config)'.
-var load_config = ^(
-  if test --exists "$CONFIGDIR/$ActiveCfg" {
-    source $CONFIGDIR/$ActiveCfg
-  } elif (ActiveCfg !== null) {
-    error "No such config: $ActiveCfg"
-  }
-)
 
 proc elaborate_tasks() {
   var ordered_comp
@@ -463,7 +455,7 @@ func sanitize_path(path) {
 }
 
 proc fix_path {
-  PATH=$[sanitize_path (PATH)] @ARGV
+  PATH=$[sanitize_path (ENV.PATH)] @ARGV
 }
 
 proc do_task_number (; num) {
@@ -502,7 +494,7 @@ proc do_tasks (; todo) {
     } elif (t ~ Range) {
       var starttask = _group('start')
       var endtask = _group('end')
-      for i in (starttask .. endtask+1) {
+      for i in (starttask ..= endtask) {
         do_task_number (i)
       }
       setvar nexttask = endtask+1
@@ -511,7 +503,7 @@ proc do_tasks (; todo) {
       do_task_number (task)
       setvar nexttask = task+1
     } elif (t === "continue") {
-      for i in (nexttask .. len(TASKARR)+1) {
+      for i in (nexttask ..= len(TASKARR)) {
         do_task_number (i)
       }
       setvar nexttask = len(TASKARR)+1
@@ -524,7 +516,7 @@ proc do_tasks (; todo) {
       #   2. Run tasks sequentially that glob-match the resulting list
       shopt -s noglob { var braceexp=@(eval "write -- $t") }
       for globname in (braceexp) {
-        for tasknum in (1..len(TASKARR)+1) {
+        for tasknum in (1 ..= len(TASKARR)) {
           var taskname = TASKARR[tasknum - 1]
           if (taskname ~~ "*${globname}*") {
             do_task_number (tasknum)
@@ -601,6 +593,14 @@ proc remove_optional_features() {
   }
 }
 
+# Optionally modify default configure options (etc.) after added modules and
+# removed features have been processed.
+proc modify_defaults() {
+  if (has_proc ("modify_config_defaults")) {
+    modify_config_defaults
+  }
+}
+
 # Unset variables apart from those in the whitelist.  Invoke like this:
 #
 # unset @(unset_varlist)
@@ -608,7 +608,7 @@ proc unset_varlist() {
   var current=$(env -0)=>trimEnd(b'\y00')=>split(b'\y00')
   var bashfunc = / 'BASH_FUNC_' .* /
   var kv = / <capture (w|'_')+ (alnum|'_')* as key> '=' <capture dot* as value> /
-  var env_whitelist = :| _ PATH HOME TERM LANG PWD OLDPWD USER LOGNAME SHELL
+  var env_whitelist = :| _ PATH ENV HOME TERM LANG PWD OLDPWD USER LOGNAME SHELL
                          NAME SHLVL HOSTTYPE LINES COLUMNS |
 
   for x in (current) {
@@ -641,29 +641,24 @@ proc unset_varlist() {
 proc rocm_env {
   var LLVM_Inst = get_installdir('llvm')
   if (ARGV[0] === '--system') {
-    shvar LD_LIBRARY_PATH="$LLVM_Inst/lib:$LLVM_Inst/lib/x86_64-unknown-linux-gnu:/opt/rocm/lib/llvm/lib:/opt/rocm/lib:${LD_LIBRARY_PATH:-}" \
-          HIP_CLANG_PATH=$INSTALLDIR/bin \
-          ROCM_PATH=/opt/rocm \
-          HIP_PATH=/opt/rocm \
-          LLVM_PATH=$LLVM_Inst {
-      export LD_LIBRARY_PATH
-      export ROCM_PATH
-      export HIP_PATH
-      export HIP_CLANG_PATH
-      export LLVM_PATH
+    with-env LD_LIBRARY_PATH=$(prepend_path "$LLVM_Inst/lib" \
+                                            "$LLVM_Inst/lib/x86_64-unknown-linux-gnu" \
+                                            "/opt/rocm/lib/llvm/lib:/opt/rocm/lib" \
+                                            LD_LIBRARY_PATH) \
+             HIP_CLANG_PATH=$INSTALLDIR/bin \
+             ROCM_PATH=/opt/rocm \
+             HIP_PATH=/opt/rocm \
+             LLVM_PATH=$LLVM_Inst {
       @[ARGV[1:]]
     }
   } else {
-    shvar LD_LIBRARY_PATH="$LLVM_Inst/lib:$LLVM_Inst/lib/x86_64-unknown-linux-gnu:${LD_LIBRARY_PATH:-}" \
-          HIP_CLANG_PATH=$LLVM_Inst/bin \
-          ROCM_PATH=$INSTALLDIR \
-          HIP_PATH=$INSTALLDIR \
-          LLVM_PATH=$LLVM_Inst {
-      export LD_LIBRARY_PATH
-      export ROCM_PATH
-      export HIP_PATH
-      export HIP_CLANG_PATH
-      export LLVM_PATH
+    with-env LD_LIBRARY_PATH=$(prepend_path "$LLVM_Inst/lib" \
+                                            "$LLVM_Inst/lib/x86_64-unknown-linux-gnu" \
+                                            LD_LIBRARY_PATH) \
+             HIP_CLANG_PATH=$LLVM_Inst/bin \
+             ROCM_PATH=$INSTALLDIR \
+             HIP_PATH=$INSTALLDIR \
+             LLVM_PATH=$LLVM_Inst {
       @ARGV
     }
   }
@@ -680,23 +675,22 @@ proc hide_git {
   var TMPDIR=ARGV[0]
   mkdir -p $TMPDIR
   ln -sf $(which true) $TMPDIR/git
-  shvar PATH=$TMPDIR:$PATH {
-    @[ARGV[1:]]
-  }
+  PATH=$TMPDIR:$[ENV.PATH] @[ARGV[1:]]
 }
 
 proc gpu_opts {
   if (GPURunOpts !== [] or GPUOffset or GPUDevices !== []) {
+    var LocalEnv = []
     if (GPUOffset) {
-      var GPURUN_DEVICE_BIAS = "$GPUOffset"
-      export GPURUN_DEVICE_BIAS
+      append "GPURUN_DEVICE_BIAS=$GPUOffset" (LocalEnv)
     }
     if (GPUDevices !== []) {
-      var ROCR_VISIBLE_DEVICES = "$[GPUDevices=>join(',')]"
-      export ROCR_VISIBLE_DEVICES
+      append "ROCR_VISIBLE_DEVICES=$[GPUDevices=>join(',')]" (LocalEnv)
     }
-    export AOMP=$INSTALLDIR
-    $INSTALLDIR/bin/gpurun @GPURunOpts @ARGV
+    append "AOMP=$INSTALLDIR" (LocalEnv)
+    with-env @LocalEnv {
+      $INSTALLDIR/bin/gpurun @GPURunOpts @ARGV
+    }
   } else {
     @ARGV
   }
@@ -800,7 +794,7 @@ proc do_bwrap {
         setvar HomebrewBinds = HomebrewBinds ++ homebrew_llvm_bind (Bin)
       }
     }
-    export PATH=/opt/homebrew/bin:$PATH
+    setglobal ENV.PATH="/opt/homebrew/bin:$[ENV.PATH]"
   }
 
   var NetSharingOpt = []
@@ -811,8 +805,8 @@ proc do_bwrap {
   }
 
   var HostSpecificOpts = []
-  if test --exists $HOME/.config/amd-scripts/bwrap-opts {
-    setvar HostSpecificOpts = $(cat $HOME/.config/amd-scripts/bwrap-opts)=>shSplit()
+  if test --exists $[ENV.HOME]/.config/amd-scripts/bwrap-opts {
+    setvar HostSpecificOpts = $(cat $[ENV.HOME]/.config/amd-scripts/bwrap-opts)=>shSplit()
   }
 
   if (ToolsRoot) {
@@ -827,7 +821,7 @@ proc do_bwrap {
           --bind /tmp /tmp \
           @BwrapExtraOpts \
           @CCacheDirOpt \
-          --bind $HOME $HOME \
+          --bind $[ENV.HOME] $[ENV.HOME] \
           --bind $RealWD $RealWD \
           --tmpfs /opt \
           --dev /dev \

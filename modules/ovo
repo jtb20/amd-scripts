@@ -20,22 +20,14 @@ proc test_misc_ovo() {
 
   copy_dir $Source $Obj
 
-  shvar AOMP_GPU="$[GPUs[0]]" \
-        PATH="$INSTALLDIR/bin:$PATH" \
-        CXX=clang++ \
-        FC=flang \
-        FFLAGS="-O2 -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$[GPUs[0]]" \
-        CXXFLAGS="-O2 -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$[GPUs[0]]" \
-        OMP_TARGET_OFFLOAD=mandatory \
-        MAKEFLAGS="-j32" {
-    export AOMP_GPU
-    export PATH
-    export CXX
-    export FC
-    export FFLAGS
-    export CXXFLAGS
-    export OMP_TARGET_OFFLOAD
-    export MAKEFLAGS
+  with-env AOMP_GPU="$[GPUs[0]]" \
+           PATH="$INSTALLDIR/bin:$[ENV.PATH]" \
+           CXX=clang++ \
+           FC=flang \
+           FFLAGS="-O2 -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$[GPUs[0]]" \
+           CXXFLAGS="-O2 -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$[GPUs[0]]" \
+           OMP_TARGET_OFFLOAD=mandatory \
+           MAKEFLAGS="-j32" {
     cd $Obj {
       try {
         rocm_env ./ovo.sh run
