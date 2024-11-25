@@ -71,14 +71,19 @@ func ao_python_mods_dependencies() {
 }
 
 proc setup_ao_python_mods() {
-  var Cond=false
-  if (Cond) {
-    pip3 install --user setuptools==70.0.0
+  var OS=null
+  var Ubuntu20=false
+  try {
+    setvar OS=$(lsb_release -sd)
   }
-  pip3 install --ignore-installed --user barectf==3.1.2 PyYAML==5.3.1
-  pip3 install --user CppHeaderParser argparse wheel lit lxml
-  if (not Cond) {
-    pip3 install --user pandas
+  if (_error.code === 0 and OS ~~ 'Ubuntu 20*') {
+    setvar Ubuntu20 = true
+  }
+  if (Ubuntu20) {
+    pip3 install --user CppHeaderParser argparse wheel lit lxml barectf pandas
+  } else {
+    pip3 install --ignore-installed --user barectf==3.1.2 PyYAML==5.3.1
+    pip3 install --user CppHeaderParser argparse wheel lit lxml pandas
   }
 }
 
@@ -103,6 +108,35 @@ func ao_prereq_dependencies() {
   return (:| ao_symlinks |)
 }
 
+func aomp_delegate_env(Comp) {
+  func flag(Name) {
+    if (ConfigureOpts.aomp_delegate[Name]) {
+      return ('1')
+    } else {
+      return ('0')
+    }
+  }
+
+  func invflag(Name) {
+    if (ConfigureOpts.aomp_delegate[Name]) {
+      return ('0')
+    } else {
+      return ('1')
+    }
+  }
+
+  var Env = :| BUILD_TYPE=$[get_build_type('ao_' ++ Comp)]
+               AOMP_USE_NINJA=1
+               AOMP=$INSTALLDIR
+               AOMP_BUILD_CUDA=$[flag('build_cuda')]
+               AOMP_BUILD_DEBUG=$[flag('build_debug')]
+               AOMP_BUILD_PERF=$[flag('build_perf')]
+               AOMP_BUILD_SANITIZER=$[flag('build_sanitizer')]
+               AOMP_SKIP_FLANG=$[invflag('flang_legacy')]
+               AOMP_SKIP_FLANG_NEW=$[invflag('flang_new')] |
+  return (Env)
+}
+
 func aomp_delegate_gen(Comp, ConfigureTool) {
   var CompName = Comp=>replace('-','_')
   var InstallWord = 'install'
@@ -111,54 +145,25 @@ func aomp_delegate_gen(Comp, ConfigureTool) {
     # No install step for llvm-legacy!
     setvar InstallWord = ''
   }
-  var BuildOptions = """
-    if (not ConfigureOpts.aomp_delegate.build_cuda) {
-      append "AOMP_BUILD_CUDA=0" (WithEnv)
-    }
-    if (not ConfigureOpts.aomp_delegate.build_debug) {
-      append "AOMP_BUILD_DEBUG=0" (WithEnv)
-    }
-    if (not ConfigureOpts.aomp_delegate.build_perf) {
-      append "AOMP_BUILD_PERF=0" (WithEnv)
-    }
-    if (not ConfigureOpts.aomp_delegate.build_sanitizer) {
-      append "AOMP_BUILD_SANITIZER=0" (WithEnv)
-    }
-    if (not ConfigureOpts.aomp_delegate.flang_legacy) {
-      append "AOMP_SKIP_FLANG=1" (WithEnv)
-    }
-    if (not ConfigureOpts.aomp_delegate.flang_new) {
-      append "AOMP_SKIP_FLANG_NEW=1" (WithEnv)
-    }
-  """
   eval """
   proc ${ConfigureTool}_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    var WithEnv = :| BUILD_TYPE=\"\$[get_build_type("ao_${CompName}")]\"
-                     AOMP_USE_NINJA=1
-                     AOMP=\$INSTALLDIR |
-    $BuildOptions
-    with-env @WithEnv {
+    var LocalEnv = aomp_delegate_env(CompName)
+    with-env @LocalEnv {
       \$AOMPSrc/bin/build_$Comp.sh $ConfigureTool
     }
   }
   proc build_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    var WithEnv = :| BUILD_TYPE=\"\$[get_build_type("ao_${CompName}")]\"
-                     AOMP_USE_NINJA=1
-                     AOMP=\$INSTALLDIR |
-    $BuildOptions
-    with-env @WithEnv {
+    var LocalEnv = aomp_delegate_env(CompName)
+    with-env @LocalEnv {
       \$AOMPSrc/bin/build_$Comp.sh no$ConfigureTool
     }
   }
   proc install_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    var WithEnv = :| BUILD_TYPE=\"\$[get_build_type("ao_${CompName}")]\"
-                     AOMP_USE_NINJA=1
-                     AOMP=\$INSTALLDIR |
-    $BuildOptions
-    with-env @WithEnv {
+    var LocalEnv = aomp_delegate_env(CompName)
+    with-env @LocalEnv {
       \$AOMPSrc/bin/build_$Comp.sh install
     }
   }

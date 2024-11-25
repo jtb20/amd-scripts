@@ -455,7 +455,9 @@ func sanitize_path(path) {
 }
 
 proc fix_path {
-  PATH=$[sanitize_path (ENV.PATH)] @ARGV
+  with-env PATH=$[sanitize_path (ENV.PATH)] {
+    @ARGV
+  }
 }
 
 proc do_task_number (; num) {
