@@ -125,15 +125,19 @@ func aomp_delegate_env(Comp) {
     }
   }
 
-  var Env = :| BUILD_TYPE=$[get_build_type('ao_' ++ Comp)]
+  # Use the AOMP component name when setting options here, e.g.
+  # --debug=project,openmp,offload (don't use an 'ao_' prefix).
+  var Env = :| BUILD_TYPE=$[get_build_type(Comp)]
                AOMP_USE_NINJA=1
                AOMP=$INSTALLDIR
                AOMP_BUILD_CUDA=$[flag('build_cuda')]
                AOMP_BUILD_DEBUG=$[flag('build_debug')]
                AOMP_BUILD_PERF=$[flag('build_perf')]
                AOMP_BUILD_SANITIZER=$[flag('build_sanitizer')]
-               AOMP_SKIP_FLANG=$[invflag('flang_legacy')]
+               AOMP_SKIP_FLANG=$[invflag('flang_classic')]
                AOMP_SKIP_FLANG_NEW=$[invflag('flang_new')] |
+  write "Using environment variables:"
+  write -- @Env
   return (Env)
 }
 
@@ -141,28 +145,28 @@ func aomp_delegate_gen(Comp, ConfigureTool) {
   var CompName = Comp=>replace('-','_')
   var InstallWord = 'install'
   var Procs = {}
-  if (Comp === 'llvm-legacy') {
+  if (Comp === 'llvm-legacy' or Comp === 'llvm-classic') {
     # No install step for llvm-legacy!
     setvar InstallWord = ''
   }
   eval """
   proc ${ConfigureTool}_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    var LocalEnv = aomp_delegate_env(CompName)
+    var LocalEnv = aomp_delegate_env('$CompName')
     with-env @LocalEnv {
       \$AOMPSrc/bin/build_$Comp.sh $ConfigureTool
     }
   }
   proc build_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    var LocalEnv = aomp_delegate_env(CompName)
+    var LocalEnv = aomp_delegate_env('$CompName')
     with-env @LocalEnv {
       \$AOMPSrc/bin/build_$Comp.sh no$ConfigureTool
     }
   }
   proc install_ao_${CompName} {
     var AOMPSrc = get_srcdir('aomp')
-    var LocalEnv = aomp_delegate_env(CompName)
+    var LocalEnv = aomp_delegate_env('$CompName')
     with-env @LocalEnv {
       \$AOMPSrc/bin/build_$Comp.sh install
     }
@@ -199,8 +203,8 @@ setvar DelegatedCompName["comgr"                ] = "ao_comgr";
 setvar DelegatedCompName["rocminfo"             ] = "ao_rocminfo";
 setvar DelegatedCompName["rocsmilib"            ] = "ao_rocm_smi_lib";
 setvar DelegatedCompName["amdsmi"               ] = "ao_amdsmi";
-setvar DelegatedCompName["llvm_legacy"          ] = "ao_llvm_legacy";
-setvar DelegatedCompName["flang_legacy"         ] = "ao_flang_legacy";
+setvar DelegatedCompName["llvm_legacy"          ] = "ao_llvm_classic";
+setvar DelegatedCompName["flang_legacy"         ] = "ao_flang_classic";
 setvar DelegatedCompName["pgmath"               ] = "ao_pgmath";
 setvar DelegatedCompName["flang"                ] = "ao_flang";
 setvar DelegatedCompName["flang_runtime"        ] = "ao_flang_runtime";
@@ -286,7 +290,15 @@ func ao_llvm_legacy_dependencies() {
   return (translate_aomp_deps('llvm_legacy'))
 }
 
+func ao_llvm_classic_dependencies() {
+  return (translate_aomp_deps('llvm_legacy'))
+}
+
 func ao_flang_legacy_dependencies() {
+  return (translate_aomp_deps('flang_legacy'))
+}
+
+func ao_flang_classic_dependencies() {
   return (translate_aomp_deps('flang_legacy'))
 }
 
@@ -335,9 +347,9 @@ func ao_libdevice_dependencies() {
 }
 
 for Comp in project rocprofiler-register roct rocr openmp offload \
-            extras comgr rocminfo rocm_smi_lib amdsmi llvm-legacy flang-legacy \
-            pgmath flang flang_runtime hipcc hipamd rocdbgapi rocgdb roctracer \
-            rocprofiler rocm-cmake libdevice {
+            extras comgr rocminfo rocm_smi_lib amdsmi llvm-legacy llvm-classic \
+            flang-legacy flang-classic pgmath flang flang_runtime hipcc hipamd \
+            rocdbgapi rocgdb roctracer rocprofiler rocm-cmake libdevice {
   var CompName = Comp=>replace('-','_')
   var ConfTool = 'cmake'
   if (Comp === 'rocgdb') {
@@ -349,3 +361,8 @@ for Comp in project rocprofiler-register roct rocr openmp offload \
   }
   call setVar("get_ao_${CompName}_src", aomp_delegate_getsrc)
 }
+
+# These are left as straggling globals, which is a bit counterintuitive...
+unset CompName
+unset ConfTool
+unset Procs

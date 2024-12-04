@@ -62,6 +62,16 @@ proc parse_args(; argv) {
         setglobal DefaultBuildOpts.build_type = "Debug"
       }
 
+      --debug=* {
+        var DebugComponents = argv[opt]=>trimStart('--debug=')=>split(',')
+        for D in (DebugComponents) {
+          if (D not in BuildOpts) {
+            setglobal BuildOpts[D] = {}
+          }
+          setglobal BuildOpts[D].build_type = "Debug"
+        }
+      }
+
       -S | --select {
         setvar opt += 1
         setglobal SelectTests = argv[opt]
