@@ -664,7 +664,8 @@ proc rocm_env {
       @[ARGV[1:]]
     }
   } else {
-    with-env LD_LIBRARY_PATH=$(prepend_path "$LLVM_Inst/lib" \
+    with-env LD_LIBRARY_PATH=$(prepend_path "$INSTALLDIR/lib" \
+                                            "$LLVM_Inst/lib" \
                                             "$LLVM_Inst/lib/x86_64-unknown-linux-gnu" \
                                             LD_LIBRARY_PATH) \
              HIP_CLANG_PATH=$LLVM_Inst/bin \
