@@ -39,7 +39,7 @@ proc test_misc_sollve_vv {
     with-env AOMP=$LLVM_Inst \
              AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
              AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
-             PATH=$Obj/tmpbin:$PATH \
+             PATH=$(prepend_path "$Obj/tmpbin" PATH) \
              SKIP_SOLLVE45=0 \
              SKIP_SOLLVE50=0 \
              SKIP_SOLLVE51=0 \
@@ -47,7 +47,7 @@ proc test_misc_sollve_vv {
              MY_SOLLVE_FLAGS="" {
       if (len(SOLLVEFlags) > 0) {
         var MY_SOLLVE_FLAGS = shell_quote_args(SOLLVEFlags)
-        setglobal ENV.MY_SOLLVE_FLAGS = "$[ENV.MY_SOLLVE_FLAGS] --offload-arch=$[GPUs[0]]"
+        setglobal ENV.MY_SOLLVE_FLAGS = "$MY_SOLLVE_FLAGS --offload-arch=$[GPUs[0]]"
         write -- "MY_SOLLVE_FLAGS: $[ENV.MY_SOLLVE_FLAGS]"
       } else {
         write "No special flags"
@@ -127,7 +127,7 @@ proc test_misc_sollve_vv {
                 write "SKIPPED: $TestSrcRel run" >> singletest.sum
               } else {
                 try {
-                  $TestBin
+                  rocm_env @ROCmOpts $TestBin
                 }
                 if (_status === 0) {
                   write "PASS: $TestSrcRel run" >> singletest.sum

@@ -34,6 +34,7 @@ var BindHomebrew = false
 var BwrapExtraOpts = []
 var BwrapUnshareNet = true
 var ToolsRoot = null
+var ModifyConfigProcs = []
 
 proc show_vars {
   write "HIP_CLANG_PATH: $[ENV.HIP_CLANG_PATH]"
@@ -465,9 +466,7 @@ func sanitize_path(path) {
 }
 
 proc fix_path {
-  with-env PATH=$[sanitize_path (ENV.PATH)] {
-    @ARGV
-  }
+  PATH=$[sanitize_path (ENV.PATH)] @ARGV
 }
 
 proc do_task_number (; num) {
@@ -605,11 +604,29 @@ proc remove_optional_features() {
   }
 }
 
+proc add_config_adjustment_proc(; Proc) {
+  call ModifyConfigProcs->append(Proc)
+}
+
+proc add_config_adjustment(;;; Block) {
+  call ModifyConfigProcs->append(Block)
+}
+
 # Optionally modify default configure options (etc.) after added modules and
 # removed features have been processed.
 proc modify_defaults() {
-  if (has_proc ("modify_config_defaults")) {
-    modify_config_defaults
+  for Proc in (ModifyConfigProcs) {
+    case (type(Proc)) {
+      'Proc' {
+        Proc
+      }
+      'Command' {
+        call io->eval(Proc)
+      }
+      * {
+        error "Unexpected deferred config entity: $(pp value (Proc))"
+      }
+    }
   }
 }
 

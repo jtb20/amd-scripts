@@ -121,6 +121,9 @@ proc with-env(...vars;;;block) {
 #
 # setglobal ENV.PATH=$(prepend_path "/usr/floop/bin" PATH)
 # setglobal ENV.LD_LIBRARY_PATH=$(prepend_path "/usr/floop/lib" "/usr/local/floop/lib" LD_LIBRARY_PATH)
+#
+# Note this is a proc not a function, so we can pass the path variable name as
+# an unadorned word.
 
 proc prepend_path(...NewPaths) {
   var Path = ENV=>get(NewPaths[-1])

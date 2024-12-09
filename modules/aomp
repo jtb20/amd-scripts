@@ -116,6 +116,11 @@ proc test_aomp_examples {
   }
 }
 
+proc save_results_aomp_examples (; files) {
+  # TODO
+  :
+}
+
 # The "smoke" and "smoke_fails" testsuites (and similar) use the same
 # arrangement to report their test results.  Process that into a .sum file
 # here.
@@ -641,4 +646,9 @@ proc test_aomp_openmpapps {
       }
     }
   }
+}
+
+proc save_results_aomp_openmpapps(; files) {
+  # TODO
+  :
 }

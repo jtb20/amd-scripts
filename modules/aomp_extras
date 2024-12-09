@@ -20,6 +20,7 @@ proc configure_aomp_extras() {
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DCMAKE_PREFIX_PATH=$DevLibs \
       -DAOMP_VERSION_STRING="AOMP_$AOMP_MAJOR_VERSION" \
+      -DLLVM_DIR=$[get_installdir('llvm')] \
       @[Cfg.cfg] $Src
   }
 }

@@ -36,7 +36,9 @@ func select_hsa_runtime() {
   }
 }
 
-proc set_aomp_common_llvm_opts () {
+# This needs to be called after option processing, etc.
+
+add_config_adjustment {
   append_configure_opts ("llvm", :| -DLLVM_BUILD_LLVM_DYLIB=ON
                                     -DLLVM_LINK_LLVM_DYLIB=ON
                                     -DCLANG_LINK_CLANG_DYLIB=ON
@@ -167,10 +169,6 @@ proc remove_optional_feature(Feat) {
       error "Unknown removable feature: $Feat"
     }
   }
-}
-
-proc modify_config_defaults() {
-  set_aomp_common_llvm_opts
 }
 
 # Eek, the Ninja build tool option doesn't work for this one.
