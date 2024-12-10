@@ -1,0 +1,27 @@
+# This is only built as an LLVM "external project", so we don't need much here.
+
+func get_spirv_llvm_translator_src() {
+  return (get_src_default ("spirv_llvm_translator"))
+}
+
+func spirv_llvm_translator_dependencies() {
+  return (:| spirv_headers |)
+}
+
+proc spirv_llvm_translator_tasks {
+  # No tasks!
+  true
+}
+
+func get_spirv_headers_src() {
+  return (get_src_default ("spirv_headers"))
+}
+
+func spirv_headers_dependencies() {
+  return ([])
+}
+
+proc spirv_headers_tasks {
+  # No tasks!
+  true
+}

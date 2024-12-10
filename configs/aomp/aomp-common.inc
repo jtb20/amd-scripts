@@ -24,6 +24,8 @@ set_configure_key ("llvm", "gfxlist", :| gfx700 gfx701 gfx801 gfx803 gfx900
 
 set_configure_key ("llvm", "append_install_dir", "lib/llvm")
 
+set_configure_key ("llvm", "spirv_translator", true)
+
 func select_hsa_runtime() {
   var SrcSubdir
   try > /dev/null 2>&1 {
@@ -69,6 +71,13 @@ add_config_adjustment {
   } else {
     append_configure_opts ("llvm", :| -DLLVM_EXTERNAL_PROJECTS=rocm-device-libs
                                       -DLLVM_EXTERNAL_ROCM_DEVICE_LIBS_SOURCE_DIR=$[get_srcdir ("device_libs")] |)
+  }
+
+  if (ConfigureOpts.llvm.spirv_translator) {
+    append_configure_opts ("llvm", :| -DLLVM_EXTERNAL_PROJECTS=spirv_translator
+                                      -DLLVM_EXTERNAL_SPIRV_TRANSLATOR_SOURCE_DIR=$[get_srcdir ('spirv_llvm_translator')]
+                                      -DLLVM_EXTERNAL_SPIRV_HEADERS_SOURCE_DIR=$[get_srcdir ('spirv_headers')] |)
+    #set_configure_opts ("comgr", :| -DLLVM_EXTERNAL_SPIRV_TRANSLATOR_SOURCE_DIR=$[get_srcdir ('spirv_llvm_translator')] |)
   }
 }
 
@@ -163,6 +172,10 @@ proc remove_optional_feature(Feat) {
     clang_tools_extra {
       setvar P = list_remove (ConfigureOpts.llvm.projects, 'clang-tools-extra')
       set_configure_key ('llvm', 'projects', P)
+    }
+
+    spirv_translator {
+      set_configure_key ("llvm", "spirv_translator", false)
     }
 
     * {
