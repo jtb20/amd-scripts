@@ -51,7 +51,19 @@ proc revert_patch_rocr_runtime() {
 }
 
 func rocr_runtime_dependencies() {
-  return (:| llvm roct_thunk_interface |)
+  # This seems a bit obscure/fragile.  FIXME: handle version-dependent
+  # dependencies better somehow?
+  case (get_version_name('rocr_runtime')) {
+    '6.1.x' | '6.2.x' {
+      return (:| llvm roct_thunk_interface |)
+    }
+    '6.3.x' {
+      return (|: llvm |)
+    }
+    * {
+      error "Unknown rocr_runtime version"
+    }
+  }
 }
 
 proc rocr_runtime_tasks {
