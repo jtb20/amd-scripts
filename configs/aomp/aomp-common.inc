@@ -1,11 +1,11 @@
 
 # Define conditional deps before adding their associated component.
 func llvm_conditional_deps() {
-  return (:| roct_thunk_interface @llvm_more_conditional_deps hwloc |)
+  return (:| @llvm_more_conditional_deps hwloc |)
 }
 
 add_components hwloc rocsmilib llvm comgr device_libs aomp_extras
-add_components rocm_cmake roct_thunk_interface rocminfo
+add_components rocm_cmake rocminfo
 add_components rocr_runtime hipamd openmp_examples
 
 set_configure_key ("llvm", "projects", :| clang lld clang-tools-extra
@@ -33,8 +33,13 @@ func select_hsa_runtime() {
   }
   if (_error.code === 0) {
     return (SrcSubdir)
-  } else {
+  } elif (in_list('roct_thunk_interface', Components)) {
+    # A non-unified build, with a separate roct_thunk_interface.
     return ("$[get_srcdir("rocr_runtime")]/src")
+  } else {
+    # A unified build, with roct_thunk_interface as part of the rocr_runtime
+    # component.
+    return (get_srcdir("rocr_runtime"))
   }
 }
 
@@ -52,13 +57,18 @@ add_config_adjustment {
                                     -DLLVM_INCLUDE_BENCHMARKS=OFF
                                     -DLIBOMP_USE_HWLOC=ON
                                     -DLIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH=$[select_hsa_runtime ()]
-                                    -DLIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH=$[get_srcdir ("roct_thunk_interface")]
                                     -DLIBOMP_COPY_EXPORTS=OFF
                                     -DLIBOMPTARGET_ENABLE_DEBUG=ON
                                     -DLIBOMPTARGET_AMDGCN_GFXLIST=$[ConfigureOpts.llvm.gfxlist=>join(';')]
                                     -DLIBOMP_HWLOC_INSTALL_DIR=$INSTALLDIR
                                     -DLIBOMP_SHARED_LINKER_FLAGS=-Wl,--disable-new-dtags
                                     -DLLVM_VERSION_SUFFIX=_AOMP_STANDALONE |)
+
+  if (in_list('roct_thunk_interface', Components)) {
+    append_configure_opts ("llvm", :| -DLIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH=$[get_srcdir ("roct_thunk_interface")] |)
+  } else {
+    append_configure_opts ("llvm", :| -DOFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR=On |)
+  }
 
   if (ConfigureOpts.llvm.append_install_dir) {
     var rocmdevicelib_loc_new="$[ConfigureOpts.llvm.append_install_dir]/lib/clang/$AOMP_MAJOR_VERSION/lib/amdgcn"

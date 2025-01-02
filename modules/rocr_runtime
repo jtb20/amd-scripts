@@ -18,8 +18,12 @@ proc configure_rocr_runtime() {
   var Src = get_srcdir("rocr_runtime")
   var Tool = get_build_tool("rocr_runtime")
   var LLVM_Inst = get_installdir('llvm')
+  var Cfg = get_configure_opts('rocr_runtime')
   var SrcSubdir = Src
-  if ("$(basename $Src)" !== "hsa-runtime") {
+  if (not in_list('roct_thunk_interface', Components)) {
+    # If we have a combined rocr/roct build, use the top-level dir.
+    :
+  } elif ("$(basename $Src)" !== "hsa-runtime") {
     # There are two arrangements for the rocr_runtime component -- as a
     # component of that name (e.g. for ROCm 6.1) or as a subdirectory of the
     # hsa_runtime component (e.g. for ROCm 6.3).  The former has a "src"
@@ -34,6 +38,7 @@ proc configure_rocr_runtime() {
       -DCMAKE_PREFIX_PATH="$INSTALLDIR;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DIMAGE_SUPPORT=OFF \
+      @Cfg \
       $SrcSubdir
   }
 }
@@ -58,7 +63,7 @@ func rocr_runtime_dependencies() {
       return (:| llvm roct_thunk_interface |)
     }
     '6.3.x' {
-      return (|: llvm |)
+      return (:| llvm |)
     }
     * {
       error "Unknown rocr_runtime version"

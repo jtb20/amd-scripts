@@ -51,7 +51,17 @@ proc llvm_symlink_hipamd() {
 }
 
 func hipamd_dependencies() {
-  return (:| roct_thunk_interface rocr_runtime hipcc hip comgr |)
+  case (get_version_name('hipamd')) {
+    '6.1.x' | '6.2.x' {
+      return (:| roct_thunk_interface rocr_runtime hipcc hip comgr |)
+    }
+    '6.3.x' {
+      return (:| rocr_runtime hipcc hip comgr |)
+    }
+    * {
+      error "Unknown hipamd version (FIXME)"
+    }
+  }
 }
 
 proc hipamd_tasks {
