@@ -99,7 +99,7 @@ add_config_adjustment {
 # for testing.
 # Other suites have their own repos (so must be listed as components), and
 # must also be added separately as testsuites below.
-add_components aomp sollve_vv nekbone openmpapps ovo
+add_components aomp sollve_vv nekbone openmpapps ovo genasis
 
 #set_configure_opts ("device_libs",
 #                    :| -DCLANG_OPTIONS_APPEND="-Xclang;-mamdgpu-precise-memory-op" |)
@@ -116,7 +116,7 @@ add_testsuites llvm llvm clang flang lld compiler_rt libcxx libcxxabi \
 add_testsuites aomp examples smoke smoke_fails smoke_limbo \
                     hip_openmp usm llnl omp5 openmpapps
 
-add_testsuites misc sollve_vv nekbone ovo
+add_testsuites misc sollve_vv nekbone ovo genasis genasis_flang_new
 
 proc add_optional_module (Mod) {
   case (Mod) {

@@ -31,7 +31,7 @@ proc build_symlink_flang_legacy() {
   var LLVMLegacyObj = get_objdir("llvm_legacy")
   var Obj = get_objdir("flang_legacy")
   cd $Obj {
-    ln -sf $LLVMLegacyObj llvm-legacy
+    ln -sf $LLVMLegacyObj llvm-$FlangAdjective
   }
 }
 
@@ -45,7 +45,7 @@ proc install_flang_legacy() {
 
 proc install_symlink_flang_legacy() {
   cd $INSTALLDIR/bin {
-    ln -sf flang-legacy flang
+    ln -sf flang-$FlangAdjective flang
   }
 }
 

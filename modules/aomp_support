@@ -1,0 +1,137 @@
+# Wrap the build_supp.sh aomp script.  Mostly just avoid using $HOME by
+# default.
+
+proc build_aomp_support_component(Component) {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Src = get_srcdir(Component)
+  var Build = get_objdir(Component)
+  copy_dir $Src $Build
+  mkdir -p $Build/tmpbin
+  # build_supp.sh wants to download and unpack these itself.  This hack stops
+  # it doing that (we run in a bubblewrap with networking disabled).
+  cd $Build/tmpbin {
+    ln -sf /bin/true wget
+    ln -sf /bin/true bzip2
+    # This is particularly shocking.  Instead of untarring the just-downloaded
+    # tarball, we hijack 'tar' to make a symlink to the source copied above.
+    cat > tar <<< "ln -sf \"$Build\" \"$OBJDIR/aomp-support/$Component\""
+    chmod +x tar
+  }
+
+  mkdir -p $INSTALLDIR/aomp-support
+
+  with-env AOMP=$[get_installdir('llvm')] \
+           AOMP_SUPP=$INSTALLDIR/aomp-support \
+           AOMP_SUPP_INSTALL=$INSTALLDIR/aomp-support-inst \
+           AOMP_SUPP_BUILD=$OBJDIR/aomp-support \
+           PATH=$(prepend_path $Build/tmpbin PATH) {
+    cd $OBJDIR/aomp-support {
+      $AOMP_Src/bin/build_supp.sh $Component
+    }
+  }
+}
+
+# SILO
+
+func get_silo_src() {
+  return (get_src_default ("silo"))
+}
+
+func silo_dependencies() {
+  return ([])
+}
+
+proc build_silo() {
+  build_aomp_support_component silo
+}
+
+proc silo_tasks() {
+  add_tasks silo build
+}
+
+# HDF5
+
+func get_hdf5_src() {
+  return (get_src_default ("hdf5"))
+}
+
+func hdf5_dependencies() {
+  return ([])
+}
+
+proc build_hdf5() {
+  build_aomp_support_component hdf5
+}
+
+proc hdf5_tasks() {
+  add_tasks hdf5 build
+}
+
+# OPENMPI
+
+# We're not using build_supp.sh for openmpi here because the script contains
+# some hard-coded paths that don't match the layout we're using.  So there's
+# a bit of slightly unfortunate duplication here.
+
+# Also we really shouldn't be hard-wiring the version number in some of the
+# paths below!
+
+func get_openmpi_src() {
+  return (get_src_default ("openmpi"))
+}
+
+func openmpi_dependencies() {
+  return (:| llvm flang_legacy flang_runtime |)
+}
+
+proc clean_openmpi() {
+  clean_component openmpi
+}
+
+proc configure_openmpi() {
+  var Src = get_srcdir('openmpi')
+  var Obj = get_objdir('openmpi')
+  var LLVM_Inst = get_installdir('llvm')
+  cd $Obj {
+    cp $Src/configure $Src/configure.bak
+    try {
+      sed -i -e 's/flang\s*)/flang*)/' $Src/configure
+      $Src/configure \
+        --with-hwloc=$INSTALLDIR \
+        --with-hwloc-libdir=$INSTALLDIR/lib \
+        OMPI_CC=$LLVM_Inst/bin/clang \
+        OMPI_CXX=$LLVM_Inst/bin/clang++ \
+        OMPI_F90=$LLVM_Inst/bin/flang \
+        CXX=$LLVM_Inst/bin/clang++ \
+        CC=$LLVM_Inst/bin/clang \
+        FC=$LLVM_Inst/bin/flang \
+        --prefix=$INSTALLDIR/aomp-support-inst/openmpi-5.0.0
+    }
+    var TryError = _error.code
+    mv -f $Src/configure.bak $Src/configure
+    if (TryError !== 0) {
+      error "Configure failed"
+    }
+  }
+}
+
+proc build_openmpi() {
+  var Obj = get_objdir('openmpi')
+  cd $Obj {
+    make -j8
+  }
+}
+
+proc install_openmpi() {
+  var Obj = get_objdir('openmpi')
+  cd $Obj {
+    make -j8 install
+    ln -sf $INSTALLDIR/aomp-support-inst/openmpi-5.0.0 \
+           $INSTALLDIR/aomp-support/openmpi
+  }
+}
+
+proc openmpi_tasks() {
+  standard_tasks openmpi
+}
+

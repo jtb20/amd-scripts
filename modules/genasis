@@ -1,0 +1,73 @@
+func get_genasis_src() {
+  return (get_src_default ("genasis"))
+}
+
+func genasis_dependencies() {
+  return (:| silo hdf5 openmpi |)
+}
+
+proc genasis_tasks {
+  # No tasks!
+  true
+}
+
+proc test_misc_genasis() {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Source = get_srcdir ("genasis")
+  var Obj = get_objdir ("genasis")
+  var GPUs = get_amd_gpus()
+  var LLVM_Inst = get_installdir('llvm')
+
+  write "Found GPUs: $[GPUs=>join(",")]"
+
+  copy_dir $Source $Obj
+
+  var Parts = Obj=>split('/')
+
+  with-env AOMP=$LLVM_Inst \
+           AOMPHIP=$INSTALLDIR \
+           ROCM=$INSTALLDIR \
+           AOMP_GPU=$[GPUs[0]] \
+           AOMP_REPOS_TEST=$[Parts[:-1]=>join('/')] \
+           SRC_DIR=$[Parts[-1]] \
+           AOMP_SUPP=$INSTALLDIR/aomp-support {
+    cd $AOMP_Src/bin {
+      try {
+        rocm_env ./run_genasis.sh
+      }
+      if (_error.code === 0) {
+        write "Success."
+      } else {
+        write "Failure."
+      }
+    }
+  }
+}
+
+proc clean_results_misc_genasis () {
+  var Obj = get_objdir ("genasis")
+  cd $Obj {
+    rm -f genasis.run.log*
+  }
+}
+
+proc save_results_misc_genasis (; files) {
+  var Obj = get_objdir ("genasis")
+  var FoundResults = false
+  
+  if (FoundResults) {
+    call files->setValue (:| genasis.sum |)
+  }
+}
+
+proc test_misc_genasis_flang_new() {
+  :
+}
+
+proc clean_results_misc_genasis_flang_new() {
+  :
+}
+
+proc save_results_misc_genasis_flang_new(; files) {
+  :
+}

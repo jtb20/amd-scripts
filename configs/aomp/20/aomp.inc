@@ -113,7 +113,7 @@ const AOMP_LFL_DIR="17.0-4"
 var flang_legacy_src = {
   "type" : "subcomponent",
   "parent" : "flang",
-  "subdir" : "flang-legacy/$AOMP_LFL_DIR"
+  "subdir" : "flang-$FlangAdjective/$AOMP_LFL_DIR"
 }
 
 add_sources ("flang_legacy", flang_legacy_src)
@@ -121,7 +121,7 @@ add_sources ("flang_legacy", flang_legacy_src)
 var llvm_legacy_src = {
   "type" : "subcomponent",
   "parent" : "flang",
-  "subdir" : "flang-legacy/$AOMP_LFL_DIR/llvm-legacy"
+  "subdir" : "flang-$FlangAdjective/$AOMP_LFL_DIR/llvm-$FlangAdjective"
 }
 
 add_sources ("llvm_legacy", llvm_legacy_src)
