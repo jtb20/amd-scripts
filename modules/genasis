@@ -11,10 +11,10 @@ proc genasis_tasks {
   true
 }
 
-proc test_misc_genasis() {
+proc run_genasis_test_script(ScriptName, Suf) {
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("genasis")
-  var Obj = get_objdir ("genasis")
+  var Obj = "$[get_objdir ("genasis")]$Suf"
   var GPUs = get_amd_gpus()
   var LLVM_Inst = get_installdir('llvm')
 
@@ -24,16 +24,24 @@ proc test_misc_genasis() {
 
   var Parts = Obj=>split('/')
 
+  cd $OBJDIR {
+    # Old versions of run_genasis.sh hardcode the test dir name, so hackily
+    # allow for that...
+    ln -sf $[Parts[-1]] GenASis
+  }
+
   with-env AOMP=$LLVM_Inst \
            AOMPHIP=$INSTALLDIR \
+           HIP_DIR=$INSTALLDIR \
            ROCM=$INSTALLDIR \
            AOMP_GPU=$[GPUs[0]] \
            AOMP_REPOS_TEST=$[Parts[:-1]=>join('/')] \
            SRC_DIR=$[Parts[-1]] \
-           AOMP_SUPP=$INSTALLDIR/aomp-support {
+           AOMP_SUPP=$INSTALLDIR/aomp-support \
+           ENABLE_OMP_OFFLOAD=1 {
     cd $AOMP_Src/bin {
       try {
-        rocm_env ./run_genasis.sh
+        rocm_env ./$ScriptName
       }
       if (_error.code === 0) {
         write "Success."
@@ -42,6 +50,10 @@ proc test_misc_genasis() {
       }
     }
   }
+}
+
+proc test_misc_genasis() {
+  run_genasis_test_script run_genasis.sh ""
 }
 
 proc clean_results_misc_genasis () {
@@ -61,7 +73,7 @@ proc save_results_misc_genasis (; files) {
 }
 
 proc test_misc_genasis_flang_new() {
-  :
+  run_genasis_test_script run_genasis_flang_new.sh "_flang_new"
 }
 
 proc clean_results_misc_genasis_flang_new() {

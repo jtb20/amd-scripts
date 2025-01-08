@@ -3,10 +3,42 @@ func get_hipfort_src() {
 }
 
 func hipfort_dependencies() {
-  return ([])
+  return (:| flang_legacy flang_runtime |)
+}
+
+proc clean_hipfort() {
+  clean_component hipfort
+}
+
+proc configure_hipfort() {
+  var Build = get_objdir("hipfort")
+  var LLVM_Inst = get_installdir("llvm")
+  var BuildType = get_build_type("hipfort")
+  var Src = get_srcdir("hipfort")
+  var Tool = get_build_tool("hipfort")
+  var Cfg = get_configure_opts("hipfort")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DHIPFORT_COMPILER=$LLVM_Inst/bin/flang \
+      -DHIPFORT_COMPILER_FLAGS="-cpp" \
+      -DCMAKE_Fortran_FLAGS_DEBUG="" \
+      -DHIPFORT_AR=$LLVM_Inst/bin/llvm-ar \
+      -DHIPFORT_RANLIB=$LLVM_Inst/bin/llvm-ranlib \
+      -DCMAKE_Fortran_FLAGS="-Mfree -fPIC" \
+      @Cfg \
+      $Src
+  }
+}
+
+proc build_hipfort() {
+  rocm_env cmake_build hipfort
+}
+
+proc install_hipfort() {
+  rocm_env cmake_install hipfort
 }
 
 proc hipfort_tasks() {
-  # No tasks yet!
-  :
+  standard_tasks hipfort
 }

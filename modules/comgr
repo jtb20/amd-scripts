@@ -5,7 +5,15 @@ proc clean_comgr() {
 }
 
 func get_comgr_src() {
-  return (get_src_default ("comgr"))
+  case (get_version_name('comgr')) {
+    5.* {
+      return ("$[get_src_default ('comgr')]/lib/comgr")
+    }
+
+    * {
+      return (get_src_default ("comgr"))
+    }
+  }
 }
 
 proc add_symlink_comgr() {

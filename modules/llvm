@@ -6,12 +6,14 @@ func get_llvm_src() {
   return ("llvm-project-$version_name")
 }
 
-func get_llvm_install() {
-  if ('append_install_dir' in ConfigureOpts.llvm and
+func get_llvm_install(installdir) {
+  if (PreinstalledAOMP) {
+    return (PreinstalledAOMP)
+  } elif ('append_install_dir' in ConfigureOpts.llvm and
       ConfigureOpts.llvm.append_install_dir) {
-    return (ConfigureOpts.llvm.append_install_dir)
+    return ("$installdir/$[ConfigureOpts.llvm.append_install_dir]")
   } else {
-    return (".")
+    return (installdir)
   }
 }
 

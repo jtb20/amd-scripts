@@ -1,0 +1,12 @@
+func get_rocclr_src() {
+  return (get_src_default ("rocclr"))
+}
+
+func rocclr_dependencies() {
+  return ([])
+}
+
+proc rocclr_tasks {
+  # No tasks!
+  true
+}

@@ -43,54 +43,6 @@ func select_hsa_runtime() {
   }
 }
 
-# This needs to be called after option processing, etc.
-
-add_config_adjustment {
-  append_configure_opts ("llvm", :| -DLLVM_BUILD_LLVM_DYLIB=ON
-                                    -DLLVM_LINK_LLVM_DYLIB=ON
-                                    -DCLANG_LINK_CLANG_DYLIB=ON
-                                    -DCLANG_ENABLE_AMDCLANG=ON
-                                    -DOPENMP_ENABLE_LIBOMPTARGET=1
-                                    -DLIBCXX_ENABLE_STATIC=ON
-                                    -DLIBCXXABI_ENABLE_STATIC=ON
-                                    -DLLVM_ENABLE_BINDINGS=OFF
-                                    -DLLVM_INCLUDE_BENCHMARKS=OFF
-                                    -DLIBOMP_USE_HWLOC=ON
-                                    -DLIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH=$[select_hsa_runtime ()]
-                                    -DLIBOMP_COPY_EXPORTS=OFF
-                                    -DLIBOMPTARGET_ENABLE_DEBUG=ON
-                                    -DLIBOMPTARGET_AMDGCN_GFXLIST=$[ConfigureOpts.llvm.gfxlist=>join(';')]
-                                    -DLIBOMP_HWLOC_INSTALL_DIR=$INSTALLDIR
-                                    -DLIBOMP_SHARED_LINKER_FLAGS=-Wl,--disable-new-dtags
-                                    -DLLVM_VERSION_SUFFIX=_AOMP_STANDALONE |)
-
-  if (in_list('roct_thunk_interface', Components)) {
-    append_configure_opts ("llvm", :| -DLIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH=$[get_srcdir ("roct_thunk_interface")] |)
-  } else {
-    append_configure_opts ("llvm", :| -DOFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR=On |)
-  }
-
-  if (ConfigureOpts.llvm.append_install_dir) {
-    var rocmdevicelib_loc_new="$[ConfigureOpts.llvm.append_install_dir]/lib/clang/$AOMP_MAJOR_VERSION/lib/amdgcn"
-    append_configure_opts ("llvm", :| -DLIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH=$[get_srcdir ("device_libs")]
-                                      -DROCM_DEVICE_LIBS_INSTALL_PREFIX_PATH=$INSTALLDIR
-                                      -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC=$rocmdevicelib_loc_new
-                                      -DROCM_LLVM_BACKWARD_COMPAT_LINK="$INSTALLDIR/llvm"
-                                      -DROCM_LLVM_BACKWARD_COMPAT_LINK_TARGET=$[ConfigureOpts.llvm.append_install_dir]
-                                      -DCLANG_LINK_FLANG_LEGACY=ON |)
-  } else {
-    append_configure_opts ("llvm", :| -DLLVM_EXTERNAL_PROJECTS=rocm-device-libs
-                                      -DLLVM_EXTERNAL_ROCM_DEVICE_LIBS_SOURCE_DIR=$[get_srcdir ("device_libs")] |)
-  }
-
-  if (ConfigureOpts.llvm.spirv_translator) {
-    append_configure_opts ("llvm", :| -DLLVM_EXTERNAL_PROJECTS=spirv_translator
-                                      -DLLVM_EXTERNAL_SPIRV_TRANSLATOR_SOURCE_DIR=$[get_srcdir ('spirv_llvm_translator')]
-                                      -DLLVM_EXTERNAL_SPIRV_HEADERS_SOURCE_DIR=$[get_srcdir ('spirv_headers')] |)
-    #set_configure_opts ("comgr", :| -DLLVM_EXTERNAL_SPIRV_TRANSLATOR_SOURCE_DIR=$[get_srcdir ('spirv_llvm_translator')] |)
-  }
-}
-
 # set_build_tool ("rocm_cmake", "Unix Makefiles")
 # set_build_tool ("rocr_runtime", "Unix Makefiles")
 
@@ -127,6 +79,11 @@ proc add_optional_module (Mod) {
 
     openmp_examples {
       add_testsuites misc openmp_examples
+    }
+
+    flang {
+      add_components flang flang_runtime hipfort
+      add_testsuites flang legacy
     }
 
     # Optional components

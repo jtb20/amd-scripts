@@ -19,7 +19,8 @@ var rocr_runtime_src = {
   "type" : "git",
   "version" : "rocm-6.3.x",
   "version_name" : "6.3.x",
-  "shallow_clone" : false
+  "shallow_clone" : false,
+  "deps" : :| llvm |
 }
 
 var hipamd_src = {
@@ -27,7 +28,8 @@ var hipamd_src = {
   "type" : "git",
   "version" : "rocm-6.3.x",
   "version_name" : "6.3.x",
-  "shallow_clone" : false
+  "shallow_clone" : false,
+  "deps" : :| rocr_runtime hipcc hip comgr |
 }
 
 var hip_src = {

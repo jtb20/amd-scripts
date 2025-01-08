@@ -19,6 +19,7 @@ proc build_aomp_support_component(Component) {
   }
 
   mkdir -p $INSTALLDIR/aomp-support
+  mkdir -p $OBJDIR/aomp-support
 
   with-env AOMP=$[get_installdir('llvm')] \
            AOMP_SUPP=$INSTALLDIR/aomp-support \

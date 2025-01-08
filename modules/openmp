@@ -20,6 +20,7 @@ proc configure_openmp() {
   var BuildType = get_build_type("openmp")
   var Src = get_srcdir("openmp")
   var Tool = get_build_tool("openmp")
+  var Cfg_opts = get_configure_opts("openmp")
   cd $Build {
     cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
@@ -29,15 +30,16 @@ proc configure_openmp() {
       -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
       -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
       -DLIBOMPTARGET_AMDGCN_GFXLIST=$[LLVM_Cfg.gfxlist=>join(';')] \
-      -DDEVICELIBS_ROOT=$[get_objdir ("device_libs")] \
+      -DDEVICELIBS_ROOT=$[get_srcdir ("device_libs")] \
       -DLIBOMP_COPY_EXPORTS=OFF \
       -DLIBOMPTARGET_ENABLE_DEBUG=ON \
       -DLLVM_DIR=$LLVM_Build \
       -DLLVM_MAIN_INCLUDE_DIR=$LLVM_Src/llvm/include \
       -DLIBOMPTARGET_LLVM_INCLUDE_DIRS=$LLVM_Src/llvm/include \
       -DLIBOMP_USE_HWLOC=ON \
-      -DLIBOMP_HWLOC_INSTALL_DIR=$[get_objdir ("hwloc")] \
+      -DLIBOMP_HWLOC_INSTALL_DIR=$[get_installdir ("hwloc")] \
       -DCMAKE_PREFIX_PATH=$INSTALLDIR/lib/cmake \
+      @Cfg_opts \
       $Src
   }
 }

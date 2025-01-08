@@ -10,37 +10,35 @@ func get_hipamd_src() {
 
 proc configure_hipamd() {
   var Build = get_objdir("hipamd")
-  var HipCCBuild = get_objdir("hipcc")
-  var HipSrc = get_srcdir("hip")
   var BuildType = get_build_type("hipamd")
   var Src = get_srcdir("hipamd")
   var Tool = get_build_tool("hipamd")
   var LLVM_Inst = get_installdir('llvm')
+  var Cfg_opts = get_configure_opts('hipamd')
   cd $Build {
     rocm_env cmake -G $Tool \
       -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_PREFIX_PATH="$INSTALLDIR;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
-      -DHIP_COMMON_DIR=$HipSrc \
-      -DHIP_PLATFORM=amd \
-      -DHIP_COMPILER=clang \
-      -DCMAKE_HIP_ARCHITECTURES=OFF \
-      -DHIP_ENABLE_ROCPROFILER_REGISTER=ON \
-      -DROCM_PATH=$INSTALLDIR \
-      -DHIP_LLVM_ROOT=$[get_installdir('llvm')] \
-      -DCLR_BUILD_HIP=ON \
-      -DCLR_BUILD_OCL=ON \
-      -DHIPCC_BIN_DIR=$HipCCBuild \
+      @Cfg_opts \
       $Src
   }
 }
 
 proc build_hipamd() {
-  rocm_env cmake_build hipamd
+  if (get_build_tool('hipamd') === "Ninja") {
+    rocm_env cmake_build hipamd
+  } else {
+    rocm_env standard_build hipamd
+  }
 }
 
 proc install_hipamd() {
-  rocm_env cmake_install hipamd
+  if (get_build_tool('hipamd') === 'Ninja') {
+    rocm_env cmake_install hipamd
+  } else {
+    rocm_env standard_install hipamd
+  }
 }
 
 proc llvm_symlink_hipamd() {
@@ -51,17 +49,7 @@ proc llvm_symlink_hipamd() {
 }
 
 func hipamd_dependencies() {
-  case (get_version_name('hipamd')) {
-    '6.1.x' | '6.2.x' {
-      return (:| roct_thunk_interface rocr_runtime hipcc hip comgr |)
-    }
-    '6.3.x' {
-      return (:| rocr_runtime hipcc hip comgr |)
-    }
-    * {
-      error "Unknown hipamd version (FIXME)"
-    }
-  }
+  return (:| roct_thunk_interface rocr_runtime hipcc hip comgr |)
 }
 
 proc hipamd_tasks {

@@ -1,0 +1,46 @@
+#!/usr/bin/env ysh
+
+proc clean_opencl_runtime() {
+  clean_component opencl_runtime
+}
+
+func get_opencl_runtime_src() {
+  return (get_src_default ("opencl_runtime"))
+}
+
+proc configure_opencl_runtime() {
+  var Build = get_objdir("opencl_runtime")
+  var Src = get_srcdir("opencl_runtime")
+  var BuildType = get_build_type("opencl_runtime")
+  var LLVM_Build = get_objdir("llvm")
+  var LLVM_Inst = get_installdir('llvm')
+  var Tool = get_build_tool("opencl_runtime")
+  var Cfg_opts = get_configure_opts("opencl_runtime")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DOpenGL_GL_PREFERENCE=LEGACY \
+      -DROCclr_DIR=$[get_srcdir ('hipamd')] \
+      -DLIBROCclr_STATIC_DIR=$[get_objdir ('hipamd')] \
+      -DCMAKE_MODULE_PATH="$[get_srcdir ('hipamd')]/cmake/modules" \
+      -DCMAKE_EXE_LINKER_FLAGS='-Wl,--disable-new-dtags' \
+      @Cfg_opts \
+      $Src
+  }
+}
+
+proc build_opencl_runtime() {
+  cmake_build opencl_runtime
+}
+
+proc install_opencl_runtime() {
+  cmake_install opencl_runtime
+}
+
+func opencl_runtime_dependencies() {
+  return (:| hipamd |)
+}
+
+proc opencl_runtime_tasks() {
+  standard_tasks opencl_runtime
+}

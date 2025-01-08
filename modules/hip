@@ -1,5 +1,8 @@
 #!/usr/bin/env ysh
 
+# This was previously the home for the "hipcc" script, but not in recent AOMP
+# versions.
+
 func get_hip_src() {
   return (get_src_default ("hip"))
 }
@@ -8,7 +11,36 @@ func hip_dependencies() {
   return ([])
 }
 
+proc modify_hip_script(ScriptName) {
+  sed -i -e 's:"/opt/rocm":"$HIP_PATH":' \
+         -e 's:"$ROCM_PATH/llvm/bin":"$ROCM_PATH/bin":' $ScriptName
+}
+
+proc install_modified_scripts_hip() {
+  var Src = get_srcdir("hip")
+  cd $Src/bin {
+    cp * $INSTALLDIR/bin
+  }
+  cd $Src {
+    cp -rf include/hip $INSTALLDIR/include
+  }
+  cd $INSTALLDIR/bin {
+    modify_hip_script hipcc
+    modify_hip_script hipvars.pm
+    modify_hip_script hipconfig
+  }
+}
+
 proc hip_tasks {
-  # No tasks!
-  true
+  case (get_version_name('hip')) {
+    '5.2.x' {
+      # It's just a script in this version, no build tasks to do as such.
+      # add_tasks hip install_modified_scripts
+      :
+    }
+    * {
+      # No tasks at all otherwise.
+      :
+    }
+  }
 }

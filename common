@@ -35,6 +35,8 @@ var BwrapExtraOpts = []
 var BwrapUnshareNet = true
 var ToolsRoot = null
 var ModifyConfigProcs = []
+var PreinstalledAOMP = null
+var DebugDep = null
 
 proc show_vars {
   write "HIP_CLANG_PATH: $[ENV.HIP_CLANG_PATH]"
@@ -133,6 +135,16 @@ proc parse_args(; argv) {
         setglobal GPUDevices = GPUDevices ++ split(argv[opt], ',')
       }
 
+      --aomp {
+        setvar opt += 1
+        setglobal PreinstalledAOMP = argv[opt]
+      }
+
+      --showdep {
+        setvar opt += 1
+        setglobal DebugDep = argv[opt]
+      }
+
       -* {
         error "Unknown option: $[argv[opt]]"
       }
@@ -173,17 +185,38 @@ proc add_sources(; component, opts) {
   setglobal Sources[component] = opts
 }
 
+proc debug_dep(Place; DepList) {
+  if (DebugDep) {
+    if (in_list(DebugDep, DepList)) {
+      write "Added $DebugDep dependency from $Place"
+    }
+  }
+}
+
 proc add_components(...components) {
   for comp in (components) {
     if (not in_list (comp, Components)) {
-      var deps = lookup_func("${comp}_dependencies")()
-      add_components @deps
+      if ('deps' in Sources[comp]) {
+        # Allow per-version dependencies to override dependencies added by the
+        # 'static' dependencies function.  This isn't entirely neat, but it'll
+        # do for now.
+        debug_dep "$comp source block" (Sources[comp].deps)
+        add_components @[Sources[comp].deps]
+      } else {
+        var deps = lookup_func("${comp}_dependencies")()
+        debug_dep "${comp}_dependencies function" (deps)
+        add_components @deps
+      }
       try {
         var cond_deps = lookup_func ("${comp}_conditional_deps")()
+        debug_dep "${comp}_conditional_deps function" (cond_deps)
         add_components @cond_deps
       }
       # Wipe 'sticky' errors from failed lookup_func above.
       clear_error
+      if (DebugDep and comp === DebugDep) {
+        write "Adding $comp now"
+      }
       append $comp (Components)
       if (has_proc ("default_configure_opts_${comp}")) {
         # If we have a "default_configure_opts_${comp}" procedure for the
@@ -244,7 +277,7 @@ func get_objdir (component) {
 func get_installdir (component) {
   try {
     var getinstdir_fn = lookup_func("get_${component}_install")
-    return ("$INSTALLDIR/$[getinstdir_fn ()]")
+    return (getinstdir_fn (INSTALLDIR))
   }
   return ("$INSTALLDIR")
 }
@@ -322,11 +355,19 @@ proc elaborate_tasks() {
   {
     var CompWithDeps = {}
     for comp in (Components) {
-      var deps = lookup_func("${comp}_dependencies")()
-      for dep in (deps) {
-        write -- "$dep $comp"
-        setvar CompWithDeps[comp] = true
-        setvar CompWithDeps[dep] = true
+      if ('deps' in Sources[comp]) {
+        for dep in (Sources[comp].deps) {
+          write -- "$dep $comp"
+          setvar CompWithDeps[comp] = true
+          setvar CompWithDeps[comp] = true
+        }
+      } else {
+        var deps = lookup_func("${comp}_dependencies")()
+        for dep in (deps) {
+          write -- "$dep $comp"
+          setvar CompWithDeps[comp] = true
+          setvar CompWithDeps[dep] = true
+        }
       }
       try {
         var cond_deps = lookup_func ("${comp}_conditional_deps")()
@@ -681,12 +722,17 @@ proc rocm_env {
       @[ARGV[1:]]
     }
   } else {
+    var UseROCm = INSTALLDIR
+    if (PreinstalledAOMP) {
+      # This doesn't seem quite right
+      setvar UseROCm = LLVM_Inst
+    }
     with-env LD_LIBRARY_PATH=$(prepend_path "$INSTALLDIR/lib" \
                                             "$LLVM_Inst/lib" \
                                             "$LLVM_Inst/lib/x86_64-unknown-linux-gnu" \
                                             LD_LIBRARY_PATH) \
              HIP_CLANG_PATH=$LLVM_Inst/bin \
-             ROCM_PATH=$INSTALLDIR \
+             ROCM_PATH=$UseROCm \
              HIP_PATH=$INSTALLDIR \
              LLVM_PATH=$LLVM_Inst {
       @ARGV
@@ -949,3 +995,5 @@ source "$SCRIPTDIR/modules/aomp_delegate"
 source "$SCRIPTDIR/modules/spirv_llvm_translator"
 source "$SCRIPTDIR/modules/genasis"
 source "$SCRIPTDIR/modules/aomp_support"
+source "$SCRIPTDIR/modules/opencl_runtime"
+source "$SCRIPTDIR/modules/rocclr"
