@@ -19,11 +19,12 @@ proc configure_opencl_runtime() {
   cd $Build {
     cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
-      -DOpenGL_GL_PREFERENCE=LEGACY \
-      -DROCclr_DIR=$[get_srcdir ('hipamd')] \
-      -DLIBROCclr_STATIC_DIR=$[get_objdir ('hipamd')] \
-      -DCMAKE_MODULE_PATH="$[get_srcdir ('hipamd')]/cmake/modules" \
+      -DCMAKE_MODULE_PATH="$[get_srcdir ('rocclr')]/cmake/modules" \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
       -DCMAKE_EXE_LINKER_FLAGS='-Wl,--disable-new-dtags' \
+      -DROCM_PATH=$INSTALLDIR \
+      -DROCCLR_PATH=$[get_srcdir ('rocclr')] \
+      -DAMD_OPENCL_PATH=$[get_srcdir ('opencl_runtime')] \
       @Cfg_opts \
       $Src
   }
@@ -38,7 +39,7 @@ proc install_opencl_runtime() {
 }
 
 func opencl_runtime_dependencies() {
-  return (:| hipamd |)
+  return (:| rocclr |)
 }
 
 proc opencl_runtime_tasks() {

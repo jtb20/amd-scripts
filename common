@@ -196,6 +196,9 @@ proc debug_dep(Place; DepList) {
 proc add_components(...components) {
   for comp in (components) {
     if (not in_list (comp, Components)) {
+      if (comp not in Sources) {
+        error "No source for component $comp!"
+      }
       if ('deps' in Sources[comp]) {
         # Allow per-version dependencies to override dependencies added by the
         # 'static' dependencies function.  This isn't entirely neat, but it'll
@@ -384,7 +387,7 @@ proc elaborate_tasks() {
         # A special case, sort of -- components which don't depend on anything
         # and which nothing depends on are marked as depending on themselves.
         # That means that 'tsort' will include them in its output, albeit in
-        # an arbitrary postion.  That's fine.
+        # an arbitrary position.  That's fine.
         write -- "$comp $comp"
       }
     }
@@ -901,6 +904,8 @@ proc do_bwrap {
           --bind $RealWD $RealWD \
           --tmpfs /opt \
           --dev /dev \
+          --dev-bind /dev/kfd /dev/kfd \
+          --dev-bind /dev/dri /dev/dri \
           --proc /proc \
           --bind /run /run \
           --ro-bind $ToolsRoot/bin /bin \
@@ -929,6 +934,8 @@ proc do_bwrap {
           @HideUsrLibCMake \
           @HomebrewBinds \
           --dev /dev \
+          --dev-bind /dev/kfd /dev/kfd \
+          --dev-bind /dev/dri /dev/dri \
           --proc /proc \
           --unshare-pid \
           @NetSharingOpt \
