@@ -1,3 +1,20 @@
+func select_hsa_runtime() {
+  var SrcSubdir
+  try > /dev/null 2>&1 {
+    setvar SrcSubdir = "$[get_srcdir("hsa_runtime")]/opensrc/hsa-runtime"
+  }
+  if (_error.code === 0) {
+    return (SrcSubdir)
+  } elif (in_list('roct_thunk_interface', Components)) {
+    # A non-unified build, with a separate roct_thunk_interface.
+    return ("$[get_srcdir("rocr_runtime")]/src")
+  } else {
+    # A unified build, with roct_thunk_interface as part of the rocr_runtime
+    # component.
+    return (get_srcdir("rocr_runtime"))
+  }
+}
+
 # This needs to be called after option processing, etc.
 
 add_config_adjustment {

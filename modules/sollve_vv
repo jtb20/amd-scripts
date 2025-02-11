@@ -1,3 +1,6 @@
+# Everything in here now corresponds to OpenMP_VV, but a lot of stuff hasn't
+# been renamed.  FIXME: Do that some time.
+
 func get_sollve_vv_src() {
   return (get_src_default ("sollve_vv"))
 }
@@ -38,7 +41,7 @@ proc test_misc_sollve_vv {
     var LLVM_Inst = get_installdir('llvm')
     with-env AOMP=$LLVM_Inst \
              AOMP_REPOS_TEST=$[Parts[:-1]=>join("/")] \
-             AOMP_SOLVV_REPO_NAME=$[Parts[-1]] \
+             AOMP_OPENMPVV_REPO_NAME=$[Parts[-1]] \
              PATH=$(prepend_path "$Obj/tmpbin" PATH) \
              SKIP_SOLLVE45=0 \
              SKIP_SOLLVE50=0 \
@@ -62,25 +65,25 @@ proc test_misc_sollve_vv {
             setglobal ENV.SKIP_SOLLVE50=1
             setglobal ENV.SKIP_SOLLVE51=1
             setglobal ENV.SKIP_SOLLVE52=1
-            rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
+            rocm_env @ROCmOpts $AOMP_Src/bin/run_openmpvv.sh
           }
           "5.0" {
             setglobal ENV.SKIP_SOLLVE45=1
             setglobal ENV.SKIP_SOLLVE51=1
             setglobal ENV.SKIP_SOLLVE52=1
-            rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
+            rocm_env @ROCmOpts $AOMP_Src/bin/run_openmpvv.sh
           }
           "5.1" {
             setglobal ENV.SKIP_SOLLVE45=1
             setglobal ENV.SKIP_SOLLVE50=1
             setglobal ENV.SKIP_SOLLVE52=1
-            rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
+            rocm_env @ROCmOpts $AOMP_Src/bin/run_openmpvv.sh
           }
           "5.2" {
             setglobal ENV.SKIP_SOLLVE45=1
             setglobal ENV.SKIP_SOLLVE50=1
             setglobal ENV.SKIP_SOLLVE51=1
-            rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
+            rocm_env @ROCmOpts $AOMP_Src/bin/run_openmpvv.sh
           }
           * {
             cd $Obj/tests {
@@ -90,13 +93,13 @@ proc test_misc_sollve_vv {
             }
             rm -f selecttests.log selecttests.sum
             for Test in (TestNames) {
-              # run_sollve.sh takes the name of a single test, not a glob.  The
+              # run_openmpvv.sh takes the name of a single test, not a glob.  The
               # script just compiles the test, and doesn't attempt to run it (so
               # we do that here instead).
               try > singletest.log {
-                rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh $(basename $Test)
+                rocm_env @ROCmOpts $AOMP_Src/bin/run_openmpvv.sh $(basename $Test)
               }
-              var MakeStatus = _status
+              var MakeStatus = _error.code
               var TestSrc = null
               var TestBin = null
               var SourcePattern = / 'Source file:' s+ <capture .* as Src> /
@@ -129,7 +132,7 @@ proc test_misc_sollve_vv {
                 try {
                   rocm_env @ROCmOpts $TestBin
                 }
-                if (_status === 0) {
+                if (_error.code === 0) {
                   write "PASS: $TestSrcRel run" >> singletest.sum
                 } else {
                   write "FAIL: $TestSrcRel run" >> singletest.sum
@@ -141,7 +144,7 @@ proc test_misc_sollve_vv {
           }
         }
       } else {
-        rocm_env @ROCmOpts $AOMP_Src/bin/run_sollve.sh
+        rocm_env @ROCmOpts $AOMP_Src/bin/run_openmpvv.sh
       }
     }
   }
@@ -208,7 +211,7 @@ proc save_results_misc_sollve_vv (; files) {
 
   cd $Obj {
     if test --exists selecttests.sum {
-      # The run_sollve.sh script has support for building a single test, but
+      # The run_openmpvv.sh script has support for building a single test, but
       # does not populate the JSON, etc. result files in that case.  So this
       # script does it manually instead.
       cp -f selecttests.log $TESTRESULTSDIR/sollve.log

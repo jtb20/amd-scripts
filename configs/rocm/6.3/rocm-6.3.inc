@@ -29,7 +29,7 @@ var hipamd_src = {
   "version" : "rocm-6.3.x",
   "version_name" : "6.3.x",
   "shallow_clone" : false,
-  "deps" : :| rocr_runtime hipcc hip comgr |
+  "deps" : :| rocr_runtime hipcc hip comgr opencl_icd_loader |
 }
 
 var hip_src = {

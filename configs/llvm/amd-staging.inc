@@ -1,5 +1,5 @@
 var llvm_src = {
-  "url" : "ssh://gerritgit/lightning/ec/llvm-project",
+  "url" : "github-ent:AMD-Lightning-Internal/llvm-project",
   "type" : "git",
   "version" : "amd-staging",
   "version_name" : "amd-staging",
