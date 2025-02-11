@@ -37,6 +37,7 @@ var ToolsRoot = null
 var ModifyConfigProcs = []
 var PreinstalledAOMP = null
 var DebugDep = null
+var FlangAdjectiveOverride = null
 
 proc show_vars {
   write "HIP_CLANG_PATH: $[ENV.HIP_CLANG_PATH]"
@@ -143,6 +144,11 @@ proc parse_args(; argv) {
       --showdep {
         setvar opt += 1
         setglobal DebugDep = argv[opt]
+      }
+
+      --flang-name {
+        setvar opt += 1
+        setglobal FlangAdjectiveOverride = argv[opt]
       }
 
       -* {
@@ -721,7 +727,8 @@ proc rocm_env {
              HIP_CLANG_PATH=$INSTALLDIR/bin \
              ROCM_PATH=/opt/rocm \
              HIP_PATH=/opt/rocm \
-             LLVM_PATH=$LLVM_Inst {
+             LLVM_PATH=$LLVM_Inst \
+             PATH=$(prepend_path $LLVM_Inst/bin PATH) {
       @[ARGV[1:]]
     }
   } else {
@@ -737,7 +744,8 @@ proc rocm_env {
              HIP_CLANG_PATH=$LLVM_Inst/bin \
              ROCM_PATH=$UseROCm \
              HIP_PATH=$INSTALLDIR \
-             LLVM_PATH=$LLVM_Inst {
+             LLVM_PATH=$LLVM_Inst \
+             PATH=$(prepend_path $LLVM_Inst/bin $INSTALLDIR/bin PATH) {
       @ARGV
     }
   }

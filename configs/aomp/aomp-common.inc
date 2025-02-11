@@ -51,7 +51,7 @@ func select_hsa_runtime() {
 # for testing.
 # Other suites have their own repos (so must be listed as components), and
 # must also be added separately as testsuites below.
-add_components aomp sollve_vv nekbone openmpapps ovo genasis
+add_components aomp sollve_vv nekbone openmpapps ovo
 
 #set_configure_opts ("device_libs",
 #                    :| -DCLANG_OPTIONS_APPEND="-Xclang;-mamdgpu-precise-memory-op" |)
@@ -68,7 +68,7 @@ add_testsuites llvm llvm clang flang lld compiler_rt libcxx libcxxabi \
 add_testsuites aomp examples smoke smoke_fails smoke_limbo \
                     hip_openmp usm llnl omp5 openmpapps
 
-add_testsuites misc sollve_vv nekbone ovo genasis genasis_flang_new
+add_testsuites misc sollve_vv nekbone ovo
 
 proc add_optional_module (Mod) {
   case (Mod) {
@@ -81,12 +81,19 @@ proc add_optional_module (Mod) {
       add_testsuites misc openmp_examples
     }
 
+    genasis {
+      # This needs a few extra components that we don't need to build all the
+      # time, so don't enable by default.
+      add_components genasis
+      add_testsuites misc genasis genasis_flang_new
+    }
+
+    # Optional components
     flang {
       add_components flang flang_runtime hipfort
       add_testsuites flang legacy
     }
 
-    # Optional components
     flang_legacy {
       add_components flang_legacy flang flang_runtime hipfort
       add_testsuites flang legacy

@@ -34,7 +34,11 @@ proc try_git_update (;; srcdir, destname, url, branch) {
     write "Attempting 'git pull --rebase'..."
     git pull --rebase
   } else {
-    write "Couldn't update: $[_error.message]"
+    if ('message' in _error) {
+      write "Couldn't update: $[_error.message]"
+    } else {
+      write "Couldn't update $destname"
+    }
   }
 }
 
