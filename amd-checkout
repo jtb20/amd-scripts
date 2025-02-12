@@ -5,6 +5,8 @@ const ScriptName = "amd-checkout"
 source $_this_dir/utils
 source $_this_dir/common
 
+var SkippedUpdates = []
+
 proc try_git_update (;; srcdir, destname, url, branch) {
   try {
     var remotes = @(git remote show)
@@ -39,6 +41,7 @@ proc try_git_update (;; srcdir, destname, url, branch) {
     } else {
       write "Couldn't update $destname"
     }
+    append $destname (SkippedUpdates)
   }
 }
 
@@ -204,3 +207,13 @@ maybe_mkdir $ARCHIVEDIR
 maybe_mkdir $SRCDIR
 
 do_downloads (TASKLIST)
+
+if (SkippedUpdates) {
+  write
+  # Red, should probably be conditional
+  write -n b'\y1b[31;1;4m'
+  write "Skipped updates for:"
+  write -n b'\y1b[0m'
+  write
+  write @SkippedUpdates
+}
