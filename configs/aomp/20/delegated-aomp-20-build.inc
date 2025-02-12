@@ -20,20 +20,6 @@ set_configure_key ('aomp_delegate', 'build_debug', true)
 set_configure_key ('aomp_delegate', 'flang_classic', true)
 set_configure_key ('aomp_delegate', 'flang_new', true)
 
-if (ScriptName === 'amd-checkout') {
-  write """
-  Please check out aomp/20/amd-staging-rocm-6.2.cfg instead for this config.
-
-  \$ amd-checkout --add flang_legacy,rocprofiler,roctracer aomp/20/amd-staging-rocm-6.2.cfg
-
-  amd-build can then be used to do a delegated build with the AOMP scripts
-  using this config, e.g.:
-
-  \$ amd-build -C aomp/20/delegate-rocm-6.2.cfg
-  """
-  exit 1
-}
-
 proc get_aomp_component_list() {
   var AOMPSrc = get_srcdir('aomp')
   try 2> /dev/null {
