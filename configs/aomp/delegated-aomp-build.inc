@@ -8,9 +8,6 @@ setglobal BwrapUnshareNet = false
 
 add_components ao_symlinks
 
-set_configure_key ('aomp_delegate', 'aomp_version', '20.0')
-set_configure_key ('aomp_delegate', 'aomp_repos', '/home/aomp/git/aomp20.0')
-
 # Build options -- these will typically set environment vars for the underlying
 # build scripts.
 set_configure_key ('aomp_delegate', 'build_sanitizer', true)
@@ -46,6 +43,18 @@ add_testsuites aomp examples smoke smoke_fails smoke_limbo \
                     hip_openmp usm llnl omp5 openmpapps
 
 add_testsuites misc sollve_vv nekbone ovo
+
+proc add_optional_module (Mod) {
+  case (Mod) {
+    # Optional testsuites
+    smoke_dev {
+      add_testsuites aomp smoke_dev
+    }
+    * {
+      error "Unknown optional module '$Mod'"
+    }
+  }
+}
 
 proc remove_optional_feature(Feat) {
   case (Feat) {

@@ -70,6 +70,16 @@ func ao_python_mods_dependencies() {
   return (:| ao_symlinks |)
 }
 
+# Our sanitize_path thing isn't working well to avoid a homebrew version of
+# pip3.  Try this instead (yuck).
+proc sys_pip3 {
+  if test --exists /usr/bin/pip3 {
+    /usr/bin/pip3 @ARGV
+  } else {
+    pip3 @ARGV
+  }
+}
+
 proc setup_ao_python_mods() {
   var OS=null
   var Ubuntu20=false
@@ -80,10 +90,11 @@ proc setup_ao_python_mods() {
     setvar Ubuntu20 = true
   }
   if (Ubuntu20) {
-    pip3 install --user CppHeaderParser argparse wheel lit lxml barectf pandas
+    sys_pip3 install --user CppHeaderParser argparse wheel lit lxml barectf pandas
   } else {
-    pip3 install --ignore-installed --user barectf==3.1.2 PyYAML==5.3.1
-    pip3 install --user CppHeaderParser argparse wheel lit lxml pandas
+    sys_pip3 install --ignore-installed --user barectf==3.1.2 PyYAML==5.3.1
+    sys_pip3 install --user CppHeaderParser argparse wheel lit lxml pandas
+
   }
 }
 
@@ -97,7 +108,9 @@ func get_ao_prereq_src() {
 
 proc setup_ao_prereq {
   var AOMPSrc = get_srcdir('aomp')
-  AOMP=$INSTALLDIR $AOMPSrc/bin/build_prereq.sh
+  AOMP=$INSTALLDIR \
+    PREREQUISITE_COMPONENTS="cmake rocmsmilib hwloc aqlprofile openclicdloader" \
+    $AOMPSrc/bin/build_prereq.sh
 }
 
 proc ao_prereq_tasks {
@@ -218,12 +231,17 @@ setvar DelegatedCompName["rocm_cmake"           ] = "ao_rocm_cmake";
 setvar DelegatedCompName["device_libs"          ] = "ao_libdevice";
 
 func translate_aomp_deps(Comp) {
-  eval "var Deps = ${Comp}_dependencies ()"
+  var Deps = []
+  if ('deps' in Sources[Comp]) {
+    setvar Deps = Sources[Comp].deps
+  } else {
+    eval "setvar Deps = ${Comp}_dependencies ()"
+  }
   var NewDeps = []
   for D in (Deps) {
     case (D) {
       rocm_cmake | device_libs | hwloc | hip | gmp | mpfr | \
-      aqlprofile | rocprofiler_sdk {
+      aqlprofile | rocprofiler_sdk | opencl_icd_loader {
         # We don't need to build these explicitly with the delegated build.
         :
       }

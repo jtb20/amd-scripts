@@ -59,5 +59,6 @@ func rocprofiler_dependencies() {
 }
 
 proc rocprofiler_tasks() {
-  add_tasks rocprofiler clean symlink_perfetto configure build install
+  #add_tasks rocprofiler clean symlink_perfetto configure build install
+  standard_tasks rocprofiler
 }

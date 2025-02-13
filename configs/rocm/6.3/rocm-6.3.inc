@@ -62,7 +62,8 @@ var rocprofiler_src = {
   "type" : "git",
   "version" : "rocm-6.3.x",
   "version_name" : "6.3.x",
-  "shallow_clone" : false
+  "shallow_clone" : false,
+  "submodules" : true
 }
 
 var roctracer_src = {
@@ -118,7 +119,8 @@ var rocprofiler_sdk_src = {
   "type" : "git",
   "version" : "rocm-6.3.x",
   "version_name" : "6.3.x",
-  "shallow_clone" : false
+  "shallow_clone" : false,
+  "submodules" : true
 }
 
 add_sources ("rocm_cmake", rocm_cmake_src)

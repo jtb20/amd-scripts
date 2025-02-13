@@ -21,6 +21,7 @@ set_configure_key ("llvm", "gfxlist", :| gfx700 gfx701 gfx801 gfx803 gfx900
                                          gfx940 gfx941 gfx942 gfx1030 gfx1031
                                          gfx1035 gfx1036 gfx1100 gfx1101
                                          gfx1102 gfx1103 |)
+set_configure_key ("rocprofiler", "gfxlist", ConfigureOpts.llvm.gfxlist)
 
 set_configure_key ("llvm", "append_install_dir", "lib/llvm")
 

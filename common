@@ -202,10 +202,11 @@ proc debug_dep(Place; DepList) {
 proc add_components(...components) {
   for comp in (components) {
     if (not in_list (comp, Components)) {
-      if (comp not in Sources) {
+      # The delegated build 'ao_<component>' tasks don't have sources set.
+      if (comp not in Sources and comp[0:3] !== 'ao_') {
         error "No source for component $comp!"
       }
-      if ('deps' in Sources[comp]) {
+      if (comp[0:3] !== 'ao_' and 'deps' in Sources[comp]) {
         # Allow per-version dependencies to override dependencies added by the
         # 'static' dependencies function.  This isn't entirely neat, but it'll
         # do for now.
@@ -364,7 +365,7 @@ proc elaborate_tasks() {
   {
     var CompWithDeps = {}
     for comp in (Components) {
-      if ('deps' in Sources[comp]) {
+      if (comp[0:3] !== 'ao_' and 'deps' in Sources[comp]) {
         for dep in (Sources[comp].deps) {
           write -- "$dep $comp"
           setvar CompWithDeps[comp] = true
@@ -728,6 +729,7 @@ proc rocm_env {
              ROCM_PATH=/opt/rocm \
              HIP_PATH=/opt/rocm \
              LLVM_PATH=$LLVM_Inst \
+             AOMP=$LLVM_Inst \
              PATH=$(prepend_path $LLVM_Inst/bin PATH) {
       @[ARGV[1:]]
     }
@@ -745,6 +747,7 @@ proc rocm_env {
              ROCM_PATH=$UseROCm \
              HIP_PATH=$INSTALLDIR \
              LLVM_PATH=$LLVM_Inst \
+             AOMP=$LLVM_Inst \
              PATH=$(prepend_path $LLVM_Inst/bin $INSTALLDIR/bin PATH) {
       @ARGV
     }
