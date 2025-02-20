@@ -18,7 +18,7 @@ set_configure_key ("llvm", "runtimes", :| compiler-rt libcxx libcxxabi
 
 set_configure_key ("llvm", "gfxlist", :| gfx700 gfx701 gfx801 gfx803 gfx900
                                          gfx902 gfx906 gfx908 gfx90a gfx90c
-                                         gfx940 gfx941 gfx942 gfx1030 gfx1031
+                                         gfx942 gfx1030 gfx1031
                                          gfx1035 gfx1036 gfx1100 gfx1101
                                          gfx1102 gfx1103 |)
 set_configure_key ("rocprofiler", "gfxlist", ConfigureOpts.llvm.gfxlist)
