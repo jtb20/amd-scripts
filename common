@@ -76,6 +76,16 @@ proc parse_args(; argv) {
         }
       }
 
+      --assertions=* {
+        var AssertionsComponents = argv[opt]=>trimStart('--assertions=')=>split(',')
+        for A in (AssertionsComponents) {
+          if (A not in BuildOpts) {
+            setglobal BuildOpts[A] = {}
+          }
+          setglobal BuildOpts[A].assertions = true
+        }
+      }
+
       -S | --select {
         setvar opt += 1
         setglobal SelectTests = argv[opt]
@@ -418,8 +428,9 @@ proc elaborate_tests() {
 var DefaultBuildOpts = {
   "tool" : "Ninja",
   "ccache" : true,
-  "build_type" : "Release"
-  "parallelism" : null
+  "build_type" : "Release",
+  "parallelism" : null,
+  "assertions" : false
 }
 
 func get_tool_opt(comp, option) {
@@ -440,6 +451,10 @@ func get_build_ccache(comp) {
 
 func get_build_type(comp) {
   return (get_tool_opt (comp, "build_type"))
+}
+
+func get_assertions(comp) {
+  return (get_tool_opt (comp, "assertions"))
 }
 
 func get_build_parallelism(comp) {

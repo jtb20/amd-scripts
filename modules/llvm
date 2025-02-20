@@ -28,6 +28,7 @@ proc configure_llvm() {
   var Cfg = ConfigureOpts["llvm"]
   var Tool = get_build_tool("llvm")
   var CCache_opt = cmake_ccache_option("llvm")
+  var Assertions_opt = :| -DLLVM_ENABLE_ASSERTIONS=ON | if get_assertions('llvm') else []
   cd $BuildDir {
     cmake -G $Tool @CCache_opt \
           -DLLVM_ENABLE_PROJECTS=$[join(Cfg.projects, ';')] \
@@ -35,6 +36,7 @@ proc configure_llvm() {
           -DCMAKE_BUILD_TYPE=$BuildType \
           -DCMAKE_INSTALL_PREFIX=$[get_installdir ('llvm')] \
           @[Cfg.cfg] -DLLVM_ENABLE_RUNTIMES=$[join(Cfg.runtimes, ';')] \
+          @Assertions_opt \
           $Src/llvm
   }
 	# -DCLANG_DEFAULT_PIE_ON_LINUX
