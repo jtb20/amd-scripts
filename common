@@ -105,6 +105,15 @@ proc parse_args(; argv) {
         setglobal NoBWrap = true
       }
 
+      -j | -j* {
+        if (argv[opt] === '-j') {
+          setvar opt += 1
+          setglobal DefaultBuildOpts.parallelism = argv[opt]
+        } else {
+          setglobal DefaultBuildOpts.parallelism = argv[opt]=>trimStart('-j')
+        }
+      }
+
       -T | --toolsroot {
         setvar opt += 1
         setglobal ToolsRoot = argv[opt]
