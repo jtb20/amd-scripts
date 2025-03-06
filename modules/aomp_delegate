@@ -92,9 +92,9 @@ proc setup_ao_python_mods() {
   if (Ubuntu20) {
     sys_pip3 install --user CppHeaderParser argparse wheel lit lxml barectf pandas
   } else {
+    sys_pip3 install packaging==22
     sys_pip3 install --ignore-installed --user barectf==3.1.2 PyYAML==5.3.1
     sys_pip3 install --user CppHeaderParser argparse wheel lit lxml pandas
-
   }
 }
 
@@ -108,9 +108,7 @@ func get_ao_prereq_src() {
 
 proc setup_ao_prereq {
   var AOMPSrc = get_srcdir('aomp')
-  AOMP=$INSTALLDIR \
-    PREREQUISITE_COMPONENTS="cmake rocmsmilib hwloc aqlprofile openclicdloader" \
-    $AOMPSrc/bin/build_prereq.sh
+  AOMP=$INSTALLDIR $AOMPSrc/bin/build_prereq.sh
 }
 
 proc ao_prereq_tasks {
@@ -229,6 +227,10 @@ setvar DelegatedCompName["roctracer"            ] = "ao_roctracer";
 setvar DelegatedCompName["rocprofiler"          ] = "ao_rocprofiler";
 setvar DelegatedCompName["rocm_cmake"           ] = "ao_rocm_cmake";
 setvar DelegatedCompName["device_libs"          ] = "ao_libdevice";
+# hipamd wants opencl_icd_loader, but with our (bwrap?) setup, it can't
+# find the system version for some reason.  Build our own.  (This will get
+# installed in *our* install dir, but that's probably acceptible.)
+setvar DelegatedCompName["opencl_icd_loader"    ] = "opencl_icd_loader";
 
 func translate_aomp_deps(Comp) {
   var Deps = []
@@ -241,7 +243,7 @@ func translate_aomp_deps(Comp) {
   for D in (Deps) {
     case (D) {
       rocm_cmake | device_libs | hwloc | hip | gmp | mpfr | \
-      aqlprofile | rocprofiler_sdk | opencl_icd_loader {
+      aqlprofile | rocprofiler_sdk {
         # We don't need to build these explicitly with the delegated build.
         :
       }
