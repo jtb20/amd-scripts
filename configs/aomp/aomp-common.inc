@@ -26,6 +26,7 @@ set_configure_key ("rocprofiler", "gfxlist", ConfigureOpts.llvm.gfxlist)
 set_configure_key ("llvm", "append_install_dir", "lib/llvm")
 
 set_configure_key ("llvm", "spirv_translator", true)
+set_configure_key ("llvm", "flang_rt", true)
 
 # set_build_tool ("rocm_cmake", "Unix Makefiles")
 # set_build_tool ("rocr_runtime", "Unix Makefiles")
@@ -125,6 +126,7 @@ proc remove_optional_feature(Feat) {
     flang_new {
       setvar P = list_remove (ConfigureOpts.llvm.projects, 'flang')
       set_configure_key ('llvm', 'projects', P)
+      set_configure_key ('llvm', 'flang_rt', false)
     }
 
     clang_tools_extra {
@@ -134,6 +136,10 @@ proc remove_optional_feature(Feat) {
 
     spirv_translator {
       set_configure_key ("llvm", "spirv_translator", false)
+    }
+
+    flang_rt {
+      set_configure_key ('llvm', 'flang_rt', false)
     }
 
     * {

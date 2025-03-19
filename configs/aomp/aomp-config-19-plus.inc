@@ -61,6 +61,10 @@ add_config_adjustment {
                                       -DLLVM_EXTERNAL_SPIRV_HEADERS_SOURCE_DIR=$[get_srcdir ('spirv_headers')] |)
     #set_configure_opts ("comgr", :| -DLLVM_EXTERNAL_SPIRV_TRANSLATOR_SOURCE_DIR=$[get_srcdir ('spirv_llvm_translator')] |)
   }
+
+  if (ConfigureOpts.llvm.flang_rt) {
+    append_configure_opts ("llvm", :| -DLIBOMPTARGET_BUILD_DEVICE_FORTRT=ON |)
+  }
 }
 
 add_config_adjustment {

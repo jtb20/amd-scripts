@@ -110,7 +110,9 @@ proc summarise_one_test(SumFile) {
         setvar Unsupported += 1
       }
       * {
-        write "Unhandled result kind: $n (FIXME)"
+        if (n ~ / ^ alnum+ ':' .* /) {
+          write "Unhandled result kind: $n (FIXME)"
+        }
       }
     }
   }

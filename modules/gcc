@@ -43,17 +43,129 @@ set_board_info cflags "-foffload-options=-mcpu=gfx90a"
   write -- $content > site.exp
 }
 
-proc test_gcc_gcc() {
-  var Build = get_objdir ("gcc")
+proc gcc_results_helper(task, name, relpath; files=null) {
+  var BuildDir = get_objdir("gcc")
+  var LogFile = "$BuildDir/$relpath/$name.log"
+  var SumFile = "$BuildDir/$relpath/$name.sum"
+  if (task === "save") {
+    if test --exists $LogFile {
+      cp $LogFile $TESTRESULTSDIR/${name}.log
+      cp $SumFile $TESTRESULTSDIR/${name}.sum
+      call files->setValue (:| ${name}.sum |)
+    }
+  } elif (task === "clean") {
+    rm -f $LogFile $SumFile
+  } else {
+    error "Unknown task $task"
+  }
 }
 
-proc test_gcc_libgomp(; options) {
+### C ###
+
+proc clean_results_gcc_c() {
+  gcc_results_helper clean gcc gcc/testsuite/gcc
+}
+
+proc test_gcc_c() {
+  var Build = get_objdir ("gcc")
+  cd $Build {
+    var pass_opts = dejagnu_opts()
+    if (SelectTests) {
+      append $SelectTests (pass_opts)
+    }
+    install_path make -k check-c RUNTESTFLAGS=$[shell_quote_args(pass_opts)]
+  }
+}
+
+proc save_results_gcc_c(; files) {
+  gcc_results_helper save gcc gcc/testsuite/gcc (files)
+}
+
+### C++ ###
+
+proc clean_results_gcc_cxx() {
+  gcc_results_helper clean g++ gcc/testsuite/g++
+}
+
+proc test_gcc_cxx() {
+  var Build = get_objdir ("gcc")
+  cd $Build {
+    var pass_opts = dejagnu_opts()
+    if (SelectTests) {
+      append $SelectTests (pass_opts)
+    }
+    install_path make -k check-c++ RUNTESTFLAGS=$[shell_quote_args(pass_opts)]
+  }
+}
+
+proc save_results_gcc_cxx(; files) {
+  gcc_results_helper save g++ gcc/testsuite/g++ (files)
+}
+
+### Fortran ###
+
+proc clean_results_gcc_fortran() {
+  gcc_results_helper clean gfortran gcc/testsuite/gfortran
+}
+
+proc test_gcc_fortran() {
+  var Build = get_objdir ("gcc")
+  cd $Build {
+    var pass_opts = dejagnu_opts()
+    if (SelectTests) {
+      append $SelectTests (pass_opts)
+    }
+    install_path make -k check-fortran RUNTESTFLAGS=$[shell_quote_args(pass_opts)]
+  }
+}
+
+proc save_results_gcc_fortran(; files) {
+  gcc_results_helper save gfortran gcc/testsuite/gfortran (files)
+}
+
+### libstdc++ ###
+
+proc clean_results_gcc_libstdcxx() {
+  var Target = ConfigureOpts.gcc.target
+  gcc_results_helper clean libstdc++ $Target/libstdc++-v3/testsuite
+}
+
+proc test_gcc_libstdcxx() {
+  var Build = get_objdir ("gcc")
+  cd $Build {
+    var pass_opts = dejagnu_opts()
+    if (SelectTests) {
+      append $SelectTests (pass_opts)
+    }
+    install_path make -k check-target-libstdc++-v3 RUNTESTFLAGS=$[shell_quote_args(pass_opts)]
+  }
+}
+
+proc save_results_gcc_libstdcxx(; files) {
+  var Target = ConfigureOpts.gcc.target
+  gcc_results_helper save libstdc++ $Target/libstdc++-v3/testsuite (files)
+}
+
+### libgomp ###
+
+proc clean_results_gcc_libgomp() {
+  var Target = ConfigureOpts.gcc.target
+  gcc_results_helper clean libgomp $Target/libgomp/testsuite
+}
+
+proc test_gcc_libgomp() {
   var Build = get_objdir ("gcc")
   var Target = ConfigureOpts.gcc.target
   cd $Build/$Target/libgomp {
-    #write_dejagnu_site_file
-    var pass_opts = :| --target_board=unix/-foffload-options=-march=gfx90a | \
-                    ++ options
-    make -k check RUNTESTFLAGS=$[shell_quote_args(pass_opts)]
+    var pass_opts = dejagnu_opts()
+    if (SelectTests) {
+      append $SelectTests (pass_opts)
+    }
+    install_path make -k check RUNTESTFLAGS=$[shell_quote_args(pass_opts)]
   }
+}
+
+proc save_results_gcc_libgomp(; files) {
+  var Target = ConfigureOpts.gcc.target
+  gcc_results_helper save libgomp $Target/libgomp/testsuite (files)
 }

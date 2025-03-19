@@ -32,7 +32,16 @@ var isl_src = {
   "md5" : "dd2f7b78e118c25bd96134a52aae7f4d"
 }
 
+var dejagnu_src = {
+  "url" : "https://ftp.wayne.edu/gnu/dejagnu/dejagnu-1.6.3.tar.gz",
+  "type" : "archive",
+  "version" : "1.6.3",
+  "version_name" : "1.6.3",
+  "md5" : "68c5208c58236eba447d7d6d1326b821"
+}
+
 add_sources ("gmp", gmp_src)
 add_sources ("mpfr", mpfr_src)
 add_sources ("mpc", mpc_src)
 add_sources ("isl", isl_src)
+add_sources ("dejagnu", dejagnu_src)

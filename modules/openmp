@@ -17,18 +17,19 @@ proc configure_openmp() {
   var LLVM_Src = get_srcdir("llvm")
   var LLVM_Build = get_objdir("llvm")
   var LLVM_Cfg = ConfigureOpts["llvm"]
+  var LLVM_Inst = get_installdir("llvm")
   var BuildType = get_build_type("openmp")
   var Src = get_srcdir("openmp")
   var Tool = get_build_tool("openmp")
   var Cfg_opts = get_configure_opts("openmp")
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$LLVM_Inst \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DOPENMP_ENABLE_LIBOMPTARGET=1 \
-      -DOPENMP_TEST_C_COMPILER=$INSTALLDIR/bin/clang \
-      -DOPENMP_TEST_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
-      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
-      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DOPENMP_TEST_C_COMPILER=$LLVM_Inst/bin/clang \
+      -DOPENMP_TEST_CXX_COMPILER=$LLVM_Inst/bin/clang++ \
+      -DCMAKE_C_COMPILER=$LLVM_Inst/bin/clang \
+      -DCMAKE_CXX_COMPILER=$LLVM_Inst/bin/clang++ \
       -DLIBOMPTARGET_AMDGCN_GFXLIST=$[LLVM_Cfg.gfxlist=>join(';')] \
       -DDEVICELIBS_ROOT=$[get_srcdir ("device_libs")] \
       -DLIBOMP_COPY_EXPORTS=OFF \
@@ -38,7 +39,7 @@ proc configure_openmp() {
       -DLIBOMPTARGET_LLVM_INCLUDE_DIRS=$LLVM_Src/llvm/include \
       -DLIBOMP_USE_HWLOC=ON \
       -DLIBOMP_HWLOC_INSTALL_DIR=$[get_installdir ("hwloc")] \
-      -DCMAKE_PREFIX_PATH=$INSTALLDIR/lib/cmake \
+      -DCMAKE_PREFIX_PATH=$LLVM_Inst/lib/cmake \
       @Cfg_opts \
       $Src
   }

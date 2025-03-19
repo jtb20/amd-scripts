@@ -23,6 +23,7 @@ const DefaultParallelism=32
 var GithubUsername=""
 var OptionalModules=[]
 var RemovedFeatures=[]
+var Variants={}
 var CleanInstallDir=false
 var NoBWrap = false
 var GPURunOpts = []
@@ -257,7 +258,7 @@ proc add_components(...components) {
   }
 }
 
-proc add_task (name) {
+proc add_task (name, component="") {
   append $name (TASKARR)
 }
 
@@ -280,6 +281,18 @@ proc add_testsuites (component, ...testsuites) {
   }
 }
 
+# This isn't done yet, just playing with ideas.  Variants would be for build
+# variants, e.g. asan & debug versions of libraries.  It's a bit awkward to
+# retrofit that now.
+proc add_variants(component, ...variants) {
+  if (component not in Variants) {
+    setglobal Variants[component] = []
+  }
+  for var in (variants) {
+    append $var (Variants[component])
+  }
+}
+
 func get_srcdir_rel (component) {
   var component_src = lookup_func("get_${component}_src")()
   return (component_src)
@@ -298,15 +311,23 @@ func get_version_name (component) {
   }
 }
 
-func get_objdir (component) {
+func get_objdir (component, variant=null) {
   var version_name = get_version_name (component)
-  return ("$OBJDIR/$component-$version_name")
+  if (variant) {
+    return ("$OBJDIR/$component-$[variant.name]-$version_name")
+  } else {
+    return ("$OBJDIR/$component-$version_name")
+  }
 }
 
-func get_installdir (component) {
+func get_installdir (component, variant=null) {
   try {
     var getinstdir_fn = lookup_func("get_${component}_install")
-    return (getinstdir_fn (INSTALLDIR))
+    if (variant) {
+      return (getinstdir_fn (INSTALLDIR, variant))
+    } else {
+      return (getinstdir_fn (INSTALLDIR))
+    }
   }
   return ("$INSTALLDIR")
 }
@@ -544,7 +565,7 @@ proc fix_path {
   PATH=$[sanitize_path (ENV.PATH)] @ARGV
 }
 
-proc do_task_number (; num) {
+proc do_task_number (; num, cfgvariant=null) {
   var taskidx = num-1
   var taskfn = TASKARR[taskidx]
   var logname=$(printf u'%.3d-%s.log' $num $taskfn)
@@ -552,7 +573,11 @@ proc do_task_number (; num) {
   setglobal CurrentLogFile="$LOGDIR/$logname"
   printf u'[%s] [%.3d/%.3d]: start %s\n' $(time_now) $num $numtasks $taskfn
   try {
-    fix_path eval "$taskfn" > $CurrentLogFile 2>&1
+    if (cfgvariant) {
+      fix_path eval "$taskfn (cfgvariant)" > $CurrentLogFile 2>&1
+    } else {
+      fix_path eval "$taskfn" > $CurrentLogFile 2>&1
+    }
   }
   if (_status !== 0) {
     write "Task '$taskfn' failed. Current log file is $CurrentLogFile"
@@ -776,6 +801,10 @@ proc rocm_env {
       @ARGV
     }
   }
+}
+
+proc install_path {
+  PATH=$(prepend_path $INSTALLDIR/bin PATH) @ARGV
 }
 
 # This proc is meant to be used with Bernstein chaining too.  "Hide" git, i.e.
@@ -1039,3 +1068,4 @@ source "$SCRIPTDIR/modules/genasis"
 source "$SCRIPTDIR/modules/aomp_support"
 source "$SCRIPTDIR/modules/opencl_runtime"
 source "$SCRIPTDIR/modules/rocclr"
+source "$SCRIPTDIR/modules/dejagnu"

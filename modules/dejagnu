@@ -1,0 +1,29 @@
+#!/usr/bin/env ysh
+
+proc clean_dejagnu() {
+  clean_component dejagnu
+}
+
+func get_dejagnu_src() {
+  return (get_src_default("dejagnu"))
+}
+
+proc configure_dejagnu() {
+  standard_configure dejagnu
+}
+
+proc build_dejagnu() {
+  standard_build dejagnu
+}
+
+proc install_dejagnu() {
+  standard_install dejagnu
+}
+
+func dejagnu_dependencies() {
+  return ([])
+}
+
+proc dejagnu_tasks() {
+  standard_tasks dejagnu
+}

@@ -22,9 +22,9 @@ func gcc_conditional_deps() {
   return (:| accel_gcc |)
 }
 
-add_components accel_gcc_first accel_newlib accel_gcc gcc
+add_components accel_gcc_first accel_newlib accel_gcc gcc rocminfo dejagnu
 
-set_configure_key ("llvm", "projects", :| lld |)
+set_configure_key ("llvm", "projects", :| lld clang |)
 set_configure_key ("llvm", "targets", :| X86 AMDGPU |)
 set_configure_key ("llvm", "runtimes", [])
 
@@ -59,3 +59,19 @@ append_configure_opts ("gcc", :| --enable-offload-targets=amdgcn-amdhsa
                                  --disable-multilib
                                  --disable-bootstrap |)
 
+add_testsuites gcc c cxx fortran libstdcxx libgomp
+
+# This all wants factoring out to somewhere more sensible.
+
+set_configure_key ('rocr_runtime', 'aomp_patch', false)
+set_configure_key ('llvm', 'append_install_dir', null)
+set_configure_key ("llvm", "gfxlist", :| gfx700 gfx701 gfx801 gfx803 gfx900
+                                         gfx902 gfx906 gfx908 gfx90a gfx90c
+                                         gfx942 gfx1030 gfx1031
+                                         gfx1035 gfx1036 gfx1100 gfx1101
+                                         gfx1102 gfx1103 gfx1200 gfx1201 |)
+
+func dejagnu_opts() {
+  var GPUs = get_amd_gpus()
+  return (:| --target_board=unix/-foffload-options=-march=$[GPUs[0]] |)
+}
