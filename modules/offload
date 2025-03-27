@@ -15,14 +15,15 @@ proc configure_offload() {
   var BuildType = get_build_type("offload")
   var Src = get_srcdir("offload")
   var Tool = get_build_tool("offload")
+  var LLVM_Inst = get_installdir('llvm')
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$LLVM_Inst \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DOPENMP_ENABLE_LIBOMPTARGET=1 \
-      -DOPENMP_TEST_C_COMPILER=$INSTALLDIR/bin/clang \
-      -DOPENMP_TEST_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
-      -DCMAKE_C_COMPILER=$INSTALLDIR/bin/clang \
-      -DCMAKE_CXX_COMPILER=$INSTALLDIR/bin/clang++ \
+      -DOPENMP_TEST_C_COMPILER=$LLVM_Inst/bin/clang \
+      -DOPENMP_TEST_CXX_COMPILER=$LLVM_Inst/bin/clang++ \
+      -DCMAKE_C_COMPILER=$LLVM_Inst/bin/clang \
+      -DCMAKE_CXX_COMPILER=$LLVM_Inst/bin/clang++ \
       -DLIBOMPTARGET_AMDGCN_GFXLIST=$[LLVM_Cfg.gfxlist=>join(';')] \
       -DLIBOMPTARGET_ENABLE_DEBUG=ON \
       -DLLVM_DIR=$LLVM_Build \
