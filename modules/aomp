@@ -507,10 +507,11 @@ proc test_aomp_llnl {
   var Obj = get_objdir ("llnl")
   var GPUs = get_amd_gpus ()
   copy_dir $Source $Obj
-  var LibDir = "$INSTALLDIR/lib/x86_64-unknown-linux-gnu"
+  var LLVM_Inst = get_installdir('llvm')
+  var LibDir = "$LLVM_Inst/lib/x86_64-unknown-linux-gnu"
   sed -i "s,LIBS = \"\",LIBS = \" -L$LibDir\"," $Obj/test.py
   cd $Obj {
-    with-env PATH=$[sanitize_path (PATH)] \
+    with-env PATH=$[sanitize_path (ENV.PATH)] \
              AOMP_GPU=$[GPUs[0]] \
              BLOG_DATE=today {
 
@@ -563,7 +564,8 @@ proc save_results_aomp_llnl (; files) {
       } elif (n ~ run_passed) {
         write "PASS: $[_group('testname')] run"
       } elif (n ~ run_failed) {
-        if boolstatus grep -Fq "$[_group('testname')] run" xfail-list {
+        if test --exists xfail-list && \
+           boolstatus grep -Fq "$[_group('testname')] run" xfail-list {
           write "XFAIL: $[_group('testname')] run"
         } else {
           write "FAIL: $[_group('testname')] run"
