@@ -16,8 +16,11 @@ proc clean_results_misc_nekbone() {
 }
 
 proc test_misc_nekbone() {
-  if ! test --exists $INSTALLDIR/bin/flang1 {
-    write 'NOTE: Build with "--add flang_legacy" to test Nekbone.'
+  var LLVM_Inst = get_installdir('llvm')
+  var FlangClassic = false
+  if test --exists $INSTALLDIR/bin/flang1 {
+    write 'NOTE: Testing Nekbone with flang-classic.'
+    setvar FlangClassic = true
   }
   var AOMP_Src = get_srcdir ("aomp")
   var Source = get_srcdir ("nekbone")
@@ -25,21 +28,29 @@ proc test_misc_nekbone() {
   var GPUs = get_amd_gpus()
   #var CompileOpts = '-x f77 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -mcpu=$(AOMP_GPU) ${G_OPT}'
   copy_dir $Source $Obj/Nekbone
-  with-env CaseDir=$Obj/Nekbone/test/nek_gpu1 \
-           NekSrc=$Obj/Nekbone/src {
+  shvar CaseDir=$Obj/Nekbone/test/nek_gpu1 \
+        NekSrc=$Obj/Nekbone/src {
     sed -e "s@^CASEDIR:=.*@CASEDIR:=$CaseDir@" -e "s@^S:=.*@S:=$NekSrc@" \
       < $Source/test/nek_gpu1/makefile.aomp \
       > $Obj/Nekbone/test/nek_gpu1/makefile.aomp
+    sed -e "s@^CASEDIR:=.*@CASEDIR:=$CaseDir@" -e "s@^S:=.*@S:=$NekSrc@" \
+      < $Source/test/nek_gpu1/makefile.llvmflang \
+      > $Obj/Nekbone/test/nek_gpu1/makefile.llvmflang
   }
-  with-env AOMP=$INSTALLDIR \
+  with-env AOMP=$LLVM_Inst \
            AOMP_REPOS_TEST=$Obj \
-           LD_LIBRARY_PATH=$INSTALLDIR/lib/x86_64-unknown-linux-gnu \
+           AOMP_TEST_DIR=$Obj \
+           LLVM_INSTALL_DIR=$LLVM_Inst \
            VERBOSE=1 \
            FLANG=flang \
            AOMP_GPU=$[GPUs[0]] {
 
     try {
-      $AOMP_Src/bin/run_nekbone.sh
+      if (FlangClassic) {
+        rocm_env $AOMP_Src/bin/run_nekbone.sh
+      } else {
+        rocm_env $AOMP_Src/bin/run_Fnekbone.sh
+      }
     }
     if (_status === 0) {
       write "Success."
