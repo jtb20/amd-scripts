@@ -23,6 +23,7 @@ proc configure_flang_legacy() {
       -DCMAKE_CXX_COMPILER=$[get_installdir('llvm')]/bin/clang++ \
       -DCMAKE_CXX_STANDARD=17 \
       -DBUILD_SHARED_LIBS=OFF \
+      @[get_rpath_opts('flang_legacy')] \
       $Src
   }
 }

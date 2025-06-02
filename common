@@ -39,6 +39,7 @@ var ModifyConfigProcs = []
 var PreinstalledAOMP = null
 var DebugDep = null
 var FlangAdjectiveOverride = null
+var SetRPathOpts = false
 
 proc show_vars {
   write "HIP_CLANG_PATH: $[ENV.HIP_CLANG_PATH]"
@@ -100,6 +101,10 @@ proc parse_args(; argv) {
       -R | --remove {
         setvar opt += 1
         setglobal RemovedFeatures = RemovedFeatures ++ split(argv[opt], ',')
+      }
+
+      -r | --rpath {
+        setglobal SetRPathOpts = true
       }
 
       -B | --no-bwrap {
@@ -394,6 +399,17 @@ proc set_build_type(; comp, build_type) {
 
 proc set_build_parallelism(; comp, procs) {
   set_build_key (comp, "parallelism", procs)
+}
+
+func get_rpath_opts(comp) {
+  try {
+    var fn = lookup_func('config_rpath_opts')
+  }
+  if (_error.code === 0) {
+    return (fn(comp))
+  } else {
+    return ([])
+  }
 }
 
 proc elaborate_tasks() {
@@ -1069,5 +1085,3 @@ source "$SCRIPTDIR/modules/aomp_support"
 source "$SCRIPTDIR/modules/opencl_runtime"
 source "$SCRIPTDIR/modules/rocclr"
 source "$SCRIPTDIR/modules/dejagnu"
-source "$SCRIPTDIR/modules/llvm_first"
-source "$SCRIPTDIR/modules/device_libs_first"

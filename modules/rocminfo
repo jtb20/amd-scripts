@@ -23,6 +23,7 @@ proc configure_rocminfo() {
       -DCPACK_PACKAGE_VERSION_MAJOR="1" \
       -DCPACK_PACKAGE_VERSION_MINOR="0" \
       -DCPACK_PACKAGE_VERSION_PATCH="0" \
+      @[get_rpath_opts('rocminfo')] \
       $Src
   }
 }

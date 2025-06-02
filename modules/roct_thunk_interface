@@ -18,6 +18,7 @@ proc configure_roct_thunk_interface() {
       -DCMAKE_PREFIX_PATH=$INSTALLDIR/lib/cmake \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DCMAKE_INSTALL_LIBDIR=$INSTALLDIR/lib \
+      @[get_rpath_opts('roct_thunk_interface')] \
       $Src
   }
 }

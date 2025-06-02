@@ -37,6 +37,7 @@ proc configure_llvm() {
           -DCMAKE_INSTALL_PREFIX=$[get_installdir ('llvm')] \
           @[Cfg.cfg] -DLLVM_ENABLE_RUNTIMES=$[join(Cfg.runtimes, ';')] \
           @Assertions_opt \
+          @[get_rpath_opts('llvm')] \
           $Src/llvm
   }
 	# -DCLANG_DEFAULT_PIE_ON_LINUX
@@ -90,7 +91,7 @@ proc default_configure_opts_llvm() {
                                  -DLLVM_INCLUDE_TESTS=ON
                                  -DCLANG_DEFAULT_LINKER=lld
                                  -DLLVM_PARALLEL_LINK_JOBS=8
-                                 -DLLVM_USE_SPLIT_DWARF=TRUE
+                                 #-DLLVM_USE_SPLIT_DWARF=TRUE
                                  -DLLVM_PARALLEL_LINK_JOBS=2
                                  @LLDOpts |)
 }

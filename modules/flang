@@ -34,6 +34,7 @@ proc configure_flang() {
       -DFLANG_INCLUDE_TESTS=ON \
       -DLLVM_EXTERNAL_LIT=$[get_srcdir('llvm')]/llvm/utils/lit/lit.py \
       -DTARGET_TRIPLE=amdgcn-amd-amdhsa \
+      @[get_rpath_opts('flang')] \
       $Src
   }
 }

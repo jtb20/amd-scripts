@@ -29,6 +29,7 @@ proc configure_rocm_dbgapi() {
       -DCPACK_READELF_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-readelf \
       -DCPACK_STRIP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-strip \
       -DCPACK_OBJDUMP_EXECUTABLE=$INSTALLDIR/llvm/bin/llvm-objdump \
+      @[get_rpath_opts('rocm_dbgapi')] \
       $Src
   }
 }

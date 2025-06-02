@@ -21,6 +21,7 @@ proc configure_hipamd() {
       -DCMAKE_PREFIX_PATH="$INSTALLDIR;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
       @Cfg_opts \
+      @[get_rpath_opts('hipamd')] \
       $Src
   }
 }
@@ -43,8 +44,9 @@ proc install_hipamd() {
 
 proc llvm_symlink_hipamd() {
   # ROCM-related stuff (e.g. composable_kernel) wants a symlink here.
+  var LLVM_Inst = get_installdir('llvm')
   cd $INSTALLDIR {
-    ln -sf $INSTALLDIR llvm
+    ln -sf $LLVM_Inst llvm
   }
 }
 

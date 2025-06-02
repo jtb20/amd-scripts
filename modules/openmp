@@ -41,6 +41,7 @@ proc configure_openmp() {
       -DLIBOMP_HWLOC_INSTALL_DIR=$[get_installdir ("hwloc")] \
       -DCMAKE_PREFIX_PATH=$LLVM_Inst/lib/cmake \
       @Cfg_opts \
+      @[get_rpath_opts('openmp')] \
       $Src
   }
 }

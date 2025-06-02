@@ -44,6 +44,7 @@ proc configure_comgr() {
       -DLLVM_DIR=$LLVM_Build \
       -DClang_DIR=$LLVM_Build \
       @[Cfg.cfg] \
+      @[get_rpath_opts('comgr')] \
       $Src
   }
 }

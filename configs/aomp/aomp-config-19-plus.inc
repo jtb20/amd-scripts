@@ -65,6 +65,8 @@ add_config_adjustment {
   if (ConfigureOpts.llvm.flang_rt) {
     append_configure_opts ("llvm", :| -DLIBOMPTARGET_BUILD_DEVICE_FORTRT=ON |)
   }
+
+  append_configure_opts ("llvm", :| -DCMAKE_EXPORT_COMPILE_COMMANDS=1 |)
 }
 
 add_config_adjustment {

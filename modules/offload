@@ -27,6 +27,7 @@ proc configure_offload() {
       -DLIBOMPTARGET_AMDGCN_GFXLIST=$[LLVM_Cfg.gfxlist=>join(';')] \
       -DLIBOMPTARGET_ENABLE_DEBUG=ON \
       -DLLVM_DIR=$LLVM_Build \
+      @[get_rpath_opts('offload')] \
       $Src
   }
 }

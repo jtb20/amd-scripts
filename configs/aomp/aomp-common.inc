@@ -148,5 +148,35 @@ proc remove_optional_feature(Feat) {
   }
 }
 
+func config_rpath_opts(comp) {
+  if (SetRPathOpts) {
+    var AOMPRPaths = "\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../../../lib:\$ORIGIN/../llvm/lib"
+    var RPathOpts = :| -DCMAKE_SHARED_LINKER_FLAGS='-Wl,--disable-new-dtags'
+                       -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON
+                       -DCMAKE_INSTALL_RPATH=$AOMPRPaths |
+    case (comp) {
+      llvm {
+        append -- -DLIBOMP_SHARED_LINKER_FLAGS='-Wl,--disable-new-dtags' \
+                  -DLIBOMP_INSTALL_RPATH=$AOMPRPaths \
+                  -DLIBOMPTARGET_INSTALL_RPATH=$AOMPRPaths (RPathOpts)
+      }
+      # These are the "non-standalone build" settings.
+      # {
+      #  var LibRPath = "\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../../lib:\$ORIGIN/../../../lib"
+      #  var ExeRPath = "\$ORIGIN/../lib:\$ORIGIN/../../lib:\$ORIGIN/../../../lib"
+      #  var SharedLinkerFlags = "-Wl,--enable-new-dtags,--build-id=sha1,--rpath,$LibRPath"
+      #  var ExeLinkerFlags = "-Wl,--enable-new-dtags,--build-id=sha1,--rpath,$ExeRPath"
+      #  append -- -DCMAKE_SKIP_INSTALL_RPATH=TRUE \
+      #            -DCMAKE_SHARED_LINKER_FLAGS_INIT=$SharedLinkerFlags \
+      #            -DCMAKE_EXE_LINKER_FLAGS_INIT=$ExeLinkerFlags \
+      #            -DCMAKE_MODULE_LINKER_FLAGS_INIT=$SharedLinkerFlags (RPathOpts)
+      #}
+    }
+    return (RPathOpts)
+  } else {
+    return ([])
+  }
+}
+
 # Eek, the Ninja build tool option doesn't work for this one.
 set_build_tool ("flang_runtime", "Unix Makefiles")

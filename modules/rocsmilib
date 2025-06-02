@@ -16,6 +16,7 @@ proc configure_rocsmilib() {
   cd $Build {
     cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
+      @[get_rpath_opts('rocsmilib')] \
       $Src
   }
 }

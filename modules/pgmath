@@ -38,6 +38,7 @@ proc configure_pgmath() {
       -DFLANG_OPENMP_GPU_NVIDIA=ON \
       -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
       -DFLANG_INCLUDE_TESTS=OFF \
+      @[get_rpath_opts('pgmath')] \
       $Src
   }
 }

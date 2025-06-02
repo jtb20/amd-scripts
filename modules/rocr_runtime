@@ -39,6 +39,7 @@ proc configure_rocr_runtime() {
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DIMAGE_SUPPORT=OFF \
       @Cfg \
+      @[get_rpath_opts('rocr_runtime')] \
       $SrcSubdir
   }
 }
