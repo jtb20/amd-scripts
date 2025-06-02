@@ -863,13 +863,17 @@ func get_ccache_cache_dir() {
   if (_error.code !== 0) {
     return (null)
   }
-  var All = @(ccache --show-config)
-  for Line in (All) {
-    if (Line ~ QueryPattern) {
-      return (_group('dirname'))
+  try > /dev/null {
+    var All = @(ccache --show-config)
+    for Line in (All) {
+      if (Line ~ QueryPattern) {
+        return (_group('dirname'))
+      }
     }
   }
-  error "Failed to find ccache cache dir"
+  if (_error.code !== 0) {
+    error "Failed to find ccache cache dir"
+  }
 }
 
 # Check if $Binary is from Homebrew -- by checking if the binary is in the
@@ -929,7 +933,16 @@ func homebrew_llvm_bind(Binary) {
 proc do_bwrap {
   var HideUsrLibCMake=[]
   var RealWD=$(readlink -f $WORKDIR)
-  var CCacheDir=$(readlink -f $[get_ccache_cache_dir ()])
+  var CCacheDir=get_ccache_cache_dir ()
+
+  if ! test --exists $CCacheDir {
+    >&2 echo "CCache cache dir doesn't exist yet, creating"
+    mkdir -p $CCacheDir
+  }
+
+  if (CCacheDir) {
+    setvar CCacheDir=$(readlink -f $CCacheDir)
+  }
 
   if test --exists /usr/lib/cmake {
     setvar HideUsrLibCMake=:| --tmpfs /usr/lib/cmake |
