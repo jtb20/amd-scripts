@@ -60,8 +60,8 @@ var rocprofiler_register_src = {
 var rocprofiler_src = {
   "url" : "https://github.com/ROCm/rocprofiler",
   "type" : "git",
-  "version" : "rocm-6.4.x",
-  "version_name" : "6.4.x",
+  "version" : "release/rocm-rel-6.4",
+  "version_name" : "6.4",
   "shallow_clone" : false,
   "submodules" : true
 }
@@ -69,8 +69,8 @@ var rocprofiler_src = {
 var roctracer_src = {
   "url" : "https://github.com/ROCm/roctracer",
   "type" : "git",
-  "version" : "rocm-6.4.x",
-  "version_name" : "6.4.x",
+  "version" : "release/rocm-rel-6.4",
+  "version_name" : "6.4",
   "shallow_clone" : false
 }
 
@@ -109,7 +109,7 @@ var composable_kernel_src = {
 var aqlprofile_src = {
   "url" : "ssh://gerritgit/hsa/ec/aqlprofile",
   "type" : "git",
-  "version" : "release/rocm-rel-6.4",
+  "version" : "release/rocm-rel-6.3",
   "version_name" : "rel-6.4",
   "shallow_clone" : false
 }
@@ -117,10 +117,18 @@ var aqlprofile_src = {
 var rocprofiler_sdk_src = {
   "url" : "https://github.com/ROCm/rocprofiler-sdk",
   "type" : "git",
-  "version" : "rocm-6.4.x",
-  "version_name" : "6.4.x",
+  "version" : "release/rocm-rel-6.4",
+  "version_name" : "6.4",
   "shallow_clone" : false,
   "submodules" : true
+}
+
+var hipify_src = {
+  "url" : "https://github.com/ROCm/hipify",
+  "type" : "git",
+  "version" : "amd-staging",
+  "version_name" : "amd-staging",
+  "shallow_clone" : false
 }
 
 add_sources ("rocm_cmake", rocm_cmake_src)
@@ -138,3 +146,4 @@ add_sources ("roctracer", roctracer_src)
 add_sources ("rocprofiler", rocprofiler_src)
 add_sources ("aqlprofile", aqlprofile_src)
 add_sources ("rocprofiler_sdk", rocprofiler_sdk_src)
+add_sources ("hipify", hipify_src)

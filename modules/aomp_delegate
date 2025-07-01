@@ -28,9 +28,11 @@ proc setup_ao_symlinks {
   var ROCMInfoSrc = get_srcdir('rocminfo')
   var ROCProfilerSrc = get_srcdir('rocprofiler')
   var ROCProfilerRegisterSrc = get_srcdir('rocprofiler_register')
+  var ROCProfilerSDK = get_srcdir('rocprofiler_sdk')
   var ROCRRuntimeSrc = get_srcdir('rocr_runtime')
   var ROCTracerSrc = get_srcdir('roctracer')
   var ROCTThunkIntfSrc = get_srcdir('roct_thunk_interface')
+  var HipifySrc = get_srcdir('hipify')
   var AOMP_VERSION = ConfigureOpts.aomp_delegate.aomp_version
   var AOMP_REPOS = ConfigureOpts.aomp_delegate.aomp_repos
 
@@ -53,9 +55,11 @@ proc setup_ao_symlinks {
   ln -sfT $AMDSMISrc $AOMP_REPOS/rocm_smi_lib
   ln -sfT $ROCProfilerSrc $AOMP_REPOS/rocprofiler
   ln -sfT $ROCProfilerRegisterSrc $AOMP_REPOS/rocprofiler-register
+  ln -sfT $ROCProfilerSDK $AOMP_REPOS/rocprofiler-sdk
   ln -sfT $ROCRRuntimeSrc $AOMP_REPOS/rocr-runtime
   ln -sfT $ROCTracerSrc $AOMP_REPOS/roctracer
   ln -sfT $ROCTThunkIntfSrc $AOMP_REPOS/roct-thunk-interface
+  ln -sfT $HipifySrc $AOMP_REPOS/hipify
 }
 
 proc ao_symlinks_tasks {
@@ -231,6 +235,7 @@ setvar DelegatedCompName["device_libs"          ] = "ao_libdevice";
 # find the system version for some reason.  Build our own.  (This will get
 # installed in *our* install dir, but that's probably acceptible.)
 setvar DelegatedCompName["opencl_icd_loader"    ] = "opencl_icd_loader";
+setvar DelegatedCompName["hipify"               ] = "hipify"
 
 func translate_aomp_deps(Comp) {
   var Deps = []
@@ -358,6 +363,10 @@ func ao_rocprofiler_dependencies() {
   return (translate_aomp_deps('rocprofiler'))
 }
 
+func ao_rocprofiler_sdk_dependencies() {
+  return (translate_aomp_deps('rocprofiler_sdk'))
+}
+
 func ao_rocm_cmake_dependencies() {
   return (translate_aomp_deps('rocm_cmake'))
 }
@@ -366,10 +375,15 @@ func ao_libdevice_dependencies() {
   return (translate_aomp_deps('device_libs'))
 }
 
+func ao_hipify_dependencies() {
+  return (translate_aomp_deps('hipify'))
+}
+
 for Comp in project rocprofiler-register roct rocr openmp offload \
             extras comgr rocminfo rocm_smi_lib amdsmi llvm-legacy llvm-classic \
             flang-legacy flang-classic pgmath flang flang_runtime hipcc hipamd \
-            rocdbgapi rocgdb roctracer rocprofiler rocm-cmake libdevice {
+            rocdbgapi rocgdb roctracer rocprofiler rocm-cmake libdevice \
+            hipify rocprofiler-sdk {
   var CompName = Comp=>replace('-','_')
   var ConfTool = 'cmake'
   if (Comp === 'rocgdb') {
@@ -377,12 +391,7 @@ for Comp in project rocprofiler-register roct rocr openmp offload \
   }
   var Procs = aomp_delegate_gen(Comp, ConfTool)
   for Name in (Procs) {
-    call setVar(Name, Procs[Name])
+    call setVar(Name, Procs[Name], global=true)
   }
-  call setVar("get_ao_${CompName}_src", aomp_delegate_getsrc)
+  call setVar("get_ao_${CompName}_src", aomp_delegate_getsrc, global=true)
 }
-
-# These are left as straggling globals, which is a bit counterintuitive...
-unset CompName
-unset ConfTool
-unset Procs
