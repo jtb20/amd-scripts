@@ -17,7 +17,7 @@ proc configure_rocprofiler_sdk() {
   cd $Build {
     rocm_env cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
-      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DCMAKE_PREFIX_PATH="$HOME/local/aqlprofile;$INSTALLDIR" \
       -DBUILD_SHARED_LIBS=YES \
       -DGPU_TARGETS=$GPUList \
       -DPython3_EXECUTABLE=$(which python3) \

@@ -110,7 +110,7 @@ proc run_llvm_check(check_target) {
       try {
         if (SelectTests !== null) {
           # This is a regex, not a glob.  Consistency, schmonsistency.
-          LIT_FILTER=$SelectTests LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
+          FILECHECK_OPTS="--dump-input=always" LIT_FILTER=$SelectTests LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
         } else {
           LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
         }

@@ -21,6 +21,7 @@ proc setup_ao_symlinks {
   var FlangSrc = get_srcdir('flang')
   var HipSrc = get_srcdir('hip')
   var HipFortSrc = get_srcdir('hipfort')
+  var HipifySrc = get_srcdir('hipify')
   var LLVMSrc = get_srcdir('llvm')
   var ROCDbgApiSrc = get_srcdir('rocm_dbgapi')
   var ROCGDBSrc = get_srcdir('rocgdb')
@@ -47,6 +48,7 @@ proc setup_ao_symlinks {
   ln -sfT $FlangSrc $AOMP_REPOS/flang
   ln -sfT $HipSrc $AOMP_REPOS/hip
   ln -sfT $HipFortSrc $AOMP_REPOS/hipfort
+  ln -sfT $HipifySrc $AOMP_REPOS/hipify
   ln -sfT $LLVMSrc $AOMP_REPOS/llvm-project
   ln -sfT $ROCDbgApiSrc $AOMP_REPOS/ROCdbgapi
   ln -sfT $ROCGDBSrc $AOMP_REPOS/ROCgdb
@@ -225,6 +227,7 @@ setvar DelegatedCompName["flang"                ] = "ao_flang";
 setvar DelegatedCompName["flang_runtime"        ] = "ao_flang_runtime";
 setvar DelegatedCompName["hipcc"                ] = "ao_hipcc";
 setvar DelegatedCompName["hipamd"               ] = "ao_hipamd";
+setvar DelegatedCompName["hipify"               ] = "ao_hipify";
 setvar DelegatedCompName["rocm_dbgapi"          ] = "ao_rocdbgapi";
 setvar DelegatedCompName["rocgdb"               ] = "ao_rocgdb";
 setvar DelegatedCompName["roctracer"            ] = "ao_roctracer";
@@ -248,7 +251,7 @@ func translate_aomp_deps(Comp) {
   for D in (Deps) {
     case (D) {
       rocm_cmake | device_libs | hwloc | hip | gmp | mpfr | \
-      aqlprofile | rocprofiler_sdk {
+      aqlprofile {
         # We don't need to build these explicitly with the delegated build.
         :
       }
@@ -345,6 +348,10 @@ func ao_hipcc_dependencies() {
 
 func ao_hipamd_dependencies() {
   return (translate_aomp_deps('hipamd'))
+}
+
+func ao_hipify_dependencies() {
+  return (translate_aomp_deps('hipify'))
 }
 
 func ao_rocdbgapi_dependencies() {

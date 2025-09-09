@@ -60,8 +60,8 @@ var rocprofiler_register_src = {
 var rocprofiler_src = {
   "url" : "https://github.com/ROCm/rocprofiler",
   "type" : "git",
-  "version" : "release/rocm-rel-6.4",
-  "version_name" : "6.4",
+  "version" : "release/rocm-rel-6.4.2.2",
+  "version_name" : "6.4.2.2",
   "shallow_clone" : false,
   "submodules" : true
 }
@@ -69,8 +69,8 @@ var rocprofiler_src = {
 var roctracer_src = {
   "url" : "https://github.com/ROCm/roctracer",
   "type" : "git",
-  "version" : "release/rocm-rel-6.4",
-  "version_name" : "6.4",
+  "version" : "release/rocm-rel-6.4.2.2",
+  "version_name" : "6.4.2.2",
   "shallow_clone" : false
 }
 
@@ -106,11 +106,12 @@ var composable_kernel_src = {
   "shallow_clone" : false
 }
 
+# FIXME. What to do with this?
 var aqlprofile_src = {
   "url" : "ssh://gerritgit/hsa/ec/aqlprofile",
   "type" : "git",
   "version" : "release/rocm-rel-6.3",
-  "version_name" : "rel-6.4",
+  "version_name" : "rel-6.3",
   "shallow_clone" : false
 }
 
@@ -126,8 +127,8 @@ var rocprofiler_sdk_src = {
 var hipify_src = {
   "url" : "https://github.com/ROCm/hipify",
   "type" : "git",
-  "version" : "amd-staging",
-  "version_name" : "amd-staging",
+  "version" : "release/rocm-rel-6.4.2.2",
+  "version_name" : "6.4.2.2",
   "shallow_clone" : false
 }
 

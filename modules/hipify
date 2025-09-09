@@ -10,32 +10,41 @@ func get_hipify_src() {
 
 proc configure_hipify() {
   var Build = get_objdir("hipify")
-  var hipifyBuild = get_objdir("hipify")
   var BuildType = get_build_type("hipify")
   var Src = get_srcdir("hipify")
   var Tool = get_build_tool("hipify")
   var LLVM_Inst = get_installdir('llvm')
+  var Cfg_opts = get_configure_opts('hipify')
   cd $Build {
-    cmake -G $Tool \
+    rocm_env cmake -G $Tool \
       -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_PREFIX_PATH="$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
-      -DCMAKE_PREFIX_PATH=$LLVM_Inst \
       -DHIPIFY_INSTALL_CLANG_HEADERS=OFF \
+      @Cfg_opts \
       -DLLVM_EXTERNAL_LIT="$LLVM_Inst/bin/llvm-lit" \
       $Src
   }
 }
 
 proc build_hipify() {
-  cmake_build hipify
+  if (get_build_tool('hipify') === "Ninja") {
+    rocm_env cmake_build hipify
+  } else {
+    rocm_env standard_build hipify
+  }
 }
 
 proc install_hipify() {
-  cmake_install hipify
+  if (get_build_tool('hipify') === 'Ninja') {
+    rocm_env cmake_install hipify
+  } else {
+    rocm_env standard_install hipify
+  }
 }
 
 func hipify_dependencies() {
-  return (:| llvm |)
+  return (:| llvm hipamd |)
 }
 
 proc hipify_tasks {
