@@ -21,7 +21,6 @@ proc setup_ao_symlinks {
   var FlangSrc = get_srcdir('flang')
   var HipSrc = get_srcdir('hip')
   var HipFortSrc = get_srcdir('hipfort')
-  var HipifySrc = get_srcdir('hipify')
   var LLVMSrc = get_srcdir('llvm')
   var ROCDbgApiSrc = get_srcdir('rocm_dbgapi')
   var ROCGDBSrc = get_srcdir('rocgdb')
@@ -48,7 +47,6 @@ proc setup_ao_symlinks {
   ln -sfT $FlangSrc $AOMP_REPOS/flang
   ln -sfT $HipSrc $AOMP_REPOS/hip
   ln -sfT $HipFortSrc $AOMP_REPOS/hipfort
-  ln -sfT $HipifySrc $AOMP_REPOS/hipify
   ln -sfT $LLVMSrc $AOMP_REPOS/llvm-project
   ln -sfT $ROCDbgApiSrc $AOMP_REPOS/ROCdbgapi
   ln -sfT $ROCGDBSrc $AOMP_REPOS/ROCgdb
@@ -354,6 +352,10 @@ func ao_hipify_dependencies() {
   return (translate_aomp_deps('hipify'))
 }
 
+func ao_hipfort_dependencies() {
+  return (translate_aomp_deps('hipfort'))
+}
+
 func ao_rocdbgapi_dependencies() {
   return (translate_aomp_deps('rocm_dbgapi'))
 }
@@ -390,7 +392,7 @@ for Comp in project rocprofiler-register roct rocr openmp offload \
             extras comgr rocminfo rocm_smi_lib amdsmi llvm-legacy llvm-classic \
             flang-legacy flang-classic pgmath flang flang_runtime hipcc hipamd \
             rocdbgapi rocgdb roctracer rocprofiler rocm-cmake libdevice \
-            hipify rocprofiler-sdk {
+            hipify rocprofiler-sdk hipfort {
   var CompName = Comp=>replace('-','_')
   var ConfTool = 'cmake'
   if (Comp === 'rocgdb') {

@@ -45,7 +45,8 @@ var hipfort_src = {
   "type" : "git",
   "version" : "release/rocm-rel-6.4",
   "version_name" : "rel-6.4",
-  "shallow_clone" : false
+  "shallow_clone" : false,
+  "deps" : :| llvm |
 }
 
 var rocprofiler_register_src = {
@@ -127,8 +128,8 @@ var rocprofiler_sdk_src = {
 var hipify_src = {
   "url" : "https://github.com/ROCm/hipify",
   "type" : "git",
-  "version" : "release/rocm-rel-6.4.2.2",
-  "version_name" : "6.4.2.2",
+  "version" : "amd-staging",
+  "version_name" : "amd-staging",
   "shallow_clone" : false
 }
 

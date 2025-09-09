@@ -90,7 +90,7 @@ add_config_adjustment {
     if ! test --symlink $INSTALLDIR {
       if (dir_empty(INSTALLDIR)) {
         rmdir $INSTALLDIR
-      } else {
+      } elif test --exists $INSTALLDIR {
         write "$INSTALLDIR isn't a symlink.  Moving it out of the way for this config."
         mv $INSTALLDIR ${INSTALLDIR}_old
       }
