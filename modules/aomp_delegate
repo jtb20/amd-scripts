@@ -150,7 +150,8 @@ func aomp_delegate_env(Comp) {
                AOMP_BUILD_PERF=$[flag('build_perf')]
                AOMP_BUILD_SANITIZER=$[flag('build_sanitizer')]
                AOMP_SKIP_FLANG=$[invflag('flang_classic')]
-               AOMP_SKIP_FLANG_NEW=$[invflag('flang_new')] |
+               AOMP_SKIP_FLANG_NEW=$[invflag('flang_new')]
+               AOMP_BUILD_TASKGRAPH=$[flag('taskgraph')] |
   write "Using environment variables:"
   write -- @Env
   return (Env)

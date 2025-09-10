@@ -16,6 +16,7 @@ set_configure_key ('aomp_delegate', 'build_perf', true)
 set_configure_key ('aomp_delegate', 'build_debug', true)
 set_configure_key ('aomp_delegate', 'flang_classic', true)
 set_configure_key ('aomp_delegate', 'flang_new', true)
+set_configure_key ('aomp_delegate', 'taskgraph', false)
 
 proc get_aomp_component_list() {
   var AOMPSrc = get_srcdir('aomp')
@@ -46,6 +47,9 @@ add_testsuites misc sollve_vv nekbone ovo
 
 proc add_optional_module (Mod) {
   case (Mod) {
+    taskgraph {
+      set_configure_key ('aomp_delegate', 'taskgraph', true)
+    }
     # Optional testsuites
     smoke_dev {
       add_testsuites aomp smoke_dev
