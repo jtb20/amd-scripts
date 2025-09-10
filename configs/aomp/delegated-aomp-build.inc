@@ -97,3 +97,9 @@ add_config_adjustment {
     }
   }
 }
+
+# This lets the llvm lit test bits find the right build directory for
+# a delegated build.
+func get_llvm_obj(variant) {
+  return ("$[ConfigureOpts.aomp_delegate.aomp_repos]/build/llvm-project")
+}

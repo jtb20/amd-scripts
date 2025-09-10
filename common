@@ -317,6 +317,10 @@ func get_version_name (component) {
 }
 
 func get_objdir (component, variant=null) {
+  try {
+    var component_obj = lookup_func("get_${component}_obj")
+    return (component_obj(variant))
+  }
   var version_name = get_version_name (component)
   if (variant) {
     return ("$OBJDIR/$component-$[variant.name]-$version_name")
