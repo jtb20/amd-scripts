@@ -24,6 +24,12 @@ func aomp_module_to_patch_control_name(comp) {
     rocr_runtime {
       return ("rocr-runtime")
     }
+    hipamd {
+      return ("hipamd")
+    }
+    rocclr {
+      return ("clr")
+    }
     * {
       error "Unknown module for patching: $comp"
     }

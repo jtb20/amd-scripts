@@ -54,7 +54,21 @@ func hipamd_dependencies() {
   return (:| roct_thunk_interface rocr_runtime hipcc hip comgr |)
 }
 
+proc apply_patch_hipamd() {
+  aomp_apply_patch hipamd
+  aomp_apply_patch rocclr
+}
+
+proc revert_patch_hipamd() {
+  aomp_revert_patch rocclr
+  aomp_revert_patch hipamd
+}
+
 proc hipamd_tasks {
-  standard_tasks hipamd
+  if (ConfigureOpts.hipamd.aomp_patch) {
+    add_tasks hipamd clean apply_patch configure build install revert_patch
+  } else {
+    standard_tasks hipamd
+  }
   add_tasks hipamd llvm_symlink
 }

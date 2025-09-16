@@ -31,6 +31,8 @@ set_configure_key ("llvm", "flang_rt", true)
 # set_build_tool ("rocm_cmake", "Unix Makefiles")
 # set_build_tool ("rocr_runtime", "Unix Makefiles")
 
+set_configure_key ("hipamd", "aomp_patch", false)
+
 # We want aomp as a component just because we're fetching the aomp dev tools
 # git repo.  We don't run any tasks relating to this component, but we use it
 # for testing.

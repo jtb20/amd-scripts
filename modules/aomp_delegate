@@ -33,6 +33,7 @@ proc setup_ao_symlinks {
   var ROCTracerSrc = get_srcdir('roctracer')
   var ROCTThunkIntfSrc = get_srcdir('roct_thunk_interface')
   var HipifySrc = get_srcdir('hipify')
+  var SPIRVLLVMTranslatorSrc = get_srcdir('spirv_llvm_translator')
   var AOMP_VERSION = ConfigureOpts.aomp_delegate.aomp_version
   var AOMP_REPOS = ConfigureOpts.aomp_delegate.aomp_repos
 
@@ -60,6 +61,7 @@ proc setup_ao_symlinks {
   ln -sfT $ROCTracerSrc $AOMP_REPOS/roctracer
   ln -sfT $ROCTThunkIntfSrc $AOMP_REPOS/roct-thunk-interface
   ln -sfT $HipifySrc $AOMP_REPOS/hipify
+  ln -sfT $SPIRVLLVMTranslatorSrc $AOMP_REPOS/SPIRV-LLVM-Translator
 }
 
 proc ao_symlinks_tasks {
@@ -151,6 +153,7 @@ func aomp_delegate_env(Comp) {
                AOMP_BUILD_SANITIZER=$[flag('build_sanitizer')]
                AOMP_SKIP_FLANG=$[invflag('flang_classic')]
                AOMP_SKIP_FLANG_NEW=$[invflag('flang_new')]
+               AOMP_SKIP_AMD_FLANGRT=$[invflag('flang_new')]
                AOMP_BUILD_TASKGRAPH=$[flag('taskgraph')] |
   write "Using environment variables:"
   write -- @Env
