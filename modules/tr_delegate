@@ -1,0 +1,265 @@
+var tr_venv_src = {
+  "type" : "subcomponent",
+  "parent" : "therock",
+  "subdirectory" : "."
+}
+
+add_sources ("tr_venv", tr_venv_src)
+
+func get_tr_venv_src() {
+  return (".")
+}
+
+proc setup_tr_venv() {
+  var TRSrc = get_srcdir('therock')
+  var Obj = get_objdir('tr_venv')
+  
+  #rm -rf $Obj
+  if ! test --dir $Obj {
+    mkdir -p $Obj
+
+    python3 -m venv $Obj
+    cd $TRSrc {
+      $Obj/bin/pip install -r requirements.txt
+    }
+  }
+}
+
+proc tr_venv_tasks {
+  add_tasks tr_venv setup
+}
+
+func tr_venv_dependencies() {
+  return ([])
+}
+
+func get_therock_src() {
+  return (get_src_default ("therock"))
+}
+
+func therock_dependencies() {
+  return (:| tr_venv |)
+}
+
+proc cmake_therock {
+  var Src = get_srcdir('therock')
+  var Obj = get_objdir('therock')
+  var Venv = get_objdir('tr_venv')
+  var Cfg = get_configure_opts('therock')
+
+  # We've set options by the time this is invoked, so this can set up the build
+  # system as we need for this particular build.
+  cd $Src {
+    VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) cmake \
+          -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
+          -DTHEROCK_AMDGPU_TARGETS=gfx90a @Cfg .
+  }
+}
+
+proc therock_tasks {
+  add_tasks therock cmake
+}
+
+func tr_delegate_env(Comp) {
+  var Venv = get_objdir('tr_venv')
+  var Env = :| VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) |
+  return (Env)
+}
+
+func therock_delegate_gen(Comp, CompName, Info) {
+  var TRSrc = get_srcdir('therock')
+  var TRObj = get_objdir('therock')
+  var Procs = {}
+  eval """
+  proc expunge_tr_${CompName} {
+    var TRSrc = get_srcdir('therock')
+    var LocalEnv = tr_delegate_env('$CompName')
+    cd $TRObj {
+      with-env @LocalEnv {
+        ninja $Comp+expunge
+      }
+    }
+  }
+  proc configure_tr_${CompName} {
+    var TRSrc = get_srcdir('therock')
+    var LocalEnv = tr_delegate_env('$CompName')
+    cd $TRObj {
+      with-env @LocalEnv {
+        ninja $Comp+configure
+      }
+    }
+  }
+  proc build_tr_${CompName} {
+    var TRSrc = get_srcdir('therock')
+    var LocalEnv = tr_delegate_env('$CompName')
+    cd $TRObj {
+      with-env @LocalEnv {
+        ninja $Comp+build
+      }
+    }
+  }
+  proc stage_tr_${CompName} {
+    var TRSrc = get_srcdir('therock')
+    var LocalEnv = tr_delegate_env('$CompName')
+    cd $TRObj {
+      with-env @LocalEnv {
+        ninja $Comp+stage
+      }
+    }
+  }
+  proc dist_tr_${CompName} {
+    var TRSrc = get_srcdir('therock')
+    var LocalEnv = tr_delegate_env('$CompName')
+    cd $TRObj {
+      with-env @LocalEnv {
+        ninja $Comp+dist
+      }
+    }
+  }
+  proc tr_${CompName}_tasks {
+    add_tasks tr_${CompName} expunge configure build stage dist
+  }
+  func get_tr_${CompName}_src() {
+    var TRSrc = get_src_default('therock')
+    return ("$[Info.src]")
+  }
+  func tr_${CompName}_dependencies() {
+    return (ConfigureOpts.tr_$CompName.deps)
+  }
+  """
+  setvar Procs["expunge_tr_${CompName}"] = getVar("expunge_tr_${CompName}")
+  setvar Procs["configure_tr_${CompName}"] = getVar("configure_tr_${CompName}")
+  setvar Procs["build_tr_${CompName}"] = getVar("build_tr_${CompName}")
+  setvar Procs["stage_tr_${CompName}"] = getVar("stage_tr_${CompName}")
+  setvar Procs["dist_tr_${CompName}"] = getVar("dist_tr_${CompName}")
+  setvar Procs["tr_${CompName}_tasks"] = getVar("tr_${CompName}_tasks")
+  setvar Procs["get_tr_${CompName}_src"] = getVar("get_tr_${CompName}_src")
+  setvar Procs["tr_${CompName}_dependencies"] = getVar("tr_${CompName}_dependencies")
+  return (Procs)
+}
+
+proc therock_preinit() {
+  var Src = get_srcdir('therock')
+  var Obj = get_objdir('therock', 'preinit')
+  var Venv = get_objdir('tr_venv')
+
+  if ! test --exists $Obj/subproject_map.json {
+    # Subproject map isn't there, try again?
+    rm -rf $Obj
+  }
+  if ! test --dir $Obj {
+    mkdir -p $Obj
+
+    setup_tr_venv
+
+    cd $Src {
+      VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) \
+        $Venv/bin/python ./build_tools/fetch_sources.py
+
+      # We're just generating the build task functions, etc., so enable
+      # everything here.
+      VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) cmake \
+            -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
+            -DTHEROCK_AMDGPU_TARGETS=gfx90a .
+    }
+  }
+
+  var SrcRel = get_srcdir_rel('therock')
+
+  var SubProj
+  json read (&SubProj) < $Obj/subproject_map.json
+  for Comp, Info in (SubProj) {
+    var CompName = Comp=>replace('-', '_')
+    var Procs = therock_delegate_gen(Comp, CompName, Info)
+    for Name, Proc in (Procs) {
+      call setVar(Name, Proc, global=true)
+    }
+    set_configure_key ("tr_$CompName", 'deps', dehyphenate_list(Info.build_deps, prepend='tr_'))
+    # Convenience symlinks (not quite the same as other amd-scripts configs though!)
+    var CompSrcSubdir = get_srcdir_rel("tr_$CompName")
+    cd $SRCDIR {
+      ln -sfT "$SrcRel/$CompSrcSubdir" $Comp
+    }
+  }
+}
+
+func get_tr_finalize_src() {
+  return (".")
+}
+
+proc install_tr_finalize() {
+  var Obj = get_objdir('therock')
+  cd $Obj {
+    ninja install
+  }
+}
+
+proc tr_finalize_tasks {
+  add_tasks tr_finalize install
+}
+
+proc therock_postinit() {
+  var Src = get_srcdir('therock')
+  var Obj = get_objdir('therock')
+  var Venv = get_objdir('tr_venv')
+  var Cfg = get_configure_opts('therock')
+
+  if test --exists $Obj/cached-config-opts.json {
+    var OldCfg
+    json read (&OldCfg) < $Obj/cached-config-opts.json
+    if (Cfg !== OldCfg) {
+      rm -f $Obj/subproject_map.json
+    }
+  } else {
+    rm -f $Obj/subproject_map.json
+  }
+
+  # We need a way to invalidate this (caching enabled/disabled options?)
+  if ! test --exists $Obj/subproject_map.json {
+    # Subproject map isn't there, try again?
+    rm -rf $Obj
+  }
+  if ! test --dir $Obj {
+    mkdir -p $Obj
+
+    json write (Cfg) > $Obj/cached-config-opts.json
+
+    cd $Src {
+      # We know our proper configuration settings now.  Invoke cmake again
+      # with that knowledge.
+      VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) cmake \
+            -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
+            -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+            -DTHEROCK_AMDGPU_TARGETS=gfx90a @Cfg .
+    }
+  }
+
+  var SubProj
+  json read (&SubProj) < $Obj/subproject_map.json
+  for Comp, Info in (SubProj) {
+    var CompName = Comp=>replace('-', '_')
+    add_components "tr_$CompName"
+    if ("tr_$CompName" not in ConfigureOpts) {
+      write -- "-- project $Comp unexpectedly appeared in postinit"
+    }
+    if (Info.build_deps !== ConfigureOpts["tr_$CompName"].deps) {
+      # This probably isn't necessary -- it's in case dependencies get dropped
+      # when we select a smaller set of enabled projects.
+      setvar ConfigureOpts["tr_$CompName"].deps = dehyphenate_list(Info.build_deps, prepend='tr_')
+    }
+  }
+
+  var DependOnAll = []
+  for Comp in (SubProj) {
+    call DependOnAll->append(Comp)
+  }
+  eval """
+  func tr_finalize_dependencies() {
+    return (:| @[dehyphenate_list(DependOnAll, prepend='tr_')] |)
+  }
+  """
+  call setVar('tr_finalize_dependencies', tr_finalize_dependencies, global=true)
+
+  add_components tr_finalize
+}
+

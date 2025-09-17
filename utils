@@ -134,3 +134,11 @@ proc prepend_path(...NewPaths) {
     write -- "$[NewPaths.join(':')]"
   }
 }
+
+func dehyphenate_list(Lst; prepend='') {
+  var Out = []
+  for x in (Lst) {
+    call Out->append("$prepend$[x=>replace('-', '_')]")
+  }
+  return (Out)
+}
