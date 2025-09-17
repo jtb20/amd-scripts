@@ -62,7 +62,9 @@ proc therock_tasks {
 
 func tr_delegate_env(Comp) {
   var Venv = get_objdir('tr_venv')
-  var Env = :| VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) |
+  var Env = :| VIRTUAL_ENV=$Venv
+               PATH=$(prepend_path $Venv/bin PATH)
+               THEROCK_INTERACTIVE=1 |
   return (Env)
 }
 
@@ -124,7 +126,7 @@ func therock_delegate_gen(Comp, CompName, Info) {
     return ("$[Info.src]")
   }
   func tr_${CompName}_dependencies() {
-    return (ConfigureOpts.tr_$CompName.deps)
+    return (['therock'] ++ ConfigureOpts.tr_$CompName.deps)
   }
   """
   setvar Procs["expunge_tr_${CompName}"] = getVar("expunge_tr_${CompName}")
@@ -198,16 +200,29 @@ proc tr_finalize_tasks {
   add_tasks tr_finalize install
 }
 
+func gather_build_type_overrides() {
+  var Overrides = []
+  for Comp, Info in (BuildOpts) {
+    if ('build_type' in Info) {
+      append -- -D${Comp}_BUILD_TYPE=$[Info.build_type] (Overrides)
+    }
+  }
+  return (Overrides)
+}
+
 proc therock_postinit() {
   var Src = get_srcdir('therock')
   var Obj = get_objdir('therock')
   var Venv = get_objdir('tr_venv')
   var Cfg = get_configure_opts('therock')
+  var BuildTypeOverrides = gather_build_type_overrides ()
+  var BuildOpts = Cfg ++ BuildTypeOverrides \
+                  ++ :| -DCMAKE_BUILD_TYPE=$[get_build_type('therock')] |
 
   if test --exists $Obj/cached-config-opts.json {
     var OldCfg
     json read (&OldCfg) < $Obj/cached-config-opts.json
-    if (Cfg !== OldCfg) {
+    if (BuildOpts !== OldCfg) {
       rm -f $Obj/subproject_map.json
     }
   } else {
@@ -222,7 +237,7 @@ proc therock_postinit() {
   if ! test --dir $Obj {
     mkdir -p $Obj
 
-    json write (Cfg) > $Obj/cached-config-opts.json
+    json write (BuildOpts) > $Obj/cached-config-opts.json
 
     cd $Src {
       # We know our proper configuration settings now.  Invoke cmake again
@@ -230,7 +245,7 @@ proc therock_postinit() {
       VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) cmake \
             -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
             -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-            -DTHEROCK_AMDGPU_TARGETS=gfx90a @Cfg .
+            -DTHEROCK_AMDGPU_TARGETS=gfx90a @BuildOpts .
     }
   }
 

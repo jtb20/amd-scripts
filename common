@@ -585,9 +585,9 @@ proc fix_path {
   PATH=$[sanitize_path (ENV.PATH)] @ARGV
 }
 
-proc do_task_number (; num, cfgvariant=null) {
+proc do_task_number (; num; cfgvariant=null, standalone=null) {
   var taskidx = num-1
-  var taskfn = TASKARR[taskidx]
+  var taskfn = standalone if standalone else TASKARR[taskidx]
   var logname=$(printf u'%.3d-%s.log' $num $taskfn)
   var numtasks = len(TASKARR)
   setglobal CurrentLogFile="$LOGDIR/$logname"
