@@ -615,7 +615,7 @@ proc do_task_number (; num; cfgvariant=null, standalone=null) {
 proc do_tasks (; todo) {
   var task = -1
   var nexttask = -1
-  var Range = / <capture digit+ as start : int> '--' <capture digit+ as end : int> /
+  var Range = / ^ <capture digit+ as start : int> '--' <capture digit+ as end : int> $ /
   if (len(todo) === 0) {
     setvar todo = ("1", "continue")
   }
@@ -629,7 +629,7 @@ proc do_tasks (; todo) {
         do_task_number (i)
       }
       setvar nexttask = endtask+1
-    } elif (t ~ /<capture digit+ as tasknum: int>/) {
+    } elif (t ~ /^ <capture digit+ as tasknum: int> $/) {
       setvar task = _group('tasknum')
       do_task_number (task)
       setvar nexttask = task+1

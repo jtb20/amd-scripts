@@ -64,7 +64,7 @@ func tr_delegate_env(Comp) {
   var Venv = get_objdir('tr_venv')
   var Env = :| VIRTUAL_ENV=$Venv
                PATH=$(prepend_path $Venv/bin PATH)
-               THEROCK_INTERACTIVE=1 |
+               THEROCK_INTERACTIVE=ON |
   return (Env)
 }
 
@@ -73,17 +73,20 @@ func therock_delegate_gen(Comp, CompName, Info) {
   var TRObj = get_objdir('therock')
   var Procs = {}
   eval """
-  proc expunge_tr_${CompName} {
-    var TRSrc = get_srcdir('therock')
+  proc clean_tr_${CompName} {
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
+        if test --exists "$[Info.bin]/build.ninja" {
+          cd $[Info.bin] {
+            ninja clean
+          }
+        }
         ninja $Comp+expunge
       }
     }
   }
   proc configure_tr_${CompName} {
-    var TRSrc = get_srcdir('therock')
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
@@ -92,44 +95,58 @@ func therock_delegate_gen(Comp, CompName, Info) {
     }
   }
   proc build_tr_${CompName} {
-    var TRSrc = get_srcdir('therock')
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
-        ninja $Comp+build
+        if test --exists "$[Info.bin]/build.ninja" {
+          cd $[Info.bin] {
+            ninja
+          }
+        } else {
+          ninja $Comp+build
+        }
       }
     }
   }
   proc stage_tr_${CompName} {
-    var TRSrc = get_srcdir('therock')
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
-        ninja $Comp+stage
+        if test --exists "$[Info.bin]/build.ninja" {
+          cd $[Info.bin] {
+            ninja install
+          }
+        } else {
+          ninja $Comp+stage
+        }
       }
     }
   }
   proc dist_tr_${CompName} {
-    var TRSrc = get_srcdir('therock')
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
-        ninja $Comp+dist
+        if test --exists "$[Info.bin]/build.ninja" {
+          cd $[Info.bin] {
+            ninja therock-dist
+          }
+        } else {
+          ninja $Comp+dist
+        }
       }
     }
   }
   proc tr_${CompName}_tasks {
-    add_tasks tr_${CompName} expunge configure build stage dist
+    add_tasks tr_${CompName} clean configure build stage dist
   }
   func get_tr_${CompName}_src() {
-    var TRSrc = get_src_default('therock')
     return ("$[Info.src]")
   }
   func tr_${CompName}_dependencies() {
     return (['therock'] ++ ConfigureOpts.tr_$CompName.deps)
   }
   """
-  setvar Procs["expunge_tr_${CompName}"] = getVar("expunge_tr_${CompName}")
+  setvar Procs["clean_tr_${CompName}"] = getVar("clean_tr_${CompName}")
   setvar Procs["configure_tr_${CompName}"] = getVar("configure_tr_${CompName}")
   setvar Procs["build_tr_${CompName}"] = getVar("build_tr_${CompName}")
   setvar Procs["stage_tr_${CompName}"] = getVar("stage_tr_${CompName}")
@@ -176,7 +193,7 @@ proc therock_preinit() {
     for Name, Proc in (Procs) {
       call setVar(Name, Proc, global=true)
     }
-    set_configure_key ("tr_$CompName", 'deps', dehyphenate_list(Info.build_deps, prepend='tr_'))
+    set_configure_key ("tr_$CompName", 'deps', dehyphenate_list(Info.runtime_deps ++ Info.build_deps, prepend='tr_'))
     # Convenience symlinks (not quite the same as other amd-scripts configs though!)
     var CompSrcSubdir = get_srcdir_rel("tr_$CompName")
     cd $SRCDIR {
@@ -219,6 +236,8 @@ proc therock_postinit() {
   var BuildOpts = Cfg ++ BuildTypeOverrides \
                   ++ :| -DCMAKE_BUILD_TYPE=$[get_build_type('therock')] |
 
+  # WARNING: This might be a bit prone to cache invalidation problems --
+  # it might be better to just run cmake every time.  Slower though.
   if test --exists $Obj/cached-config-opts.json {
     var OldCfg
     json read (&OldCfg) < $Obj/cached-config-opts.json
@@ -229,7 +248,6 @@ proc therock_postinit() {
     rm -f $Obj/subproject_map.json
   }
 
-  # We need a way to invalidate this (caching enabled/disabled options?)
   if ! test --exists $Obj/subproject_map.json {
     # Subproject map isn't there, try again?
     rm -rf $Obj
@@ -245,6 +263,7 @@ proc therock_postinit() {
       VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) cmake \
             -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
             -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+            @[cmake_ccache_option('therock')] \
             -DTHEROCK_AMDGPU_TARGETS=gfx90a @BuildOpts .
     }
   }
@@ -257,10 +276,12 @@ proc therock_postinit() {
     if ("tr_$CompName" not in ConfigureOpts) {
       write -- "-- project $Comp unexpectedly appeared in postinit"
     }
-    if (Info.build_deps !== ConfigureOpts["tr_$CompName"].deps) {
+    var AllDeps = Info.runtime_deps ++ Info.build_deps
+    write "Comp $Comp: Deps: $[AllDeps.join(', ')]"
+    if (AllDeps !== ConfigureOpts["tr_$CompName"].deps) {
       # This probably isn't necessary -- it's in case dependencies get dropped
       # when we select a smaller set of enabled projects.
-      setvar ConfigureOpts["tr_$CompName"].deps = dehyphenate_list(Info.build_deps, prepend='tr_')
+      setvar ConfigureOpts["tr_$CompName"].deps = dehyphenate_list(AllDeps, prepend='tr_')
     }
   }
 
