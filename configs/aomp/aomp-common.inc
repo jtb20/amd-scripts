@@ -116,6 +116,10 @@ proc add_optional_module (Mod) {
       add_components composable_kernel
     }
 
+    taskgraph {
+      append_configure_opts ("llvm", :| -DLIBOMP_TASKGRAPH_EXPERIMENTAL=ON |)
+    }
+
     * {
       error "Unknown optional module: $Mod"
     }
