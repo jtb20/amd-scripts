@@ -171,6 +171,20 @@ proc save_results_llvm_llvm (; files) {
   llvm_results_helper save llvm test (files)
 }
 
+### LLVM-UNIT ###
+
+proc clean_results_llvm_llvm () {
+  llvm_results_helper clean llvm-unit test
+}
+
+proc test_llvm_unit () {
+  run_llvm_check check-llvm-unit
+}
+
+proc save_results_llvm_unit (; files) {
+  llvm_results_helper save llvm-unit test (files)
+}
+
 ### CLANG ###
 
 proc clean_results_llvm_clang () {
