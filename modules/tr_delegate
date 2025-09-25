@@ -297,5 +297,10 @@ proc therock_postinit() {
   call setVar('tr_finalize_dependencies', tr_finalize_dependencies, global=true)
 
   add_components tr_finalize
+
+  # Convenience symlink for "TheRock" logs
+  cd "$LOGDIR/.." {
+    ln -sfT $Obj/logs therock-logs
+  }
 }
 
