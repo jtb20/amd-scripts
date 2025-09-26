@@ -173,8 +173,8 @@ proc save_results_llvm_llvm (; files) {
 
 ### LLVM-UNIT ###
 
-proc clean_results_llvm_llvm () {
-  llvm_results_helper clean llvm-unit test
+proc clean_results_llvm_unit () {
+  llvm_results_helper clean llvm-unit unittests
 }
 
 proc test_llvm_unit () {
@@ -182,7 +182,7 @@ proc test_llvm_unit () {
 }
 
 proc save_results_llvm_unit (; files) {
-  llvm_results_helper save llvm-unit test (files)
+  llvm_results_helper save llvm-unit unittests (files)
 }
 
 ### CLANG ###
@@ -197,6 +197,47 @@ proc test_llvm_clang () {
 
 proc save_results_llvm_clang (; files) {
   llvm_results_helper save clang tools/clang/test (files)
+}
+
+### LIBCLANG_PYTHON ###
+
+proc clean_results_llvm_libclang_python () {
+  var Obj = get_objdir('llvm')
+  rm -f $Obj/libclang_python.log
+}
+
+proc test_llvm_libclang_python () {
+  var Src = get_srcdir('llvm')
+  var Obj = get_objdir('llvm')
+  cd "$Src/clang/bindings/python" {
+    try {
+      with-env CLANG_NO_DEFAULT_CONFIG=1 \
+              CLANG_LIBRARY_PATH="$Obj/lib" {
+        /usr/bin/python3 -m unittest discover -v 2> $Obj/libclang_python.log
+      }
+    }
+    if failed {
+      >&2 write "Testing failed!"
+    }
+  }
+  #run_llvm_check check-clang-python
+}
+
+proc save_results_llvm_libclang_python (; files) {
+  var Obj = get_objdir('llvm')
+  cat $Obj/libclang_python.log | while read n {
+    var OK = / ^ <capture dot* as testname> ' ... ok' $ /
+    var Fail = / ^ <capture dot* as testname> ' ... test_from_id' /
+    var Fail1 = / ^ <capture dot* as testname> ' ... FAIL' $ /
+    if (n ~ OK) {
+      write "PASS: $[_group('testname')]"
+    } elif (n ~ Fail or n ~ Fail1) {
+      write "FAIL: $[_group('testname')]"
+    }
+    # There might be other ways that tests can fail...
+  } > "$TESTRESULTSDIR/libclang_python.sum"
+  cp $Obj/libclang_python.log $TESTRESULTSDIR
+  call files->setValue(:| libclang_python.sum |)
 }
 
 ### FLANG ###
@@ -314,7 +355,11 @@ proc save_results_llvm_offload (; files) {
 ### OPENMP ###
 
 proc clean_results_llvm_openmp () {
-  llvm_results_helper clean openmp runtimes/runtimes-bins/openmp
+  if (in_list('openmp', ConfigureOpts.llvm.projects)) {
+    llvm_results_helper clean openmp projects/openmp
+  } else {
+    llvm_results_helper clean openmp runtimes/runtimes-bins/openmp
+  }
 }
 
 proc test_llvm_openmp () {
@@ -322,5 +367,9 @@ proc test_llvm_openmp () {
 }
 
 proc save_results_llvm_openmp (; files) {
-  llvm_results_helper save openmp runtimes/runtimes-bins/openmp (files)
+  if (in_list('openmp', ConfigureOpts.llvm.projects)) {
+    llvm_results_helper save openmp projects/openmp (files)
+  } else {
+    llvm_results_helper save openmp runtimes/runtimes-bins/openmp (files)
+  }
 }

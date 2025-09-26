@@ -49,8 +49,8 @@ add_components aomp sollve_vv nekbone openmpapps ovo
 # FIXME: this is intended to roughly partition the tests that are run with
 # the "check-all" target.  Does this cover all those tests?  Should we just
 # use "check-all" instead?
-add_testsuites llvm llvm unit clang flang lld compiler_rt libcxx libcxxabi \
-                    libunwind offload openmp
+add_testsuites llvm llvm clang libclang_python flang lld compiler_rt \
+                    libcxx libcxxabi libunwind offload openmp
 
 add_testsuites aomp examples smoke smoke_fails smoke_limbo \
                     hip_openmp usm llnl omp5 openmpapps
