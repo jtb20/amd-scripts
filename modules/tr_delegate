@@ -18,7 +18,7 @@ proc setup_tr_venv() {
   if ! test --dir $Obj {
     mkdir -p $Obj
 
-    python3 -m venv $Obj
+    /usr/bin/python3 -m venv $Obj
     cd $TRSrc {
       $Obj/bin/pip install -r requirements.txt
     }
@@ -68,6 +68,15 @@ func tr_delegate_env(Comp) {
   return (Env)
 }
 
+func tr_delegate_has_ninja_tgt(Dir, Target) {
+  try {
+    cd $Dir {
+      ninja -n $Target
+    }
+  }
+  return (_error.code === 0)
+}
+
 func therock_delegate_gen(Comp, CompName, Info) {
   var TRSrc = get_srcdir('therock')
   var TRObj = get_objdir('therock')
@@ -112,7 +121,8 @@ func therock_delegate_gen(Comp, CompName, Info) {
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
-        if test --exists "$[Info.bin]/build.ninja" {
+        if test --exists "$[Info.bin]/build.ninja" \
+           && test --true $[tr_delegate_has_ninja_target(Info.bin, 'install')] {
           cd $[Info.bin] {
             ninja install
           }
@@ -126,7 +136,8 @@ func therock_delegate_gen(Comp, CompName, Info) {
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
-        if test --exists "$[Info.bin]/build.ninja" {
+        if test --exists "$[Info.bin]/build.ninja" \
+           && test --true $[tr_delegate_has_ninja_target(Info.bin, 'therock-dist')] {
           cd $[Info.bin] {
             ninja therock-dist
           }
