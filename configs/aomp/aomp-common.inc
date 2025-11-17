@@ -16,7 +16,7 @@ set_configure_key ("llvm", "targets", :| X86 AMDGPU |)
 set_configure_key ("llvm", "runtimes", :| compiler-rt libcxx libcxxabi
                                           libunwind openmp offload |)
 
-set_configure_key ("llvm", "gfxlist", :| gfx700 gfx701 gfx801 gfx803 gfx900
+set_configure_key ("llvm", "gfxlist", :| gfx601 gfx700 gfx701 gfx801 gfx803 gfx900
                                          gfx902 gfx906 gfx908 gfx90a gfx90c
                                          gfx942 gfx1030 gfx1031
                                          gfx1035 gfx1036 gfx1100 gfx1101
@@ -27,6 +27,7 @@ set_configure_key ("llvm", "append_install_dir", "lib/llvm")
 
 set_configure_key ("llvm", "spirv_translator", true)
 set_configure_key ("llvm", "flang_rt", true)
+set_configure_key ("llvm", "gpu_runtimes", [])
 
 # set_build_tool ("rocm_cmake", "Unix Makefiles")
 # set_build_tool ("rocr_runtime", "Unix Makefiles")
@@ -58,6 +59,7 @@ add_testsuites aomp examples smoke smoke_fails smoke_limbo \
 add_testsuites misc sollve_vv nekbone ovo
 
 proc add_optional_module (Mod) {
+  var R
   case (Mod) {
     # Optional testsuites
     smoke_dev {
@@ -112,12 +114,21 @@ proc add_optional_module (Mod) {
       add_components rocprofiler
     }
 
+    rocprofiler_sdk {
+      add_components rocprofiler_sdk
+    }
+
     composable_kernel {
       add_components composable_kernel
     }
 
     taskgraph {
       append_configure_opts ("llvm", :| -DLIBOMP_TASKGRAPH_EXPERIMENTAL=ON |)
+    }
+
+    gpu_libc {
+      setvar R = ConfigureOpts.llvm.gpu_runtimes
+      set_configure_key ('llvm', 'gpu_runtimes', ['libc'] ++ R)
     }
 
     * {

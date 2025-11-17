@@ -66,6 +66,16 @@ add_config_adjustment {
     append_configure_opts ("llvm", :| -DLIBOMPTARGET_BUILD_DEVICE_FORTRT=ON |)
   }
 
+  if (ConfigureOpts.llvm.gpu_runtimes) {
+    var Runtimes = ConfigureOpts.llvm.gpu_runtimes=>join(';')
+    append_configure_opts ('llvm', :| -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=$Runtimes
+                                      -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+                                      -DLLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa" |)
+    if (in_list('libc', ConfigureOpts.llvm.gpu_runtimes)) {
+      append_configure_opts ('llvm', :| DLLVM_LIBC_GPU_BUILD=ON |)
+    }
+  }
+
   append_configure_opts ("llvm", :| -DCMAKE_EXPORT_COMPILE_COMMANDS=1 |)
 }
 

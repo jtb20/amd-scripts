@@ -14,6 +14,9 @@ func ao_symlinks_dependencies() {
 }
 
 proc setup_ao_symlinks {
+  var HaveRocProfiler = in_list('rocprofiler', Components)
+  var HaveRocTracer = in_list('roctracer', Components)
+  var HaveRoctThunkInterface = in_list('roct_thunk_interface', Components)
   var AMDSMISrc = get_srcdir('rocsmilib')
   var AOMPSrc = get_srcdir('aomp')
   var AOMPExtrasSrc = get_srcdir('aomp_extras')
@@ -26,12 +29,18 @@ proc setup_ao_symlinks {
   var ROCGDBSrc = get_srcdir('rocgdb')
   var ROCMCmakeSrc = get_srcdir('rocm_cmake')
   var ROCMInfoSrc = get_srcdir('rocminfo')
-  var ROCProfilerSrc = get_srcdir('rocprofiler')
+  if (HaveRocProfiler) {
+    var ROCProfilerSrc = get_srcdir('rocprofiler')
+  }
   var ROCProfilerRegisterSrc = get_srcdir('rocprofiler_register')
   var ROCProfilerSDK = get_srcdir('rocprofiler_sdk')
   var ROCRRuntimeSrc = get_srcdir('rocr_runtime')
-  var ROCTracerSrc = get_srcdir('roctracer')
-  var ROCTThunkIntfSrc = get_srcdir('roct_thunk_interface')
+  if (HaveRocTracer) {
+    var ROCTracerSrc = get_srcdir('roctracer')
+  }
+  if (HaveRoctThunkInterface) {
+    var ROCTThunkIntfSrc = get_srcdir('roct_thunk_interface')
+  }
   var HipifySrc = get_srcdir('hipify')
   var SPIRVLLVMTranslatorSrc = get_srcdir('spirv_llvm_translator')
   var AOMP_VERSION = ConfigureOpts.aomp_delegate.aomp_version
@@ -54,12 +63,18 @@ proc setup_ao_symlinks {
   ln -sfT $ROCMCmakeSrc $AOMP_REPOS/rocm-cmake
   ln -sfT $ROCMInfoSrc $AOMP_REPOS/rocminfo
   ln -sfT $AMDSMISrc $AOMP_REPOS/rocm_smi_lib
-  ln -sfT $ROCProfilerSrc $AOMP_REPOS/rocprofiler
+  if (HaveRocProfiler) {
+    ln -sfT $ROCProfilerSrc $AOMP_REPOS/rocprofiler
+  }
   ln -sfT $ROCProfilerRegisterSrc $AOMP_REPOS/rocprofiler-register
   ln -sfT $ROCProfilerSDK $AOMP_REPOS/rocprofiler-sdk
   ln -sfT $ROCRRuntimeSrc $AOMP_REPOS/rocr-runtime
-  ln -sfT $ROCTracerSrc $AOMP_REPOS/roctracer
-  ln -sfT $ROCTThunkIntfSrc $AOMP_REPOS/roct-thunk-interface
+  if (HaveRocTracer) {
+    ln -sfT $ROCTracerSrc $AOMP_REPOS/roctracer
+  }
+  if (HaveRoctThunkInterface) {
+    ln -sfT $ROCTThunkIntfSrc $AOMP_REPOS/roct-thunk-interface
+  }
   ln -sfT $HipifySrc $AOMP_REPOS/hipify
   ln -sfT $SPIRVLLVMTranslatorSrc $AOMP_REPOS/SPIRV-LLVM-Translator
 }
@@ -240,7 +255,6 @@ setvar DelegatedCompName["device_libs"          ] = "ao_libdevice";
 # find the system version for some reason.  Build our own.  (This will get
 # installed in *our* install dir, but that's probably acceptible.)
 setvar DelegatedCompName["opencl_icd_loader"    ] = "opencl_icd_loader";
-setvar DelegatedCompName["hipify"               ] = "hipify"
 
 func translate_aomp_deps(Comp) {
   var Deps = []
