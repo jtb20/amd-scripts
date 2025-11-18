@@ -14,16 +14,20 @@ proc configure_rocprofiler_sdk() {
   var BuildType = get_build_type("rocprofiler_sdk")
   var Tool = get_build_tool("rocprofiler_sdk")
   var GPUList = join(ConfigureOpts.rocprofiler.gfxlist, ';')
+  var Cfg = get_configure_opts('rocprofiler_sdk')
+  var HipBuild = get_objdir('hipamd')
+  var LLVMInst = get_installdir('llvm')
   cd $Build {
     rocm_env cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
-      -DCMAKE_PREFIX_PATH="$HOME/local/aqlprofile;$INSTALLDIR" \
+      -DCMAKE_PREFIX_PATH="$LLVMInst;$[ENV.HOME]/local/aqlprofile" \
       -DBUILD_SHARED_LIBS=YES \
       -DGPU_TARGETS=$GPUList \
       -DPython3_EXECUTABLE=$(which python3) \
       -DROCPROFILER_BUILD_SAMPLES=ON \
       -DROCPROFILER_BUILD_TESTS=ON \
       -DCPACK_DEBIAN_PACKAGE_SHLIBDEPS=OFF \
+      @Cfg \
       $Src
   }
 }

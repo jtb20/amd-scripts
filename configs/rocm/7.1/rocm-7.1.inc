@@ -50,6 +50,14 @@ var rocprofiler_register_src = {
   "submodules" : true
 }
 
+var roctracer_src = {
+  "url" : "https://github.com/ROCm/roctracer",
+  "type" : "git",
+  "version" : "release/rocm-rel-7.1",
+  "version_name" : "7.1",
+  "shallow_clone" : false
+}
+
 var opencl_icd_loader_src = {
   "url" : "https://github.com/KhronosGroup/OpenCL-ICD-Loader",
   "type" : "git",
@@ -114,6 +122,7 @@ add_sources ("hipamd", hipamd_src)
 add_sources ("hip", hip_src)
 add_sources ("hipfort", hipfort_src)
 add_sources ("composable_kernel", composable_kernel_src)
+add_sources ("roctracer", roctracer_src)
 add_sources ("rocprofiler_register", rocprofiler_register_src)
 add_sources ("opencl_icd_loader", opencl_icd_loader_src)
 add_sources ("opencl_headers", opencl_headers_src)

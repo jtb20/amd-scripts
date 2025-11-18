@@ -17,7 +17,7 @@ proc configure_hipamd() {
   var Cfg_opts = get_configure_opts('hipamd')
   cd $Build {
     rocm_env cmake -G $Tool \
-      -DCMAKE_INSTALL_PREFIX=$LLVM_Inst \
+      -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_PREFIX_PATH="$INSTALLDIR;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
       @Cfg_opts \
