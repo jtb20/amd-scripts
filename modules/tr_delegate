@@ -122,7 +122,7 @@ func therock_delegate_gen(Comp, CompName, Info) {
     cd $TRObj {
       with-env @LocalEnv {
         if test --exists "$[Info.bin]/build.ninja" \
-           && test --true $[tr_delegate_has_ninja_target(Info.bin, 'install')] {
+           && test --true $[tr_delegate_has_ninja_tgt(Info.bin, 'install')] {
           cd $[Info.bin] {
             ninja install
           }
@@ -137,7 +137,7 @@ func therock_delegate_gen(Comp, CompName, Info) {
     cd $TRObj {
       with-env @LocalEnv {
         if test --exists "$[Info.bin]/build.ninja" \
-           && test --true $[tr_delegate_has_ninja_target(Info.bin, 'therock-dist')] {
+           && test --true $[tr_delegate_has_ninja_tgt(Info.bin, 'therock-dist')] {
           cd $[Info.bin] {
             ninja therock-dist
           }
