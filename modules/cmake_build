@@ -1,5 +1,5 @@
-proc cmake_build(comp) {
-  var BuildDir = get_objdir(comp)
+proc cmake_build(comp, variant="") {
+  var BuildDir = get_objdir(comp, variant) if variant else get_objdir(comp)
   var Tool = get_build_tool(comp)
   var Parallelism = get_build_parallelism(comp)
   var Parallelism_opt
@@ -15,8 +15,8 @@ proc cmake_build(comp) {
   }
 }
 
-proc cmake_install(comp) {
-  var BuildDir = get_objdir(comp)
+proc cmake_install(comp, variant="") {
+  var BuildDir = get_objdir(comp, variant) if variant else get_objdir(comp)
   var Tool = get_build_tool(comp)
   var Parallelism = get_build_parallelism(comp)
   var Parallelism_opt

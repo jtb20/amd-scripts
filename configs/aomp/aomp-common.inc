@@ -165,14 +165,16 @@ proc remove_optional_feature(Feat) {
   }
 }
 
-func config_rpath_opts(comp) {
+func config_rpath_opts(comp, variant) {
   if (SetRPathOpts) {
     var AOMPRPaths = "\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../../../lib:\$ORIGIN/../llvm/lib"
     var RPathOpts = :| -DCMAKE_SHARED_LINKER_FLAGS='-Wl,--disable-new-dtags'
                        -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON
                        -DCMAKE_INSTALL_RPATH=$AOMPRPaths |
     case (comp) {
-      llvm {
+      llvm | comgr | rocm_dbgapi | rocprofiler_register | rocsmilib | roctracer | \
+      pgmath | rocminfo | rocprofiler | rocprofiler_sdk | hipamd | rocr_runtime | \
+      offload | flang | openmp {
         append -- -DLIBOMP_SHARED_LINKER_FLAGS='-Wl,--disable-new-dtags' \
                   -DLIBOMP_INSTALL_RPATH=$AOMPRPaths \
                   -DLIBOMPTARGET_INSTALL_RPATH=$AOMPRPaths (RPathOpts)

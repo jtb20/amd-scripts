@@ -4,16 +4,16 @@
 # "--add openmp_legacy" builds, i.e. for historical versions of amd_staging,
 # etc.  So keep it simple.
 
-proc clean_openmp() {
-  clean_component openmp
+proc clean_openmp(var) {
+  clean_component openmp $var
 }
 
 func get_openmp_src() {
   return (get_src_default ("openmp"))
 }
 
-proc configure_openmp() {
-  var Build = get_objdir("openmp")
+proc configure_openmp(var) {
+  var Build = get_objdir("openmp", var)
   var LLVM_Src = get_srcdir("llvm")
   var LLVM_Build = get_objdir("llvm")
   var LLVM_Cfg = ConfigureOpts["llvm"]
@@ -21,9 +21,10 @@ proc configure_openmp() {
   var BuildType = get_build_type("openmp")
   var Src = get_srcdir("openmp")
   var Tool = get_build_tool("openmp")
-  var Cfg_opts = get_configure_opts("openmp")
+  var Cfg_opts = get_configure_opts("openmp", var)
+  var InstallDir = get_installdir('openmp', var)
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$LLVM_Inst \
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$InstallDir \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DOPENMP_ENABLE_LIBOMPTARGET=1 \
       -DOPENMP_TEST_C_COMPILER=$LLVM_Inst/bin/clang \
@@ -41,17 +42,17 @@ proc configure_openmp() {
       -DLIBOMP_HWLOC_INSTALL_DIR=$[get_installdir ("hwloc")] \
       -DCMAKE_PREFIX_PATH=$LLVM_Inst/lib/cmake \
       @Cfg_opts \
-      @[get_rpath_opts('openmp')] \
+      @[get_rpath_opts('openmp', var)] \
       $Src
   }
 }
 
-proc build_openmp() {
-  cmake_build openmp
+proc build_openmp(var) {
+  cmake_build openmp $var
 }
 
-proc install_openmp() {
-  cmake_install openmp
+proc install_openmp(var) {
+  cmake_install openmp $var
 }
 
 func openmp_dependencies() {

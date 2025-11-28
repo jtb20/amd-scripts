@@ -18,6 +18,7 @@ source $CONFIGDIR/$ActiveCfg
 
 add_optional_modules
 remove_optional_features
+discover_variants
 modify_defaults
 
 elaborate_tasks

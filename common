@@ -14,6 +14,7 @@ var CONFIGDIR="$SCRIPTDIR/configs"
 var ActiveCfg
 var Sources={}
 var Components=[]
+var ComponentVariants={}
 var Testsuites={}
 var SelectTests=null
 var ConfigureOpts={}
@@ -23,7 +24,6 @@ const DefaultParallelism=32
 var GithubUsername=""
 var OptionalModules=[]
 var RemovedFeatures=[]
-var Variants={}
 var CleanInstallDir=false
 var NoBWrap = false
 var GPURunOpts = []
@@ -263,13 +263,21 @@ proc add_components(...components) {
   }
 }
 
-proc add_task (name, component="") {
-  append $name (TASKARR)
+proc add_task (; ...taskparts) {
+  call TASKARR->append(taskparts)
 }
 
 proc add_tasks (component, ...tasks) {
-  for task in (tasks) {
-    add_task "${task}_${component}"
+  if (component in ComponentVariants) {
+    for var in (ComponentVariants[component]) {
+      for task in (tasks) {
+        add_task (component, var, task)
+      }
+    }
+  } else {
+    for task in (tasks) {
+      add_task (component, task)
+    }
   }
 }
 
@@ -290,11 +298,11 @@ proc add_testsuites (component, ...testsuites) {
 # variants, e.g. asan & debug versions of libraries.  It's a bit awkward to
 # retrofit that now.
 proc add_variants(component, ...variants) {
-  if (component not in Variants) {
-    setglobal Variants[component] = []
+  if (component not in ComponentVariants) {
+    setglobal ComponentVariants[component] = []
   }
   for var in (variants) {
-    append $var (Variants[component])
+    append $var (ComponentVariants[component])
   }
 }
 
@@ -374,8 +382,16 @@ proc append_configure_opts(; comp, opts) {
   setglobal ConfigureOpts[comp].cfg = ConfigureOpts[comp].cfg ++ opts
 }
 
-func get_configure_opts(comp) {
-  if (comp in ConfigureOpts and 'cfg' in ConfigureOpts[comp]) {
+# This does something quite different in the non-variant and variant case.
+# In the non-variant case, it returns the configuration opts (set by the config)
+# in the ConfigureOpts dict.  In the variant case, it calls a function
+# <component>_variant_config(variant), again provided by the config.
+
+func get_configure_opts(comp, variant=null) {
+  if (variant) {
+    var cfgvarfn = lookup_func("${comp}_variant_config")
+    return (cfgvarfn(variant))
+  } elif (comp in ConfigureOpts and 'cfg' in ConfigureOpts[comp]) {
     return (ConfigureOpts[comp].cfg)
   } else {
     return ([])
@@ -405,12 +421,12 @@ proc set_build_parallelism(; comp, procs) {
   set_build_key (comp, "parallelism", procs)
 }
 
-func get_rpath_opts(comp) {
+func get_rpath_opts(comp, variant=null) {
   try {
     var fn = lookup_func('config_rpath_opts')
   }
   if (_error.code === 0) {
-    return (fn(comp))
+    return (fn(comp, variant))
   } else {
     return ([])
   }
@@ -420,7 +436,7 @@ proc elaborate_tasks() {
   var ordered_comp
   var add_task_fn
   if (CleanInstallDir) {
-    add_task clean_install_dir
+    add_task ('clean_install_dir')
   }
   {
     var CompWithDeps = {}
@@ -465,14 +481,14 @@ proc elaborate_tasks() {
 }
 
 proc elaborate_tests() {
-  add_task clean_test_dirs
+  add_task ('clean_test_dirs')
   for comp in (Testsuites) {
     for testsuite in (Testsuites[comp]) {
       var testsuite_nodash = testsuite=>replace('-', '_')
-      add_task test_${comp}_${testsuite_nodash}
+      add_task ("test_${comp}_${testsuite_nodash}")
     }
   }
-  add_task save_test_results
+  add_task ('save_test_results')
 }
 
 var DefaultBuildOpts = {
@@ -557,7 +573,7 @@ proc print_tasks {
     error "No tasks!"
   }
   for i, task in (TASKARR) {
-    printf u'%.3d: %s\n' $[i+1] $task
+    printf u'%.3d: %s\n' $[i+1] $[task=>join('/')]
   }
 }
 
@@ -585,16 +601,30 @@ proc fix_path {
   PATH=$[sanitize_path (ENV.PATH)] @ARGV
 }
 
-proc do_task_number (; num; cfgvariant=null, standalone=null) {
+proc do_task_number (; num; standalone=null) {
   var taskidx = num-1
-  var taskfn = standalone if standalone else TASKARR[taskidx]
-  var logname=$(printf u'%.3d-%s.log' $num $taskfn)
+  var taskparts = standalone if standalone else TASKARR[taskidx]
+  var taskfn
+  var cfgvariant = null
+  if (len(taskparts) === 1) {
+    setvar taskfn = taskparts[0]
+  } elif (len(taskparts) === 2) {
+    # Call function "component_task"
+    setvar taskfn = "$[taskparts[1]]_$[taskparts[0]]"
+  } elif (len(taskparts) === 3) {
+    # Call function "component_task (cfgvariant)"
+    setvar taskfn = "$[taskparts[2]]_$[taskparts[0]]"
+    setvar cfgvariant = taskparts[1]
+  } else {
+    error "Unexpected number of task parts ($[len(taskparts)])"
+  }
+  var logname=$(printf u'%.3d-%s.log' $num $[taskparts=>join('_')])
   var numtasks = len(TASKARR)
   setglobal CurrentLogFile="$LOGDIR/$logname"
-  printf u'[%s] [%.3d/%.3d]: start %s\n' $(time_now) $num $numtasks $taskfn
+  printf u'[%s] [%.3d/%.3d]: start %s\n' $(time_now) $num $numtasks $[taskparts=>join('/')]
   try {
     if (cfgvariant) {
-      fix_path eval "$taskfn (cfgvariant)" > $CurrentLogFile 2>&1
+      fix_path eval "$taskfn $cfgvariant" > $CurrentLogFile 2>&1
     } else {
       fix_path eval "$taskfn" > $CurrentLogFile 2>&1
     }
@@ -609,7 +639,7 @@ proc do_task_number (; num; cfgvariant=null, standalone=null) {
       exit 1
     }
   }
-  printf u'[%s] [%.3d/%.3d]: finish %s\n' $(time_now) $num $numtasks $taskfn
+  printf u'[%s] [%.3d/%.3d]: finish %s\n' $(time_now) $num $numtasks $[taskparts=>join('/')]
 }
 
 proc do_tasks (; todo) {
@@ -648,7 +678,7 @@ proc do_tasks (; todo) {
       shopt -s noglob { var braceexp=@(eval "write -- $t") }
       for globname in (braceexp) {
         for tasknum in (1 ..= len(TASKARR)) {
-          var taskname = TASKARR[tasknum - 1]
+          var taskname = TASKARR[tasknum - 1]=>join('/')
           if (taskname ~~ "*${globname}*") {
             do_task_number (tasknum)
             setvar nexttask = tasknum + 1
@@ -679,8 +709,8 @@ func get_amd_gpus() {
   return (LocalGPUs)
 }
 
-proc clean_component (component) {
-  var OBJDIR = get_objdir(component)
+proc clean_component (component, variant="") {
+  var OBJDIR = get_objdir(component, variant) if variant else get_objdir(component)
   if test --dir $OBJDIR {
     rm -rf $OBJDIR/*
   } else {
@@ -730,6 +760,15 @@ proc add_config_adjustment_proc(; Proc) {
 
 proc add_config_adjustment(;;; Block) {
   call ModifyConfigProcs->append(Block)
+}
+
+# Find variants for components and populate the ComponentVariants dict.
+proc discover_variants() {
+  for Comp in (Components) {
+    if (has_proc("${Comp}_variants")) {
+      eval "${Comp}_variants"
+    }
+  }
 }
 
 # Optionally modify default configure options (etc.) after added modules and
