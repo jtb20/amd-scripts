@@ -61,5 +61,13 @@ func aqlprofile_dependencies() {
 }
 
 proc aqlprofile_tasks() {
-  add_tasks aqlprofile clean configure build test install
+  case (get_version_name('aqlprofile')) {
+    7.1 {
+      standard_tasks aqlprofile
+    }
+
+    * {
+      add_tasks aqlprofile clean configure build test install
+    }
+  }
 }

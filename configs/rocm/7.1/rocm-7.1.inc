@@ -90,12 +90,11 @@ var composable_kernel_src = {
   "shallow_clone" : false
 }
 
-# FIXME. What to do with this?
 var aqlprofile_src = {
-  "url" : "ssh://gerritgit/hsa/ec/aqlprofile",
+  "url" : "https://github.com/ROCm/aqlprofile.git",
   "type" : "git",
-  "version" : "release/rocm-rel-6.3",
-  "version_name" : "rel-6.3",
+  "version" : "release/rocm-rel-7.1",
+  "version_name" : "7.1",
   "shallow_clone" : false
 }
 
