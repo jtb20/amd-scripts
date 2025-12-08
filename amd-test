@@ -7,17 +7,18 @@ source $_this_dir/common
 
 proc clean_test_dirs() {
   for test in (TASKARR) {
-    if (test=>startsWith("test_")) {
+    var testname=test[0]
+    if (testname=>startsWith("test_")) {
       try {
-        var name = test=>trimStart("test_")
+        var name = testname=>trimStart("test_")
         var CleanProc = "clean_results_$name"
         try {
           eval $CleanProc
         }
         if (_status === 0) {
-          write "Cleaned results for $test"
+          write "Cleaned results for $testname"
         } else {
-          write "Failed to clean results for $test (FIXME)"
+          write "Failed to clean results for $testname (FIXME)"
         }
       }
     }
@@ -29,8 +30,9 @@ var SaveDone = false
 
 proc save_test_results() {
   for test in (TASKARR) {
-    if (test=>startsWith("test_")) {
-      var name = test=>trimStart("test_")
+    var testname=test[0]
+    if (testname=>startsWith("test_")) {
+      var name = testname=>trimStart("test_")
       var SaverProc = "save_results_$name"
       var Files
       try {
@@ -38,9 +40,9 @@ proc save_test_results() {
         setglobal GatheredTestResults = GatheredTestResults ++ Files
       }
       if (_status === 0) {
-        write "Saved results for $test"
+        write "Saved results for $testname"
       } else {
-        write "Result saving failed for $test"
+        write "Result saving failed for $testname"
       }
     }
   }

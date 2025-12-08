@@ -1,5 +1,5 @@
 var llvm_src = {
-  "url" : "github-ent:AMD-Lightning-Internal/llvm-project",
+  "url" : "https://github.com/ROCm/llvm-project",
   "type" : "git",
   "version" : "amd-staging",
   "version_name" : "amd-staging",

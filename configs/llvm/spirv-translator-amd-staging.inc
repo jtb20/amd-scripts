@@ -1,5 +1,5 @@
 var spirv_llvm_translator_src = {
-  "url" : "github-ent:AMD-Lightning-Internal/spirv-llvm-translator",
+  "url" : "https://github.com/ROCm/spirv-llvm-translator",
   "type" : "git",
   "version" : "amd-staging",
   "version_name" : "amd-staging",
