@@ -4,7 +4,7 @@
 # "--add openmp_legacy" builds, i.e. for historical versions of amd_staging,
 # etc.  So keep it simple.
 
-proc clean_openmp(var) {
+proc clean_openmp(var="") {
   clean_component openmp $var
 }
 
@@ -12,7 +12,7 @@ func get_openmp_src() {
   return (get_src_default ("openmp"))
 }
 
-proc configure_openmp(var) {
+proc configure_openmp(var="") {
   var Build = get_objdir("openmp", var)
   var LLVM_Src = get_srcdir("llvm")
   var LLVM_Build = get_objdir("llvm")
@@ -47,11 +47,11 @@ proc configure_openmp(var) {
   }
 }
 
-proc build_openmp(var) {
+proc build_openmp(var="") {
   cmake_build openmp $var
 }
 
-proc install_openmp(var) {
+proc install_openmp(var="") {
   cmake_install openmp $var
 }
 

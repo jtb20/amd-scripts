@@ -72,7 +72,7 @@ add_config_adjustment {
                                       -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                       -DLLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa" |)
     if (in_list('libc', ConfigureOpts.llvm.gpu_runtimes)) {
-      append_configure_opts ('llvm', :| DLLVM_LIBC_GPU_BUILD=ON |)
+      append_configure_opts ('llvm', :| -DLLVM_LIBC_GPU_BUILD=ON |)
     }
   }
 
