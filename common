@@ -204,7 +204,7 @@ proc parse_args(; argv) {
   #setglobal GithubUsername = args.ghuser
   if (ActiveCfg === null) {
     error "Please specify a config file (from configs/*.cfg)"
-  } elif ! test $CONFIGDIR/$ActiveCfg {
+  } elif ! test -e $CONFIGDIR/$ActiveCfg {
     error "No such config: $ActiveCfg"
   }
 }
@@ -603,7 +603,7 @@ proc fix_path {
 
 proc do_task_number (; num; standalone=null) {
   var taskidx = num-1
-  var taskparts = standalone if standalone else TASKARR[taskidx]
+  var taskparts = [standalone] if standalone else TASKARR[taskidx]
   var taskfn
   var cfgvariant = null
   if (len(taskparts) === 1) {
@@ -801,7 +801,7 @@ proc unset_varlist() {
 
   for x in (current) {
     if (x ~ bashfunc) {
-      :
+      true
     } elif (x ~ kv) {
       var Key = _group('key')
       if (env_whitelist=>indexOf(Key) < 0) {

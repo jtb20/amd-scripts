@@ -52,7 +52,7 @@ proc cmake_therock {
   cd $Src {
     VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) cmake \
           -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
-          -DTHEROCK_AMDGPU_TARGETS=gfx90a @Cfg .
+          -DTHEROCK_AMDGPU_FAMILIES=gfx90X-all @Cfg .
   }
 }
 
@@ -86,7 +86,7 @@ func therock_delegate_gen(Comp, CompName, Info) {
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
-        if test --exists "$[Info.bin]/build.ninja" {
+        if test --exists "\$[Info.bin]/build.ninja" {
           cd $[Info.bin] {
             ninja clean
           }
@@ -107,7 +107,7 @@ func therock_delegate_gen(Comp, CompName, Info) {
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
-        if test --exists "$[Info.bin]/build.ninja" {
+        if test --exists "\$[Info.bin]/build.ninja" {
           cd $[Info.bin] {
             ninja
           }
@@ -121,14 +121,7 @@ func therock_delegate_gen(Comp, CompName, Info) {
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
-        if test --exists "$[Info.bin]/build.ninja" \
-           && test --true $[tr_delegate_has_ninja_tgt(Info.bin, 'install')] {
-          cd $[Info.bin] {
-            ninja install
-          }
-        } else {
-          ninja $Comp+stage
-        }
+        ninja $Comp+stage
       }
     }
   }
@@ -136,8 +129,8 @@ func therock_delegate_gen(Comp, CompName, Info) {
     var LocalEnv = tr_delegate_env('$CompName')
     cd $TRObj {
       with-env @LocalEnv {
-        if test --exists "$[Info.bin]/build.ninja" \
-           && test --true $[tr_delegate_has_ninja_tgt(Info.bin, 'therock-dist')] {
+        if test --exists "\$[Info.bin]/build.ninja" \
+           && test --true \$[tr_delegate_has_ninja_tgt(Info.bin, 'therock-dist')] {
           cd $[Info.bin] {
             ninja therock-dist
           }
@@ -190,7 +183,8 @@ proc therock_preinit() {
       # everything here.
       VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) cmake \
             -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
-            -DTHEROCK_AMDGPU_TARGETS=gfx90a .
+            -DTHEROCK_ENABLE_ALL=ON \
+            -DTHEROCK_AMDGPU_FAMILIES=gfx90X-all .
     }
   }
 
@@ -202,6 +196,7 @@ proc therock_preinit() {
     var CompName = Comp=>replace('-', '_')
     var Procs = therock_delegate_gen(Comp, CompName, Info)
     for Name, Proc in (Procs) {
+      write "Define $Name of type $[type(Proc)]"
       call setVar(Name, Proc, global=true)
     }
     set_configure_key ("tr_$CompName", 'deps', dehyphenate_list(Info.runtime_deps ++ Info.build_deps, prepend='tr_'))
@@ -275,26 +270,44 @@ proc therock_postinit() {
             -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
             -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
             @[cmake_ccache_option('therock')] \
-            -DTHEROCK_AMDGPU_TARGETS=gfx90a @BuildOpts .
+            -DTHEROCK_AMDGPU_FAMILIES=gfx90X-all @BuildOpts .
     }
   }
 
   var SubProj
   json read (&SubProj) < $Obj/subproject_map.json
+
+  write "Start gathering deps..."
+
   for Comp, Info in (SubProj) {
     var CompName = Comp=>replace('-', '_')
-    add_components "tr_$CompName"
     if ("tr_$CompName" not in ConfigureOpts) {
       write -- "-- project $Comp unexpectedly appeared in postinit"
     }
     var AllDeps = Info.runtime_deps ++ Info.build_deps
+    setvar AllDeps = dehyphenate_list(AllDeps, prepend='tr_')
     write "Comp $Comp: Deps: $[AllDeps.join(', ')]"
     if (AllDeps !== ConfigureOpts["tr_$CompName"].deps) {
-      # This probably isn't necessary -- it's in case dependencies get dropped
-      # when we select a smaller set of enabled projects.
-      setvar ConfigureOpts["tr_$CompName"].deps = dehyphenate_list(AllDeps, prepend='tr_')
+      # Some (optional) dependencies might disappear now, depending on which
+      # set of components is selected to build.
+      write "Adjusting deps for $Comp: previously $[ConfigureOpts["tr_$CompName"].deps.join(', ')]"
+      setvar ConfigureOpts["tr_$CompName"].deps = AllDeps
     }
   }
+
+  write "Done gathering deps."
+
+  # Now we've fixed the dependencies (dropping any we don't need any more),
+  # add the components we're actually building.
+
+  write "Add components..."
+
+  for Comp in (SubProj) {
+    setvar CompName = Comp=>replace('-', '_')
+    add_components "tr_$CompName"
+  }
+
+  write "Done adding components."
 
   var DependOnAll = []
   for Comp in (SubProj) {

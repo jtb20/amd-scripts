@@ -36,7 +36,7 @@ func lookup_func(name) {
 }
 
 proc time_now {
-  date +"%H:%M:%S"
+  date "+%H:%M:%S"
 }
 
 func in_list(item, inlist) {
