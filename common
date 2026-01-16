@@ -40,6 +40,7 @@ var PreinstalledAOMP = null
 var DebugDep = null
 var FlangAdjectiveOverride = null
 var SetRPathOpts = false
+var ModifyCheckoutProcs = []
 
 proc show_vars {
   write "HIP_CLANG_PATH: $[ENV.HIP_CLANG_PATH]"
@@ -762,6 +763,10 @@ proc add_config_adjustment(;;; Block) {
   call ModifyConfigProcs->append(Block)
 }
 
+proc add_checkout_adjustment(;;; Block) {
+  call ModifyCheckoutProcs->append(Block)
+}
+
 # Find variants for components and populate the ComponentVariants dict.
 proc discover_variants() {
   for Comp in (Components) {
@@ -784,6 +789,23 @@ proc modify_defaults() {
       }
       * {
         error "Unexpected deferred config entity: $(pp value (Proc))"
+      }
+    }
+  }
+}
+
+# Similar, modify checkout in some config-specific way (e.g. switching branches)
+proc modify_checkout() {
+  for Proc in (ModifyCheckoutProcs) {
+    case (type(Proc)) {
+      'Proc' {
+        Proc
+      }
+      'Command' {
+        call io->eval(Proc)
+      }
+      * {
+        error "Unexpected deferred postcheckout entity: $(pp value (Proc))"
       }
     }
   }

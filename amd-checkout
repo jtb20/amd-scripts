@@ -208,6 +208,8 @@ maybe_mkdir $SRCDIR
 
 do_downloads (TASKLIST)
 
+modify_checkout
+
 if (SkippedUpdates) {
   write
   # Red, should probably be conditional

@@ -64,7 +64,8 @@ func tr_delegate_env(Comp) {
   var Venv = get_objdir('tr_venv')
   var Env = :| VIRTUAL_ENV=$Venv
                PATH=$(prepend_path $Venv/bin PATH)
-               THEROCK_INTERACTIVE=ON |
+               THEROCK_INTERACTIVE=ON
+               THEROCK_IGNORE_RUNTIME_DEPS=ON |
   return (Env)
 }
 

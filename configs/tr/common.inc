@@ -1,5 +1,3 @@
-source "$CONFIGDIR/tr/therock.inc"
-
 setglobal BwrapUnshareNet = false
 
 # We're called early, this might not have been done yet.
@@ -26,14 +24,14 @@ set_configure_key ('therock', 'rocprof', false)
 set_configure_key ('therock', 'rocprofv3', false)
 set_configure_key ('therock', 'rocprofsys', false)
 set_configure_key ('therock', 'sysdeps', false)
-set_configure_key ('therock', 'compiler', false)
+set_configure_key ('therock', 'compiler', true)
 set_configure_key ('therock', 'hipify', false)
 set_configure_key ('therock', 'core_runtime', false)
 set_configure_key ('therock', 'flatbuffers', false)
 set_configure_key ('therock', 'fmt', false)
 set_configure_key ('therock', 'nlohmann_json', false)
 set_configure_key ('therock', 'spdlog', false)
-set_configure_key ('therock', 'hip_runtime', true)
+set_configure_key ('therock', 'hip_runtime', false)
 set_configure_key ('therock', 'core_hipinfo', false)
 set_configure_key ('therock', 'core_hiptests', false)
 set_configure_key ('therock', 'ocl_runtime', false)
@@ -138,7 +136,18 @@ add_config_adjustment {
   }
 
   append_configure_opts ('therock',
-                         :| -DTHEROCK_ENABLE_RCCL=$[flag('rccl')]
+                         :| # Disable all groups.
+                            -DTHEROCK_ENABLE_ALL=OFF
+                            -DTHEROCK_ENABLE_CORE=OFF
+                            -DTHEROCK_ENABLE_COMM_LIBS=OFF
+                            -DTHEROCK_ENABLE_DEBUG_TOOLS=OFF
+                            -DTHEROCK_ENABLE_MATH_LIBS=OFF
+                            -DTHEROCK_ENABLE_ML_LIBS=OFF
+                            -DTHEROCK_ENABLE_PROFILER=OFF
+                            -DTHEROCK_ENABLE_DC_TOOLS=OFF
+
+                            # Enable individual features.
+                            -DTHEROCK_ENABLE_RCCL=$[flag('rccl')]
                             -DTHEROCK_ENABLE_PRIM=$[flag('prim')]
                             -DTHEROCK_ENABLE_BLAS=$[flag('blas')]
                             -DTHEROCK_ENABLE_RAND=$[flag('rand')]
