@@ -52,7 +52,7 @@ proc cmake_therock {
   cd $Src {
     VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) cmake \
           -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
-          -DTHEROCK_AMDGPU_FAMILIES=gfx90X-all @Cfg .
+          -DTHEROCK_AMDGPU_FAMILIES=dgpu-all @Cfg .
   }
 }
 
@@ -162,10 +162,38 @@ func therock_delegate_gen(Comp, CompName, Info) {
   return (Procs)
 }
 
+proc update_therock_smrev(CompName) {
+  case (CompName) {
+    amd_llvm {
+      var Src = get_srcdir('therock')
+      cd $Src/compiler/amd-llvm {
+        if ! test --exists ../.amd-llvm.smrev {
+          error "Expected to find $Src/.amd-llvm.smrev file"
+        }
+        var smrev="../.amd-llvm.smrev"
+        git config --get remote.origin.url > $smrev
+        var smsha=$(git rev-parse HEAD)
+        # The srock scripts use LLVM_SHA_EXTRA here but do not define it
+        # anywhere.  Should we do similar?
+        write "$smsha" >> $smrev
+      }
+    }
+
+    * {
+      # There is also a ".rocm-systems.smrev", but we ignore that for now.
+      error "Unknown component $CompName for .smrev update"
+    }
+  }
+}
+
 proc therock_preinit() {
   var Src = get_srcdir('therock')
   var Obj = get_objdir('therock', 'preinit')
   var Venv = get_objdir('tr_venv')
+
+  # Do this before the first cmake invocation to avoid surprises with
+  # switching away from an LLVM branch with modifications.
+  update_therock_smrev amd_llvm
 
   if ! test --exists $Obj/subproject_map.json {
     # Subproject map isn't there, try again?
@@ -185,7 +213,7 @@ proc therock_preinit() {
       VIRTUAL_ENV=$Venv PATH=$(prepend_path $Venv/bin PATH) cmake \
             -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
             -DTHEROCK_ENABLE_ALL=ON \
-            -DTHEROCK_AMDGPU_FAMILIES=gfx90X-all .
+            -DTHEROCK_AMDGPU_FAMILIES=dgpu-all .
     }
   }
 
@@ -271,7 +299,7 @@ proc therock_postinit() {
             -DTHEROCK_INTROSPECTION=ON -GNinja -B $Obj \
             -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
             @[cmake_ccache_option('therock')] \
-            -DTHEROCK_AMDGPU_FAMILIES=gfx90X-all @BuildOpts .
+            -DTHEROCK_AMDGPU_FAMILIES=dgpu-all @BuildOpts .
     }
   }
 
