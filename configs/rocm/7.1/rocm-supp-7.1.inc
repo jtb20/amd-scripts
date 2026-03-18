@@ -2,7 +2,7 @@ var rocsmilib_src = {
   "url" : "https://github.com/ROCm/rocm_smi_lib",
   "type" : "git",
   "version" : "release/rocm-rel-7.1",
-  "version_name" : "6.4",
+  "version_name" : "7.1",
   "shallow_clone" : false
 }
 
