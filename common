@@ -1080,7 +1080,9 @@ proc do_bwrap {
           --die-with-parent \
           @ARGV
   } else {
+    # The .parallel bind is needed for smoke tests (GNU Parallel) to work.
     bwrap --ro-bind / / \
+          --bind $[ENV.HOME]/.parallel $[ENV.HOME]/.parallel \
           --bind /tmp /tmp \
           @BwrapExtraOpts \
           @CCacheDirOpt \
