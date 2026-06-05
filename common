@@ -819,7 +819,8 @@ proc unset_varlist() {
   var bashfunc = / 'BASH_FUNC_' .* /
   var kv = / <capture (w|'_')+ (alnum|'_')* as key> '=' <capture dot* as value> /
   var env_whitelist = :| _ PATH ENV HOME TERM LANG PWD OLDPWD USER LOGNAME SHELL
-                         NAME SHLVL HOSTTYPE LINES COLUMNS |
+                         NAME SHLVL HOSTTYPE LINES COLUMNS
+                         GCN_PLUGIN_IMPL GCN_DEBUG GOMP_DEBUG |
 
   for x in (current) {
     if (x ~ bashfunc) {
