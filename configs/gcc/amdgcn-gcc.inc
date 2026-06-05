@@ -58,7 +58,8 @@ append_configure_opts ("gcc", :| --enable-offload-targets=amdgcn-amdhsa
                                  --enable-lto
                                  --enable-languages=c,c++,fortran,lto
                                  --disable-multilib
-                                 --disable-bootstrap |)
+                                 --disable-bootstrap
+                                 --with-libhsastream=$INSTALLDIR |)
 
 add_testsuites gcc c cxx fortran libstdcxx libgomp
 
