@@ -48,7 +48,8 @@ append_configure_opts ("accel_gcc", :| --with-sysroot=/opt/amd
                                        --with-build-time-tools=$INSTALLDIR/amdgcn-amdhsa/bin
                                        --enable-as-accelerator-for=x86_64-linux-gnu
                                        --disable-decimal-float
-                                       --enable-languages=c,fortran,lto |)
+                                       --enable-languages=c,fortran,lto
+                                       --with-multilib-list=gfx906,gfx908,gfx90a,gfx90c,gfx1030,gfx1036,gfx1100,gfx1103 |)
 
 set_target ("binutils", "x86_64-linux-gnu")
 
