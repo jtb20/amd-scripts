@@ -1,0 +1,74 @@
+#!/usr/bin/env ysh
+
+proc clean_libhsastream() {
+  clean_component libhsastream
+}
+
+# The checkout lives at src/libhsastream (no -<version> suffix), so override
+# the get_src_default convention which would look for src/libhsastream-main.
+func get_libhsastream_src() {
+  return ("libhsastream")
+}
+
+proc configure_libhsastream() {
+  var Build = get_objdir("libhsastream")
+  var Src = get_srcdir("libhsastream")
+  var BuildType = get_build_type("libhsastream")
+  var Tool = get_build_tool("libhsastream")
+  var Cfg_opts = get_configure_opts("libhsastream")
+
+  # libhsastream needs the HSA headers (hsa/hsa.h, hsa/hsa_ext_amd.h) at
+  # compile time only -- it dlopens libhsa-runtime64 at runtime. We must build
+  # it BEFORE llvm (the amdgpu_hsx plugin links it), so we cannot take a build
+  # dependency on rocr_runtime (which itself depends on llvm -> a cycle).
+  # Instead, pick the headers up directly from the rocr_runtime *source* tree.
+  # Those headers live flat in runtime/hsa-runtime/inc, but our sources include
+  # them as <hsa/...>, so stage a build-dir-local "hsa" symlink pointing at the
+  # rocr inc dir and feed that prefix to FindHSA via HSA_INCLUDE_DIR.
+  var RocrIncSrc = "$[get_srcdir('rocr_runtime')]/runtime/hsa-runtime/inc"
+  var HsaShim = "$Build/hsa-include"
+  var HsaArgs = :| -DLIBHSASTREAM_HSA_PATH=$INSTALLDIR |
+  if test -d $RocrIncSrc {
+    mkdir -p $HsaShim
+    ln -sfn $RocrIncSrc $HsaShim/hsa
+    setvar HsaArgs = :| -DHSA_INCLUDE_DIR=$HsaShim |
+  }
+
+  cd $Build {
+    # Build only the static flavour: the amdgpu_hsx plugin links it into
+    # libomptarget.so, so no shared object needs to be installed or rpath'd.
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DLIBHSASTREAM_BUILD_SHARED=OFF \
+      -DLIBHSASTREAM_BUILD_STATIC=ON \
+      -DLIBHSASTREAM_BUILD_TESTS=OFF \
+      @HsaArgs \
+      @Cfg_opts \
+      $Src
+  }
+}
+
+proc default_configure_opts_libhsastream() {
+  set_configure_opts ("libhsastream", [])
+}
+
+proc build_libhsastream() {
+  cmake_build libhsastream
+}
+
+proc install_libhsastream() {
+  cmake_install libhsastream
+}
+
+# No build dependencies: llvm depends on libhsastream (the amdgpu_hsx plugin
+# links it), so libhsastream must build first, using the system compiler. The
+# only external input is the HSA headers, taken from the rocr_runtime *source*
+# tree at configure time (see configure_libhsastream) rather than its install.
+func libhsastream_dependencies() {
+  return ([])
+}
+
+proc libhsastream_tasks() {
+  standard_tasks libhsastream
+}

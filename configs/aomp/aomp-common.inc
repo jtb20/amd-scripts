@@ -1,7 +1,15 @@
 
 # Define conditional deps before adding their associated component.
 func llvm_conditional_deps() {
-  return (:| @llvm_more_conditional_deps hwloc |)
+  var deps = :| @llvm_more_conditional_deps hwloc |
+  # The amdgpu_hsx plugin links the external libhsastream static library, which
+  # must be built and installed before llvm/offload configures (it is located
+  # via find_package(libhsastream CONFIG)). Only pull it in when the plugin is
+  # requested via --add amdgpu_hsx.
+  if (in_list("amdgpu_hsx", OptionalModules)) {
+    setvar deps = deps ++ :| libhsastream |
+  }
+  return (deps)
 }
 
 add_components hwloc rocsmilib llvm comgr device_libs aomp_extras
@@ -124,6 +132,35 @@ proc add_optional_module (Mod) {
 
     taskgraph {
       append_configure_opts ("llvm", :| -DLIBOMP_TASKGRAPH_EXPERIMENTAL=ON |)
+    }
+
+    amdgpu_hsx {
+      # Opt-in build of the libhsastream-backed AMDGPU OpenMP offload plugin
+      # (sibling of the legacy amdgpu plugin, selected at runtime via
+      # LIBOMPTARGET_AMDGPU_IMPL=hsx).
+      #
+      # LIBOMPTARGET_HSA_PATH points at the staged-install dir, where the
+      # earlier rocr_runtime/install step has populated include/hsa/hsa.h and
+      # lib/cmake/hsa-runtime64/. (libhsastream's FindHSA also accepts
+      # LIBHSASTREAM_HSA_PATH, but only the LIBOMPTARGET_ prefix is forwarded
+      # into the LLVM runtimes sub-build, where libhsastream actually configures.)
+      #
+      # LIBOMPTARGET_LIBHSASTREAM_PATH points at the staged-install prefix
+      # where the separately-built libhsastream component installed its static
+      # library, headers and CMake package config. Like LIBOMPTARGET_HSA_PATH
+      # it carries the LIBOMPTARGET_ prefix, so it is forwarded into the LLVM
+      # runtimes sub-build where offload's find_package(libhsastream CONFIG)
+      # consumes it as a HINTS path.
+      append_configure_opts ("llvm", :| -DLIBOMPTARGET_BUILD_AMDGPU_HSX=ON
+                                        -DLIBOMPTARGET_HSA_PATH=$INSTALLDIR
+                                        -DLIBOMPTARGET_LIBHSASTREAM_PATH=$INSTALLDIR |)
+    }
+
+    amdgpu_hip {
+      # Opt-in build of the HIP-runtime-backed AMDGPU OpenMP offload plugin
+      # (sibling of the legacy amdgpu plugin, selected at runtime via
+      # LIBOMPTARGET_AMDGPU_IMPL=hip).
+      append_configure_opts ("llvm", :| -DLIBOMPTARGET_BUILD_AMDGPU_HIP=ON |)
     }
 
     gpu_libc {
