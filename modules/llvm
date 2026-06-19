@@ -104,23 +104,47 @@ proc run_lit {
 
 proc run_llvm_check(check_target) {
   var BuildDir = get_objdir("llvm")
-  cd $BuildDir {
-    var Tool = get_build_tool("llvm")
-    if (Tool === "Ninja") {
-      try {
-        if (SelectTests !== null) {
-          # This is a regex, not a glob.  Consistency, schmonsistency.
-          FILECHECK_OPTS="--dump-input=always" LIT_FILTER=$SelectTests LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
-        } else {
-          LIT_OPTS="-o testresults.json" ninja -k 0 $check_target
+  # Inside the build sandbox /opt is a tmpfs (see do_bwrap), so clang can't see
+  # the system ROCm and fails to locate the device bitcode (amdgcn/bitcode)
+  # needed by the offload/openmp suites.  Point it at our own install tree via
+  # ROCM_PATH, fed into every test's environment through the suites'
+  # CHECK_OPENMP_ENV hook (offload/test/lit.cfg, openmp/runtime/test/lit.cfg).
+  # ROCM_PATH (unlike --rocm-path) is silently ignored by non-AMD/host compiles,
+  # so it adds no unused-argument warnings to the CPU suites, and harmless for
+  # non-OpenMP check targets which don't read CHECK_OPENMP_ENV.
+  # A per-test timeout (requires the psutil python module) keeps a single
+  # hung/deadlocked test (e.g. a GPU reduction that never returns) from
+  # wedging the whole campaign: lit marks it TIMEOUT and moves on instead of
+  # blocking forever.  300s is generous - real offload tests finish in well
+  # under a second.
+  var LitOpts = "-o testresults.json --timeout=300"
+  # ROCM_PATH: device bitcode (amdgcn/bitcode) lives in our install tree, not
+  #   the bwrap-hidden /opt/rocm.
+  # LD_LIBRARY_PATH=$INSTALLDIR/lib: the AMDGPU plugins dlopen the bare soname
+  #   "libhsa-runtime64.so" (dynamic_hsa/hsa.cpp / the hsx hsa_loader), so this
+  #   makes them bind OUR freshly-built HSA runtime (installed via
+  #   rocr_runtime/install) instead of a system/stub libhsa or an uncontrolled
+  #   /opt/rocm.  $INSTALLDIR/lib holds no libomp*/libomptarget*/libLLVM*, so it
+  #   can't shadow the obj-tree runtime libs the tests resolve via DT_RUNPATH.
+  with-env CHECK_OPENMP_ENV="ROCM_PATH=$INSTALLDIR LD_LIBRARY_PATH=$INSTALLDIR/lib" {
+    cd $BuildDir {
+      var Tool = get_build_tool("llvm")
+      if (Tool === "Ninja") {
+        try {
+          if (SelectTests !== null) {
+            # This is a regex, not a glob.  Consistency, schmonsistency.
+            FILECHECK_OPTS="--dump-input=always" LIT_FILTER=$SelectTests LIT_OPTS=$LitOpts ninja -k 0 $check_target
+          } else {
+            LIT_OPTS=$LitOpts ninja -k 0 $check_target
+          }
         }
-      }
-    } else {
-      try {
-        if (SelectTests !== null) {
-          make -k $check_target LIT_OPTS="-o testresults.json" LIT_FILTER=$SelectTests
-        } else {
-          make -k $check_target LIT_OPTS="-o testresults.json"
+      } else {
+        try {
+          if (SelectTests !== null) {
+            make -k $check_target LIT_OPTS=$LitOpts LIT_FILTER=$SelectTests
+          } else {
+            make -k $check_target LIT_OPTS=$LitOpts
+          }
         }
       }
     }

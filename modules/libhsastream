@@ -23,15 +23,13 @@ proc configure_libhsastream() {
   # dependency on rocr_runtime (which itself depends on llvm -> a cycle).
   # Instead, pick the headers up directly from the rocr_runtime *source* tree.
   # Those headers live flat in runtime/hsa-runtime/inc, but our sources include
-  # them as <hsa/...>, so stage a build-dir-local "hsa" symlink pointing at the
-  # rocr inc dir and feed that prefix to FindHSA via HSA_INCLUDE_DIR.
+  # them as <hsa/...>. We hand the flat dir to libhsastream's CMake via
+  # HSA_INCLUDE_PATH; FindHSA.cmake stages the build-dir "hsa" symlink shim
+  # itself, so the driver no longer owns that detail.
   var RocrIncSrc = "$[get_srcdir('rocr_runtime')]/runtime/hsa-runtime/inc"
-  var HsaShim = "$Build/hsa-include"
   var HsaArgs = :| -DLIBHSASTREAM_HSA_PATH=$INSTALLDIR |
   if test -d $RocrIncSrc {
-    mkdir -p $HsaShim
-    ln -sfn $RocrIncSrc $HsaShim/hsa
-    setvar HsaArgs = :| -DHSA_INCLUDE_DIR=$HsaShim |
+    setvar HsaArgs = :| -DHSA_INCLUDE_PATH=$RocrIncSrc |
   }
 
   cd $Build {

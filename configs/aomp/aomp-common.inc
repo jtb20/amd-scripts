@@ -151,8 +151,18 @@ proc add_optional_module (Mod) {
       # it carries the LIBOMPTARGET_ prefix, so it is forwarded into the LLVM
       # runtimes sub-build where offload's find_package(libhsastream CONFIG)
       # consumes it as a HINTS path.
+      #
+      # LIBOMPTARGET_LIBHSASTREAM_HSA_INCLUDE_PATH points at the rocr_runtime
+      # *source* inc dir (flat hsa.h / hsa_ext_amd.h). The amdgpu_hsx plugin
+      # pulls in <hsa/hsa.h> transitively via libhsastream's hsx/hsx.h, but at
+      # LLVM-build time no hsa-runtime64 package exists yet (rocr_runtime
+      # depends on LLVM and is installed afterwards), so the plugin's CMake
+      # stages a build-dir "hsa" symlink from this path - the same source-tree
+      # trick libhsastream itself uses. (LIBOMPTARGET_ prefix => forwarded into
+      # the runtimes sub-build.)
       append_configure_opts ("llvm", :| -DLIBOMPTARGET_BUILD_AMDGPU_HSX=ON
                                         -DLIBOMPTARGET_HSA_PATH=$INSTALLDIR
+                                        -DLIBOMPTARGET_LIBHSASTREAM_HSA_INCLUDE_PATH=$[get_srcdir('rocr_runtime')]/runtime/hsa-runtime/inc
                                         -DLIBOMPTARGET_LIBHSASTREAM_PATH=$INSTALLDIR |)
     }
 
