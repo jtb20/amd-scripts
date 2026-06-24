@@ -37,7 +37,8 @@ append_configure_opts ("accel_gcc_first", :| --with-sysroot=/opt/amd
                                              --enable-languages=c
                                              --disable-decimal-float
                                              --disable-libgomp
-                                             --disable-libssp |)
+                                             --disable-libssp
+                                             --with-multilib-list=gfx906,gfx908,gfx90a,gfx90c,gfx1030,gfx1036,gfx1100,gfx1103 |)
 
 set_target ("accel_newlib", "amdgcn-amdhsa")
 append_configure_opts ("accel_newlib", :| --enable-newlib-io-long-long |)
