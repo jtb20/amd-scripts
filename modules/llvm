@@ -120,13 +120,25 @@ proc run_llvm_check(check_target) {
   var LitOpts = "-o testresults.json --timeout=300"
   # ROCM_PATH: device bitcode (amdgcn/bitcode) lives in our install tree, not
   #   the bwrap-hidden /opt/rocm.
-  # LD_LIBRARY_PATH=$INSTALLDIR/lib: the AMDGPU plugins dlopen the bare soname
-  #   "libhsa-runtime64.so" (dynamic_hsa/hsa.cpp / the hsx hsa_loader), so this
-  #   makes them bind OUR freshly-built HSA runtime (installed via
-  #   rocr_runtime/install) instead of a system/stub libhsa or an uncontrolled
-  #   /opt/rocm.  $INSTALLDIR/lib holds no libomp*/libomptarget*/libLLVM*, so it
-  #   can't shadow the obj-tree runtime libs the tests resolve via DT_RUNPATH.
-  with-env CHECK_OPENMP_ENV="ROCM_PATH=$INSTALLDIR LD_LIBRARY_PATH=$INSTALLDIR/lib" {
+  # LD_LIBRARY_PATH needs to cover libs that live in two different install
+  # subtrees, because the openmp/runtime lit suite builds its test binaries
+  # WITHOUT an rpath on Linux (openmp/runtime/test/lit.cfg only adds -rpath on
+  # Darwin) and then OVERWRITES LD_LIBRARY_PATH with this value (lit.cfg:190,
+  # config.environment[name]=value), so the build's own lib dir is dropped and
+  # the only way the binaries find libomp.so is via the dirs we list here:
+  #   - $INSTALLDIR/lib: the AMDGPU plugins dlopen the bare soname
+  #     "libhsa-runtime64.so" (dynamic_hsa/hsa.cpp / the hsx hsa_loader); this
+  #     binds OUR freshly-built HSA runtime (rocr_runtime/install) instead of a
+  #     system/stub libhsa or an uncontrolled /opt/rocm.  (libhsastream is a
+  #     static .a linked into libomptarget, so it needs no runtime path.)
+  #   - $LLVMInst/lib/<triple> and $LLVMInst/lib: the LLVM install is nested at
+  #     $INSTALLDIR/lib/llvm, so libomp.so/libomptarget.so land in the
+  #     per-target-runtime-dir subdir and libLLVM.so in lib/.  Without these
+  #     the openmp-runtime tests fail to load libomp.so (exit 127).
+  # The offload suite is unaffected either way: its binaries carry a DT_RUNPATH
+  # into the obj tree for libomp/libomptarget, and only need libhsa from here.
+  var LLVMInst = get_installdir('llvm')
+  with-env CHECK_OPENMP_ENV="ROCM_PATH=$INSTALLDIR LD_LIBRARY_PATH=$INSTALLDIR/lib:$LLVMInst/lib/x86_64-unknown-linux-gnu:$LLVMInst/lib" {
     cd $BuildDir {
       var Tool = get_build_tool("llvm")
       if (Tool === "Ninja") {

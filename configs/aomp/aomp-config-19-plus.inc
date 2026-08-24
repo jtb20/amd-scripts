@@ -93,4 +93,10 @@ add_config_adjustment {
                                    -DCLR_BUILD_HIP=ON
                                    -DCLR_BUILD_OCL=ON
                                    -DHIPCC_BIN_DIR=$HipCCBuild |)
+
+  # comgr's gtest unit tests (test-unit/) don't put libLLVM.so on their link
+  # line, so against an LLVM dylib build they fail with "DSO missing from
+  # command line" on llvm::sys::PrintStackTraceOnErrorSignal.  The comgr
+  # library/install don't depend on the tests, so disable them.
+  append_configure_opts ("comgr", :| -DBUILD_TESTING=OFF |)
 }

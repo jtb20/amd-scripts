@@ -118,6 +118,14 @@ proc add_optional_module (Mod) {
       add_components roctracer
     }
 
+    hrx_system {
+      # Opt-in build of the HRX (HIP Runtime Extended) system, an alternative
+      # HIP implementation from https://github.com/ROCm/hrx-system. Not part of
+      # the default pipeline and not consumed by any other component; enable it
+      # explicitly via --add hrx_system to build/checkout it.
+      add_components hrx_system
+    }
+
     rocprofiler {
       add_components rocprofiler
     }
@@ -171,6 +179,29 @@ proc add_optional_module (Mod) {
       # (sibling of the legacy amdgpu plugin, selected at runtime via
       # LIBOMPTARGET_AMDGPU_IMPL=hip).
       append_configure_opts ("llvm", :| -DLIBOMPTARGET_BUILD_AMDGPU_HIP=ON |)
+    }
+
+    amdgpu_hrx {
+      # Opt-in build of the HRX-System-backed AMDGPU OpenMP offload plugin
+      # (sibling of the legacy amdgpu plugin, selected at runtime via
+      # LIBOMPTARGET_AMDGPU_IMPL=hrx).
+      #
+      # The plugin never links libhrx: it dlopens libhrx.so at first use, so
+      # only the HRX public *source* header (hrx_runtime.h) is needed at LLVM
+      # build time. LIBOMPTARGET_HRX_INCLUDE_PATH points at the hrx_system
+      # checkout's libhrx/include dir (LIBOMPTARGET_ prefix => forwarded into
+      # the runtimes sub-build). The source is present as soon as amd-checkout
+      # clones the component, which happens before any build.
+      #
+      # hrx_system is pulled in as a component (add_components) rather than a
+      # conditional dep of llvm: hrx_system_dependencies() lists {llvm,
+      # rocr_runtime}, so it must build AFTER llvm - adding it to
+      # llvm_conditional_deps would create a cycle. As a post-llvm component it
+      # still builds+installs libhrx.so into the (-r) install tree so the
+      # runtime dlopen resolves it via the $ORIGIN rpath.
+      add_components hrx_system
+      append_configure_opts ("llvm", :| -DLIBOMPTARGET_BUILD_AMDGPU_HRX=ON
+                                        -DLIBOMPTARGET_HRX_INCLUDE_PATH=$[get_srcdir('hrx_system')]/libhrx/include |)
     }
 
     gpu_libc {

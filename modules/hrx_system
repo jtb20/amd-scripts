@@ -1,0 +1,97 @@
+#!/usr/bin/env ysh
+
+proc clean_hrx_system() {
+  clean_component hrx_system
+}
+
+# The component is registered under the underscored name "hrx_system", but the
+# upstream repo is "hrx-system"; the user-facing checkout convention here is
+# src/hrx-system-<branch> (hyphenated repo name + version), which is what we
+# return rather than the underscored "hrx_system-<branch>" that get_src_default
+# would produce.
+func get_hrx_system_src() {
+  return ("hrx-system-$[get_version_name('hrx_system')]")
+}
+
+proc configure_hrx_system() {
+  var Build = get_objdir("hrx_system")
+  var Src = get_srcdir("hrx_system")
+  var BuildType = get_build_type("hrx_system")
+  var Tool = get_build_tool("hrx_system")
+  var Cfg_opts = get_configure_opts("hrx_system")
+  var LLVM_Inst = get_installdir('llvm')
+
+  # HRX (HIP Runtime Extended) is an IREE-based CMake project. It needs a ROCm
+  # LLVM toolchain (clang/lld) plus ROCm HSA + AQL profile headers/libraries.
+  # In this checkout the just-built llvm component supplies clang/lld and the
+  # staged install ($INSTALLDIR, where rocr_runtime installed HSA) supplies the
+  # ROCm dependencies in "package" mode. See the repo README for the full set
+  # of options.
+  cd $Build {
+    cmake -G $Tool \
+      -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DCMAKE_C_COMPILER=$LLVM_Inst/bin/clang \
+      -DCMAKE_CXX_COMPILER=$LLVM_Inst/bin/clang++ \
+      -DCMAKE_ASM_COMPILER=$LLVM_Inst/bin/clang \
+      -DCMAKE_AR=$LLVM_Inst/bin/llvm-ar \
+      -DCMAKE_RANLIB=$LLVM_Inst/bin/llvm-ranlib \
+      -DIREE_ROCM_PATH=$INSTALLDIR \
+      -DIREE_ROCM_DEPENDENCY_MODE=pinned \
+      -DIREE_HAL_DRIVER_AMDGPU=ON \
+      @[get_rpath_opts('hrx_system')] \
+      -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
+      -DCMAKE_MODULE_LINKER_FLAGS="-fuse-ld=lld" \
+      -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,--disable-new-dtags" \
+      @Cfg_opts \
+      $Src
+  }
+}
+
+proc default_configure_opts_hrx_system() {
+  # IREE's test/sample/benchmark trees pull in googletest / google_benchmark via
+  # FetchContent (a network git-clone at configure time), which fails in the
+  # offline sandboxed build. libhrx.so (the only artefact the amdgpu_hrx plugin
+  # dlopens at runtime) does not need any of them, so turn them off.
+  #
+  # The remaining runtime third-party deps (flatcc, spirv-tools/headers,
+  # vulkan-headers, libbacktrace) are pulled by IREE via network FetchContent,
+  # which the offline sandbox cannot reach. They are pre-fetched into
+  # ../hrx-deps and handed to CMake through the standard
+  # FETCHCONTENT_SOURCE_DIR_<NAME> overrides so no download is attempted.
+  var Deps = "/work2/julbrown/code/mainline+amd-staging/hrx-deps"
+  # loom's code generators use PEP 695 `type` statements, which require
+  # Python >= 3.12; the system /usr/bin/python3.10 that CMake finds by default
+  # cannot parse them. Pin the homebrew 3.12 interpreter.
+  set_configure_opts ("hrx_system", :| -DPython3_EXECUTABLE=/home/julbrown/homebrew/bin/python3.12
+                                        -DIREE_BUILD_TESTS=OFF
+                                        -DIREE_BUILD_SAMPLES=OFF
+                                        -DIREE_BUILD_BENCHMARKS=OFF
+                                        "-DFETCHCONTENT_SOURCE_DIR_FLATCC=$Deps/flatcc"
+                                        "-DFETCHCONTENT_SOURCE_DIR_SPIRV_TOOLS=$Deps/spirv_tools"
+                                        "-DFETCHCONTENT_SOURCE_DIR_SPIRV_HEADERS=$Deps/spirv_headers"
+                                        "-DFETCHCONTENT_SOURCE_DIR_VULKAN_HEADERS=$Deps/vulkan_headers"
+                                        "-DFETCHCONTENT_SOURCE_DIR_LIBBACKTRACE_SRC=$Deps/libbacktrace"
+                                        "-DFETCHCONTENT_SOURCE_DIR_HSA_RUNTIME_HEADERS=$Deps/hsa_runtime_headers"
+                                        "-DFETCHCONTENT_SOURCE_DIR_HIP_API_HEADERS=$Deps/hip_api_headers"
+                                        "-DFETCHCONTENT_SOURCE_DIR_LOOM_AMDGPU_ISA_XML=$Deps/loom_amdgpu_isa_xml" |)
+}
+
+proc build_hrx_system() {
+  cmake_build hrx_system
+}
+
+proc install_hrx_system() {
+  cmake_install hrx_system
+}
+
+# HRX consumes the ROCm LLVM toolchain (clang/lld) and HSA, so it must build
+# after llvm and rocr_runtime.
+func hrx_system_dependencies() {
+  return (:| llvm rocr_runtime |)
+}
+
+proc hrx_system_tasks() {
+  standard_tasks hrx_system
+}
