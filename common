@@ -973,7 +973,7 @@ func get_amd_gpus() {
     var RAE = $(which rocm_agent_enumerator)
   }
   if (_error.code !== 0) {
-    setvar RAE = "$INSTALLDIR/bin/rocm_agent_enumerator"
+    setvar RAE = "$[get_rocm_root()]/bin/rocm_agent_enumerator"
     if ! test --exists $RAE {
       error "No rocm_agent_enumerator found"
     }
@@ -1366,6 +1366,29 @@ proc unset_varlist() {
 # for testing mainline builds).  You need to use the -B/--no-bwrap option if
 # you want to access the system's /opt/rocm.
 
+# The root of the ROCm stack under test: HIP, rocm_agent_enumerator and friends
+# live here, with the compiler in a subdirectory named by append_install_dir.
+# Normally that is what we installed locally, but --aomp points at a toolchain
+# installed elsewhere, which brings its own ROCm along with it while the local
+# install directory stays empty.  --aomp names the compiler directory, so walk
+# back up to the tree containing it.
+func get_rocm_root() {
+  if (not PreinstalledAOMP) {
+    return (INSTALLDIR)
+  }
+  var Suffix = ''
+  if ('llvm' in ConfigureOpts and
+      'append_install_dir' in ConfigureOpts.llvm and
+      ConfigureOpts.llvm.append_install_dir) {
+    setvar Suffix = "/$[ConfigureOpts.llvm.append_install_dir]"
+  }
+  if (Suffix and PreinstalledAOMP=>endsWith(Suffix)) {
+    return (PreinstalledAOMP=>trimEnd(Suffix))
+  }
+  # A flat installation, or one laid out some other way: take it as it stands.
+  return (PreinstalledAOMP)
+}
+
 proc rocm_env {
   var LLVM_Inst = get_installdir('llvm')
   if (ARGV[0] === '--system') {
@@ -1382,26 +1405,17 @@ proc rocm_env {
       @[ARGV[1:]]
     }
   } else {
-    # Normally the ROCm stack and HIP are the tree we installed here.  With
-    # --aomp we are testing a toolchain installed elsewhere, which brings its
-    # own ROCm and HIP along with it, so point both at that instead: the local
-    # install directory is typically empty in that case.
-    var UseROCm = INSTALLDIR
-    var UseHIP = INSTALLDIR
-    if (PreinstalledAOMP) {
-      setvar UseROCm = PreinstalledAOMP
-      setvar UseHIP = PreinstalledAOMP
-    }
-    with-env LD_LIBRARY_PATH=$(prepend_path "$INSTALLDIR/lib" \
+    var ROCm = get_rocm_root ()
+    with-env LD_LIBRARY_PATH=$(prepend_path "$ROCm/lib" \
                                             "$LLVM_Inst/lib" \
                                             "$LLVM_Inst/lib/x86_64-unknown-linux-gnu" \
                                             LD_LIBRARY_PATH) \
              HIP_CLANG_PATH=$LLVM_Inst/bin \
-             ROCM_PATH=$UseROCm \
-             HIP_PATH=$UseHIP \
+             ROCM_PATH=$ROCm \
+             HIP_PATH=$ROCm \
              LLVM_PATH=$LLVM_Inst \
              AOMP=$LLVM_Inst \
-             PATH=$(prepend_path $LLVM_Inst/bin $INSTALLDIR/bin PATH) {
+             PATH=$(prepend_path $LLVM_Inst/bin $ROCm/bin PATH) {
       @ARGV
     }
   }
@@ -1590,13 +1604,16 @@ proc do_bwrap {
   # to create the destination, which it cannot do through a symlinked parent.
   var AOMPBind = []
   if (PreinstalledAOMP) {
-    var RealAOMP = $(readlink -f $PreinstalledAOMP)
-    if (PreinstalledAOMP=>startsWith('/opt/') or RealAOMP=>startsWith('/opt/')) {
+    # Bind the whole tree rather than just the compiler directory inside it:
+    # HIP and rocm_agent_enumerator are at the root.
+    var AOMPRoot = get_rocm_root ()
+    var RealAOMP = $(readlink -f $AOMPRoot)
+    if (AOMPRoot=>startsWith('/opt/') or RealAOMP=>startsWith('/opt/')) {
       setvar AOMPBind = :| --ro-bind $RealAOMP $RealAOMP |
       # /opt/rocm is normally a symlink to a versioned directory, and neither
       # name survives the tmpfs, so make the requested one work too.
-      if (RealAOMP !== PreinstalledAOMP) {
-        setvar AOMPBind = AOMPBind ++ :| --ro-bind $RealAOMP $PreinstalledAOMP |
+      if (RealAOMP !== AOMPRoot) {
+        setvar AOMPBind = AOMPBind ++ :| --ro-bind $RealAOMP $AOMPRoot |
       }
     }
   }

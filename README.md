@@ -741,7 +741,13 @@ amd-test --aomp /path/to/aomp_24.0-0/lib/llvm \
          aomp/24/amd-staging-rocm-10.0.cfg test_aomp_smoke
 ```
 
-`DIR` becomes `ROCM_PATH`, `HIP_PATH`, `LLVM_PATH` and `AOMP` for the tests.
+`DIR` becomes `LLVM_PATH` and `AOMP` for the tests. An AOMP installation is laid
+out the way this repository installs one, with the compiler in `lib/llvm` inside
+a tree that carries HIP, `rocm_agent_enumerator` and the rest of the ROCm stack
+at its root, so `ROCM_PATH` and `HIP_PATH` become that root — `DIR` with the
+`lib/llvm` suffix removed. Point `--aomp` at the compiler directory and the rest
+follows.
+
 Nothing has to have been built in the work directory, but the testsuites
 themselves come from the checked-out sources, so `amd-checkout` is still needed.
 
@@ -749,6 +755,8 @@ The sandbox binds the whole filesystem read-only, so a toolchain is visible
 wherever it lives. The exception is `/opt`, which is replaced by a tmpfs: a
 toolchain named there is bound back in, at both the name you give and the one it
 resolves to, since `/opt/rocm` is usually a symlink to a versioned directory.
+Note that this also hides the system `rocm_agent_enumerator`, which is why the
+tests use the one belonging to the toolchain under test.
 
 Only `amd-test` accepts this. `amd-build` rejects it, because the same setting
 also decides where components install, so a build would write over the toolchain
