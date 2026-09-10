@@ -1,5 +1,5 @@
 var rocm_dbgapi_src = {
-  "url" : "ssh://gerritgit/compute/ec/rocm-dbgapi",
+  "url" : "https://github.com/ROCm/ROCdbgapi",
   "type" : "git",
   "version" : "amd-mainline",
   "version_name" : "mainline",

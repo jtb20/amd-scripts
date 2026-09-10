@@ -103,11 +103,14 @@ var composable_kernel_src = {
   "shallow_clone" : false
 }
 
+# aqlprofile was closed source until ROCm 7.0, so there is no 6.x branch to
+# match the rest of this config; 7.0 is the oldest the public repo offers.
+# Nothing here builds aqlprofile by default.
 var aqlprofile_src = {
-  "url" : "ssh://gerritgit/hsa/ec/aqlprofile",
+  "url" : "https://github.com/ROCm/aqlprofile.git",
   "type" : "git",
-  "version" : "release/rocm-rel-6.2",
-  "version_name" : "rel-6.2",
+  "version" : "release/rocm-rel-7.0",
+  "version_name" : "rel-7.0",
   "shallow_clone" : false
 }
 

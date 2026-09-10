@@ -1,5 +1,5 @@
 var rocgdb_src = {
-  "url" : "ssh://gerritgit/compute/ec/rocm-gdb",
+  "url" : "https://github.com/ROCm/ROCgdb",
   "type" : "git",
   "version" : "amd-mainline-rocgdb-14",
   "version_name" : "14",

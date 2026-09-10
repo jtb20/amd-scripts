@@ -1,5 +1,5 @@
 var rocprofiler_src = {
-  "url" : "ssh://gerritgit/compute/ec/rocprofiler",
+  "url" : "https://github.com/ROCm/rocprofiler",
   "type" : "git",
   "version" : "amd-master",
   "version_name" : "amd-master",
