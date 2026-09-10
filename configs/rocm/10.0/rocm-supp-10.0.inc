@@ -1,6 +1,6 @@
 # rocm_smi_lib moved into the rocm-systems monorepo too, so unlike the earlier
 # versions of this file it is a subcomponent rather than a checkout of its own.
-# rocm-10.inc must be sourced first for the parent to exist.
+# rocm-10.0.inc must be sourced first for the parent to exist.
 
 var rocsmilib_src = {
   "type" : "subcomponent",

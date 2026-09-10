@@ -1,5 +1,5 @@
 # ROCdbgapi is projects/rocdbgapi in the rocm-systems monorepo now, so
-# rocm-10.inc must be sourced before this file.
+# rocm-10.1.inc must be sourced before this file.
 
 var rocm_dbgapi_src = {
   "type" : "subcomponent",

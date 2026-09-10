@@ -43,7 +43,7 @@ var hipfort_src = {
 
 # The rocprofiler repositories are archived: their ROCm 7.2 sources are now
 # taken from the ROCm/rocm-systems monorepo's release branch.  The monorepo is
-# a placeholder component (see modules/rocm_systems and configs/rocm/10), only
+# a placeholder component (see modules/rocm_systems and configs/rocm/10.0), only
 # cloned when one of these is built, and the submodules they need are
 # initialised after checkout (below).
 

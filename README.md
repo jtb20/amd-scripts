@@ -216,9 +216,10 @@ Building and testing then work exactly as above.
 | Goal | Config |
 |------|--------|
 | Current AOMP-like stack | `aomp/23/amd-staging-rocm-7.2.cfg` |
-| Closest to a current TheRock or AOMP build (`amd-staging` with ROCm 10) | `aomp/23/amd-staging-rocm-10.cfg` |
 | Upstream LLVM `main` with the ROCm stack | `aomp/23/mainline+amd-staging-rocm-7.2.cfg` |
-| Upstream LLVM `main` with the ROCm 10 stack | `aomp/23/mainline+amd-staging-rocm-10.cfg` |
+| Closest to a current TheRock or AOMP build (`amd-staging` with ROCm 10.0) | `aomp/24/amd-staging-rocm-10.0.cfg` |
+| Upstream LLVM `main` with the ROCm 10.0 stack | `aomp/24/mainline+amd-staging-rocm-10.0.cfg` |
+| Either of the above against the in-development ROCm 10.1 | `aomp/24/*-rocm-10.1.cfg` |
 | Previous ROCm release | `aomp/22/amd-staging-rocm-7.1.cfg` |
 | ROCm stack without the full AOMP test matrix | `rocm/6.3/rocm-6.3.cfg` |
 | Upstream LLVM only, no ROCm components | `llvm/mainline.cfg` |
@@ -235,6 +236,8 @@ Naming conventions inside `configs/aomp/<version>/`:
 
 Older trees (`aomp/15` through `aomp/22`, `rocm/5.2` through `rocm/7.1`) are
 kept for archaeology: reproducing and bisecting behaviour in released compilers.
+`aomp/23` tracks ROCm 7.2 and `aomp/24` the ROCm 10 stack, matching the AOMP
+version that AOMP's own `aomp-dev` branch reports.
 `configs/misc/llvm-mos.cfg` is an unrelated experiment that happens to be a good
 minimal example of the config format.
 
@@ -278,12 +281,12 @@ system.
 ROCm rearranged its repositories for ROCm 10: rocr-runtime, clr, rocminfo,
 rocm-smi-lib, roctracer, aqlprofile, ROCdbgapi and the rest now live in
 [ROCm/rocm-systems](https://github.com/ROCm/rocm-systems) under `projects/`,
-instead of having a repository each. `configs/rocm/10/` therefore checks out one
-monorepo as the `rocm_systems` component and declares everything inside it as a
-`subcomponent`. `rocm_systems` is a placeholder with no tasks of its own; the
-component names and modules are as they were for ROCm 7.2.
-`aomp/23/amd-staging-rocm-10.cfg` pairs it with LLVM `amd-staging`, and
-`aomp/23/mainline+amd-staging-rocm-10.cfg` with upstream `main`.
+instead of having a repository each. `configs/rocm/10.0/` and `configs/rocm/10.1/`
+therefore check out one monorepo as the `rocm_systems` component and declare
+everything inside it as a `subcomponent`. `rocm_systems` is a placeholder with no
+tasks of its own; the component names and modules are as they were for ROCm 7.2.
+The `aomp/24/amd-staging-rocm-10.*.cfg` configs pair it with LLVM `amd-staging`,
+and `aomp/24/mainline+amd-staging-rocm-10.*.cfg` with upstream `main`.
 
 The ROCm 10 configs also build the components TheRock (and srock) builds
 that the 7.x configs don't: `amdsmi` (amd-smi), `rocm_core`, `rocm_kpack`
@@ -298,24 +301,39 @@ Building the GPU Fortran runtime (`gpu_flang_rt`, on by default for the
 `amd-staging` configs) builds LLVM's GPU libc, whose header generator needs
 `PyYAML` (`import yaml`).
 
-Two consequences worth knowing about:
+ROCm 10 is split into 10.0 and 10.1 the same way the earlier versions are:
 
-- The monorepo is about 7.7GB to clone in full, so `configs/rocm/10/rocm-10.inc`
-  asks for a blobless clone (`"blobless_clone" : true`, `git clone
+- `rocm/10.0/` is the released version and pins the monorepo to its release
+  branch, `release/therock-10.0`.
+- `rocm/10.1/` is still in development. There is no `release/therock-10.1` yet,
+  so it tracks the monorepo's rolling `develop` branch and can break as that
+  moves. If you need a reproducible 10.1, both TheRock and the monorepo publish
+  dated "best known configuration" snapshots as
+  `release/bkc/therock-10.1-<YYYYMMDD>`; set `"version"` in
+  `rocm/10.1/rocm-10.1.inc` to one of those.
+
+The standalone repositories the configs still use — rocm-cmake, hipfort, HIPIFY
+and Composable Kernel — have no per-release branches, so they are pinned
+identically for 10.0 and 10.1.
+
+Two consequences of the monorepo worth knowing about:
+
+- It is about 7.7GB to clone in full, so `rocm-10.0.inc` and `rocm-10.1.inc` ask
+  for a blobless clone (`"blobless_clone" : true`, `git clone
   --filter=blob:none`). That takes about 30 seconds and 1.2GB, and still has the
   full history. Blobs for other revisions are fetched on demand, which needs
   network, so run `git log -p` and friends outside the sandbox.
-- The monorepo carries a great many submodules, most of them for components we
-  never build. Rather than recursing into all of them, `rocm-10.inc` initialises
-  only the ones the current component set needs, from an
+- It carries a great many submodules, most of them for components we never
+  build. Rather than recursing into all of them, the `rocm-10.*.inc` files
+  initialise only the ones the current component set needs, from an
   `add_checkout_adjustment` block calling `rocm_systems_submodules`.
 
-The branch pins follow TheRock's `compiler/amd-staging` branch, which is the
-TheRock configuration that goes with LLVM `amd-staging`: it points rocm-systems
-at `develop` and llvm-project, HIPIFY and SPIRV-LLVM-Translator at
-`amd-staging`. Composable Kernel moved to the separate `ROCm/rocm-libraries`
-monorepo, but it is optional and rarely built here, so the config keeps taking
-it from the standalone repository rather than cloning a second monorepo.
+Otherwise the pins follow TheRock, which is the canonical way to build ROCm 10:
+for 10.1 that is TheRock's `compiler/amd-staging` branch, the configuration that
+goes with LLVM `amd-staging` and reports `rocm-version 10.1.0`. Composable Kernel
+moved to the separate `ROCm/rocm-libraries` monorepo, but it is optional and
+rarely built here, so the configs keep taking it from the standalone repository
+rather than cloning a second monorepo.
 
 ## amd-checkout
 

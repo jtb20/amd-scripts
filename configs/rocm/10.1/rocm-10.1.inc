@@ -1,20 +1,28 @@
-# ROCm 10 sources.
+# ROCm 10.1 sources.
 #
-# ROCm's repositories were rearranged for this release: the runtime and tools
+# ROCm's repositories were rearranged for ROCm 10: the runtime and tools
 # components now live in the ROCm/rocm-systems monorepo under projects/, so they
 # are declared here as subcomponents of the rocm_systems placeholder rather than
 # as repositories of their own.
 #
-# The pins follow TheRock's compiler/amd-staging branch, which is the TheRock
-# configuration that goes with LLVM amd-staging: its .gitmodules points
-# rocm-systems and rocm-libraries at "develop", llvm-project, HIPIFY and
-# SPIRV-LLVM-Translator at "amd-staging", and reports rocm-version 10.1.0.
+# 10.1 is still in development, so there is no release/therock-10.1 branch to
+# pin to yet and this file tracks the monorepo's rolling "develop" branch.  That
+# matches TheRock's compiler/amd-staging, the TheRock configuration that goes
+# with LLVM amd-staging: its .gitmodules points rocm-systems and rocm-libraries
+# at "develop", llvm-project, HIPIFY and SPIRV-LLVM-Translator at "amd-staging",
+# and it reports rocm-version 10.1.0.
+#
+# Tracking a branch that moves under us is the price of building 10.1 before it
+# ships.  For a reproducible 10.1 there are dated "best known configuration"
+# snapshots, release/bkc/therock-10.1-<YYYYMMDD>, in both TheRock and the
+# monorepo; set "version" to one of those to pin a specific one.  When 10.1 is
+# released this should become release/therock-10.1, as in ../10.0/rocm-10.0.inc.
 
 var rocm_systems_src = {
   "url" : "https://github.com/ROCm/rocm-systems",
   "type" : "git",
   "version" : "develop",
-  "version_name" : "10",
+  "version_name" : "10.1",
   "shallow_clone" : false,
   # A full clone of the monorepo is around 7.7GB.  Fetching blobs on demand
   # brings that down to about 1.2GB while keeping the history for bisecting.
