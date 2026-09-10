@@ -164,6 +164,13 @@ modify_defaults
 
 elaborate_tests
 
+# Tasks log to LOGDIR and the suites build in OBJDIR.  Both usually exist
+# because amd-build has run here first, but with --aomp the toolchain was built
+# somewhere else and this may be the first thing to run in this work directory.
+# Note these have to exist before do_bwrap, which only binds directories it can
+# see.
+maybe_mkdir $LOGDIR
+maybe_mkdir $OBJDIR
 maybe_mkdir $TESTRESULTSDIR
 
 unset @(unset_varlist)
