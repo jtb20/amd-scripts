@@ -50,6 +50,18 @@ proc show_vars {
   write "PATH: $[ENV.PATH]"
 }
 
+# Resolve a user-supplied directory to an absolute path.  The scripts hand
+# these paths to bubblewrap and to build systems that run with a different
+# working directory, so a relative one would not survive.  Canonicalisation is
+# left until the directory exists; see do_bwrap.
+
+func absolute_dir (Dir) {
+  if (Dir=>startsWith('/')) {
+    return (Dir)
+  }
+  return ("$WORKDIR/$Dir")
+}
+
 proc parse_args(; argv) {
   var spec
   var tasks
@@ -124,6 +136,39 @@ proc parse_args(; argv) {
       -T | --toolsroot {
         setvar opt += 1
         setglobal ToolsRoot = argv[opt]
+      }
+
+      # Repoint the work directory layout.  Note the lowercase/uppercase pairs:
+      # -s is not -S, -b is not -B, -t is not -T.
+
+      -s | --source {
+        setvar opt += 1
+        setglobal SRCDIR = absolute_dir(argv[opt])
+      }
+
+      -b | --build {
+        setvar opt += 1
+        setglobal OBJDIR = absolute_dir(argv[opt])
+      }
+
+      -i | --install {
+        setvar opt += 1
+        setglobal INSTALLDIR = absolute_dir(argv[opt])
+      }
+
+      -t | --testresults {
+        setvar opt += 1
+        setglobal TESTRESULTSDIR = absolute_dir(argv[opt])
+      }
+
+      -l | --logs {
+        setvar opt += 1
+        setglobal LOGDIR = absolute_dir(argv[opt])
+      }
+
+      -d | --downloads {
+        setvar opt += 1
+        setglobal ARCHIVEDIR = absolute_dir(argv[opt])
       }
 
       --share-net {
@@ -1042,6 +1087,21 @@ proc do_bwrap {
     setvar NetSharingOpt = :| --share-net |
   }
 
+  # The work directory is the only writable part of the filesystem by default,
+  # so anything -s/-b/-i/-t/-l/-d moved out of it needs binding in explicitly.
+  var DirBinds = []
+  var BoundDirs = []
+  for D in ([SRCDIR, OBJDIR, INSTALLDIR, TESTRESULTSDIR, LOGDIR, ARCHIVEDIR]) {
+    if test --dir $D {
+      var RealD = $(readlink -f $D)
+      if (RealD !== RealWD and not RealD=>startsWith("$RealWD/")
+          and not in_list (RealD, BoundDirs)) {
+        setvar DirBinds = DirBinds ++ :| --bind $RealD $RealD |
+        call BoundDirs->append(RealD)
+      }
+    }
+  }
+
   var HostSpecificOpts = []
   if test --exists $[ENV.HOME]/.config/amd-scripts/bwrap-opts {
     setvar HostSpecificOpts = $(cat $[ENV.HOME]/.config/amd-scripts/bwrap-opts)=>shSplit()
@@ -1061,6 +1121,7 @@ proc do_bwrap {
           @CCacheDirOpt \
           --bind $[ENV.HOME] $[ENV.HOME] \
           --bind $RealWD $RealWD \
+          @DirBinds \
           --tmpfs /opt \
           --dev /dev \
           --dev-bind /dev/kfd /dev/kfd \
@@ -1088,6 +1149,7 @@ proc do_bwrap {
           @BwrapExtraOpts \
           @CCacheDirOpt \
           --bind $RealWD $RealWD \
+          @DirBinds \
           --bind /run/user /run/user \
           --tmpfs /opt \
           --dir /opt/homebrew \

@@ -124,6 +124,37 @@ The scripts create these as needed. Nothing is written outside the work
 directory except the source checkouts' own git metadata, the ccache cache and
 downloads.
 
+### Moving the directories elsewhere
+
+Each part of the layout can be repointed, which is useful when the pieces want
+to live on different filesystems: sources and build trees on a fast local disk,
+the install tree and test results somewhere backed up.
+
+| Option | Directory | Default | Matters to |
+|--------|-----------|---------|------------|
+| `-s`, `--source DIR` | Checkouts | `src/` | `amd-checkout`, `amd-build`, `amd-test` |
+| `-b`, `--build DIR` | Build trees | `obj/` | `amd-build` |
+| `-i`, `--install DIR` | Installed toolchain | `install/` | `amd-build`, `amd-test` |
+| `-t`, `--testresults DIR` | Test results | `testresults/` | `amd-test` |
+| `-l`, `--logs DIR` | Task logs | `logs/` | `amd-build`, `amd-test` |
+| `-d`, `--downloads DIR` | Downloaded tarballs | `archives/` | `amd-checkout` |
+
+Mind the case: `-s` is not `-S`, `-b` is not `-B`, and `-t` is not `-T`.
+
+All three scripts accept all six options, so it is harmless to pass them
+everywhere; the "matters to" column says which script actually reads each one.
+A relative path is taken relative to the work directory, so `-b ../shared-obj`
+works as you would expect.
+
+The scripts hold no state between runs, so a directory you moved has to be
+named again on every invocation that needs it. Relocating the sources means
+passing the same `-s` to `amd-checkout` and to `amd-build`, otherwise the build
+looks in `src/` and finds nothing.
+
+Directories moved outside the work directory are bound into the [bubblewrap
+sandbox](#the-bubblewrap-sandbox) read-write automatically, so builds and tests
+work the same as they do in the default layout.
+
 Configs are named by their path relative to the `configs/` directory in this
 repository, so `aomp/23/amd-staging-rocm-7.2.cfg` means
 `amd-scripts/configs/aomp/23/amd-staging-rocm-7.2.cfg`. The config name is
@@ -376,6 +407,10 @@ These options are shared by `amd-build` and `amd-test`.
 | `--ghuser USER` | GitHub username, for configs that clone a fork |
 | `--showdep COMP` | Print where a component's dependency edges come from |
 
+The `-s`, `-b`, `-i`, `-t`, `-l` and `-d` options move the work directory
+layout around; see [Moving the directories
+elsewhere](#moving-the-directories-elsewhere).
+
 `-g` affects the configure step, so it does not take effect on an incremental
 rebuild unless you re-run the component's `configure` task.
 
@@ -412,8 +447,9 @@ otherwise leak into results:
 
 The filesystem is otherwise bound read-only, with writable exceptions for the
 work directory, `/tmp`, the ccache cache directory, and `$HOME/.parallel` (GNU
-Parallel needs this for the smoke tests). `/dev/kfd` and `/dev/dri` are bound
-through so GPU tests work.
+Parallel needs this for the smoke tests). Any directory moved out of the work
+directory with `-s`, `-b`, `-i`, `-t`, `-l` or `-d` is added to that list.
+`/dev/kfd` and `/dev/dri` are bound through so GPU tests work.
 
 When something does not work under the sandbox, the usual escape hatches are:
 
@@ -538,17 +574,17 @@ sharing a multi-GPU machine.
 ## Comparing test results
 
 Because the `.sum` files are DejaGNU-shaped, a before-and-after comparison is
-just:
+just a matter of sending each run's results somewhere of their own with
+`-t`/`--testresults`:
 
 ```bash
-amd-test aomp/23/amd-staging-rocm-7.2.cfg
-mv testresults testresults-baseline
+amd-test -t results-baseline aomp/23/amd-staging-rocm-7.2.cfg
 
 # ...change the compiler, rebuild...
 amd-build aomp/23/amd-staging-rocm-7.2.cfg modify llvm/{build,install} restore
-amd-test  aomp/23/amd-staging-rocm-7.2.cfg
+amd-test  -t results-new aomp/23/amd-staging-rocm-7.2.cfg
 
-compare-tests testresults-baseline testresults
+compare-tests results-baseline results-new
 ```
 
 `compare-tests` reports tests that changed state in either direction, grouped by
