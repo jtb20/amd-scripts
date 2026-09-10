@@ -364,9 +364,17 @@ proc parse_args(; argv) {
         setglobal GPUDevices = GPUDevices ++ split(argv[opt], ',')
       }
 
+      # Test a toolchain installed elsewhere rather than one built here.  This
+      # only makes sense for amd-test: get_llvm_install returns this directory
+      # for everything that asks, and several modules use that as their CMake
+      # install prefix, so building with it set would install over the very
+      # tree we were asked to test against.
       --aomp {
         setvar opt += 1
-        setglobal PreinstalledAOMP = argv[opt]
+        if (ScriptName !== 'amd-test') {
+          error "The --aomp option is only meaningful for amd-test, not $ScriptName"
+        }
+        setglobal PreinstalledAOMP = absolute_dir(argv[opt])
       }
 
       --showdep {
@@ -1374,10 +1382,15 @@ proc rocm_env {
       @[ARGV[1:]]
     }
   } else {
+    # Normally the ROCm stack and HIP are the tree we installed here.  With
+    # --aomp we are testing a toolchain installed elsewhere, which brings its
+    # own ROCm and HIP along with it, so point both at that instead: the local
+    # install directory is typically empty in that case.
     var UseROCm = INSTALLDIR
+    var UseHIP = INSTALLDIR
     if (PreinstalledAOMP) {
-      # This doesn't seem quite right
-      setvar UseROCm = LLVM_Inst
+      setvar UseROCm = PreinstalledAOMP
+      setvar UseHIP = PreinstalledAOMP
     }
     with-env LD_LIBRARY_PATH=$(prepend_path "$INSTALLDIR/lib" \
                                             "$LLVM_Inst/lib" \
@@ -1385,7 +1398,7 @@ proc rocm_env {
                                             LD_LIBRARY_PATH) \
              HIP_CLANG_PATH=$LLVM_Inst/bin \
              ROCM_PATH=$UseROCm \
-             HIP_PATH=$INSTALLDIR \
+             HIP_PATH=$UseHIP \
              LLVM_PATH=$LLVM_Inst \
              AOMP=$LLVM_Inst \
              PATH=$(prepend_path $LLVM_Inst/bin $INSTALLDIR/bin PATH) {
@@ -1566,6 +1579,28 @@ proc do_bwrap {
     }
   }
 
+  # We bind the whole filesystem read-only, so a toolchain named with --aomp is
+  # already visible wherever it happens to live.  The exception is /opt, which
+  # we replace with a tmpfs to stop a system ROCm being picked up by accident,
+  # and which would hide a toolchain someone has just explicitly asked for.
+  # Bind that case back in, after the --tmpfs so it survives it; bwrap applies
+  # these in order.
+  #
+  # Only that case: binding a path we did not have to would mean asking bwrap
+  # to create the destination, which it cannot do through a symlinked parent.
+  var AOMPBind = []
+  if (PreinstalledAOMP) {
+    var RealAOMP = $(readlink -f $PreinstalledAOMP)
+    if (PreinstalledAOMP=>startsWith('/opt/') or RealAOMP=>startsWith('/opt/')) {
+      setvar AOMPBind = :| --ro-bind $RealAOMP $RealAOMP |
+      # /opt/rocm is normally a symlink to a versioned directory, and neither
+      # name survives the tmpfs, so make the requested one work too.
+      if (RealAOMP !== PreinstalledAOMP) {
+        setvar AOMPBind = AOMPBind ++ :| --ro-bind $RealAOMP $PreinstalledAOMP |
+      }
+    }
+  }
+
   var HostSpecificOpts = []
   if test --exists $[ENV.HOME]/.config/amd-scripts/bwrap-opts {
     setvar HostSpecificOpts = $(cat $[ENV.HOME]/.config/amd-scripts/bwrap-opts)=>shSplit()
@@ -1587,6 +1622,7 @@ proc do_bwrap {
           --bind $RealWD $RealWD \
           @DirBinds \
           --tmpfs /opt \
+          @AOMPBind \
           --dev /dev \
           --dev-bind /dev/kfd /dev/kfd \
           --dev-bind /dev/dri /dev/dri \
@@ -1618,6 +1654,7 @@ proc do_bwrap {
           --tmpfs /opt \
           --dir /opt/homebrew \
           --dir /opt/homebrew/bin \
+          @AOMPBind \
           @HideUsrLibCMake \
           @HomebrewBinds \
           --dev /dev \

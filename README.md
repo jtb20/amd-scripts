@@ -729,6 +729,31 @@ Tests that run on hardware can be routed with `--gpurun=<args>` (passed to
 and `--gpu-devices a,b` (sets `ROCR_VISIBLE_DEVICES`). These are useful for
 sharing a multi-GPU machine.
 
+### Testing a toolchain built elsewhere
+
+`--aomp DIR` runs the suites against a toolchain that is already installed,
+instead of one built in this work directory. `DIR` is an *installation*
+directory: the same thing this repository's `install/lib/llvm` is, so typically
+a nightly build's install tree rather than a system ROCm.
+
+```bash
+amd-test --aomp /path/to/aomp_24.0-0/lib/llvm \
+         aomp/24/amd-staging-rocm-10.0.cfg test_aomp_smoke
+```
+
+`DIR` becomes `ROCM_PATH`, `HIP_PATH`, `LLVM_PATH` and `AOMP` for the tests.
+Nothing has to have been built in the work directory, but the testsuites
+themselves come from the checked-out sources, so `amd-checkout` is still needed.
+
+The sandbox binds the whole filesystem read-only, so a toolchain is visible
+wherever it lives. The exception is `/opt`, which is replaced by a tmpfs: a
+toolchain named there is bound back in, at both the name you give and the one it
+resolves to, since `/opt/rocm` is usually a symlink to a versioned directory.
+
+Only `amd-test` accepts this. `amd-build` rejects it, because the same setting
+also decides where components install, so a build would write over the toolchain
+you were pointing at.
+
 ## Comparing test results
 
 Because the `.sum` files are DejaGNU-shaped, a before-and-after comparison is
