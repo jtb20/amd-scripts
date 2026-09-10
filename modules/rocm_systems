@@ -33,8 +33,14 @@ proc rocm_systems_tasks {
 
 proc rocm_systems_submodules(...paths) {
   var Src = get_srcdir ("rocm_systems")
-  cd $Src {
-    write "Post-checkout hook: init rocm_systems submodules: $[paths=>join(' ')]"
-    git submodule update --init @paths
+  # Checkout adjustments all run, but amd-checkout can be asked for a subset of
+  # the components, in which case the monorepo is not there to init anything in.
+  if ! test --dir $Src {
+    write "Post-checkout hook: rocm_systems is not checked out, no submodules to init"
+  } else {
+    cd $Src {
+      write "Post-checkout hook: init rocm_systems submodules: $[paths=>join(' ')]"
+      git submodule update --init @paths
+    }
   }
 }
