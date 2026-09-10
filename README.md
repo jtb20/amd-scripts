@@ -184,6 +184,7 @@ Building and testing then work exactly as above.
 |------|--------|
 | Current AOMP-like stack | `aomp/23/amd-staging-rocm-7.2.cfg` |
 | Upstream LLVM `main` with the ROCm stack | `aomp/23/mainline+amd-staging-rocm-7.2.cfg` |
+| Upstream LLVM `main` with the ROCm 10 stack | `aomp/23/mainline+amd-staging-rocm-10.cfg` |
 | Previous ROCm release | `aomp/22/amd-staging-rocm-7.1.cfg` |
 | ROCm stack without the full AOMP test matrix | `rocm/6.3/rocm-6.3.cfg` |
 | Upstream LLVM only, no ROCm components | `llvm/mainline.cfg` |
@@ -203,6 +204,35 @@ kept for archaeology: reproducing and bisecting behaviour in released compilers.
 `configs/misc/llvm-mos.cfg` is an unrelated experiment that happens to be a good
 minimal example of the config format.
 
+### ROCm 10 and the monorepo
+
+ROCm rearranged its repositories for ROCm 10: rocr-runtime, clr, rocminfo,
+rocm-smi-lib, roctracer, aqlprofile, ROCdbgapi and the rest now live in
+[ROCm/rocm-systems](https://github.com/ROCm/rocm-systems) under `projects/`,
+instead of having a repository each. `configs/rocm/10/` therefore checks out one
+monorepo as the `rocm_systems` component and declares everything inside it as a
+`subcomponent`. `rocm_systems` is a placeholder with no tasks of its own; the
+component names, modules and task list are exactly as they were for ROCm 7.2.
+
+Two consequences worth knowing about:
+
+- The monorepo is about 7.7GB to clone in full, so `configs/rocm/10/rocm-10.inc`
+  asks for a blobless clone (`"blobless_clone" : true`, `git clone
+  --filter=blob:none`). That takes about 30 seconds and 1.2GB, and still has the
+  full history. Blobs for other revisions are fetched on demand, which needs
+  network, so run `git log -p` and friends outside the sandbox.
+- The monorepo carries a great many submodules, most of them for components we
+  never build. Rather than recursing into all of them, `rocm-10.inc` initialises
+  only the ones the current component set needs, from an
+  `add_checkout_adjustment` block calling `rocm_systems_submodules`.
+
+The branch pins follow TheRock's `compiler/amd-staging` branch, which is the
+TheRock configuration that goes with LLVM `amd-staging`: it points rocm-systems
+at `develop` and llvm-project, HIPIFY and SPIRV-LLVM-Translator at
+`amd-staging`. Composable Kernel moved to the separate `ROCm/rocm-libraries`
+monorepo, but it is optional and rarely built here, so the config keeps taking
+it from the standalone repository rather than cloning a second monorepo.
+
 ## amd-checkout
 
 ```bash
@@ -211,9 +241,9 @@ amd-checkout [options] <config> [component ...]
 
 Clones or updates everything the config needs into `src/`. Components come in
 several flavours, handled transparently: plain git clones (optionally shallow,
-optionally with submodules), tarball downloads verified by MD5, git worktrees
-sharing a parent clone, and "subcomponents" that are just a subdirectory of
-another checkout.
+optionally blobless, optionally with submodules), tarball downloads verified by
+MD5, git worktrees sharing a parent clone, and "subcomponents" that are just a
+subdirectory of another checkout.
 
 Re-running `amd-checkout` updates existing checkouts, but conservatively. It
 only runs `git pull --rebase` when the checkout is on the expected branch of the

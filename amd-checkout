@@ -45,7 +45,7 @@ proc try_git_update (;; srcdir, destname, url, branch) {
   }
 }
 
-proc git_checkout (;; srcdir, destname, url, branch, shallow, submods) {
+proc git_checkout (;; srcdir, destname, url, branch, shallow, submods, blobless) {
   if test --dir "$srcdir/$destname" {
     cd "$srcdir/$destname" {
       try_git_update (srcdir=srcdir, destname=destname, url=url, branch=branch)
@@ -54,7 +54,8 @@ proc git_checkout (;; srcdir, destname, url, branch, shallow, submods) {
     cd $srcdir {
       var shallow_opt = :| --depth 1 | if shallow else ()
       var submod_opt = :| --recurse-submodules | if submods else ()
-      git clone @shallow_opt @submod_opt --branch $branch $url $destname
+      var filter_opt = :| --filter=blob:none | if blobless else ()
+      git clone @shallow_opt @submod_opt @filter_opt --branch $branch $url $destname
     }
   }
 }
@@ -149,12 +150,17 @@ proc do_downloads (; comps) {
         if ('submodules' in Sources[comp]) {
           setvar SubMods = Sources[comp].submodules
         }
+        var Blobless = false
+        if ('blobless_clone' in Sources[comp]) {
+          setvar Blobless = Sources[comp].blobless_clone
+        }
         git_checkout (srcdir=SRCDIR,
                       destname=dirname_in_srcdir,
                       url=Sources[comp].url,
                       branch=Sources[comp].version,
                       shallow=Sources[comp].shallow_clone,
-                      submods=SubMods)
+                      submods=SubMods,
+                      blobless=Blobless)
       }
 
       "archive" {

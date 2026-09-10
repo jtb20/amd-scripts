@@ -1,0 +1,40 @@
+#!/usr/bin/env ysh
+
+# A placeholder for the ROCm/rocm-systems monorepo.  From ROCm 10 onwards most
+# of the runtime and tools components (rocr-runtime, clr, rocminfo, ...) live in
+# its projects/ subdirectory rather than in a repository each, so they are
+# declared as subcomponents of this one.  Like hsa_runtime, it has no tasks of
+# its own: it exists so that amd-checkout has something to clone and so that
+# get_srcdir() resolves for the components inside it.
+
+func get_rocm_systems_src() {
+  return (get_src_default ("rocm_systems"))
+}
+
+func rocm_systems_dependencies() {
+  return ([])
+}
+
+proc rocm_systems_tasks {
+  # No tasks!
+  true
+}
+
+# Cloning every submodule in the monorepo is far too expensive: dyninst, kokkos,
+# papi and friends all hang off rocprofiler-systems, which we never build.
+# Components that do need theirs ask for them by path from a checkout
+# adjustment, e.g.:
+#
+#   add_checkout_adjustment {
+#     rocm_systems_submodules projects/rocprofiler-register
+#   }
+#
+# A path naming a directory selects every submodule underneath it.
+
+proc rocm_systems_submodules(...paths) {
+  var Src = get_srcdir ("rocm_systems")
+  cd $Src {
+    write "Post-checkout hook: init rocm_systems submodules: $[paths=>join(' ')]"
+    git submodule update --init @paths
+  }
+}
