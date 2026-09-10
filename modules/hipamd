@@ -76,7 +76,10 @@ func hipamd_supported_variants() {
 }
 
 func hipamd_variant_tasks(var=null) {
-  if (ConfigureOpts.hipamd.aomp_patch) {
+  # Only the AOMP configs set this: elsewhere there is nothing to patch.
+  if ('hipamd' in ConfigureOpts and
+      'aomp_patch' in ConfigureOpts.hipamd and
+      ConfigureOpts.hipamd.aomp_patch) {
     return (:| clean apply_patch configure build install revert_patch |)
   }
   return (:| clean configure build install |)
