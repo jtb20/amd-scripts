@@ -697,7 +697,7 @@ proc do_tasks (; todo) {
   }
   for t in (todo) {
     if (nexttask > len(TASKARR)) {
-      :
+      true
     } elif (t ~ Range) {
       var starttask = _group('start')
       var endtask = _group('end')

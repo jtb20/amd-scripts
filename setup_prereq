@@ -14,7 +14,9 @@ OIL_TARBALL="oils-for-unix-0.37.0.tar.gz"
 OIL_URL="https://oils.pub/download/$OIL_TARBALL"
 
 READLINE_TARBALL="readline-8.2.tar.gz"
-READLINE_URL="http://ftp.gnu.org/gnu/readline/$READLINE_TARBALL"
+# ftpmirror.gnu.org redirects to a working mirror; ftp.gnu.org itself is not
+# reachable from some networks, over either http or https.
+READLINE_URL="https://ftpmirror.gnu.org/readline/$READLINE_TARBALL"
 
 if ! [ "$DOWNLOAD" ] || ! [ "$PREFIX" ] || ! [ "$BUILD" ]; then
   echo "Empty DOWNLOAD/PREFIX/BUILD, please fix."
@@ -31,11 +33,31 @@ check_sys_readline() {
   cat > dummy.c << EOF
 int main(void) { return 0; }
 EOF
-  if gcc dummy.c -lreadline -o dummy; then
+  if gcc dummy.c -lreadline -o dummy >& /dev/null; then
     echo "system"
   else
     echo "ours"
   fi
+  popd >& /dev/null
+}
+
+# readline's shared library needs a terminfo library for tgetent(), tputs()
+# and friends, but its build does not link one in by default.  Without this,
+# oils' ./configure cannot link its readline probe, and you silently get a
+# shell with no interactive editing or history.
+check_curses_lib() {
+  local BUILD="$1"
+  pushd "$BUILD" >& /dev/null
+  cat > dummy_curses.c << EOF
+int main(void) { return 0; }
+EOF
+  local lib
+  for lib in tinfo ncurses curses; do
+    if gcc dummy_curses.c "-l$lib" -o dummy_curses >& /dev/null; then
+      echo "-l$lib"
+      break
+    fi
+  done
   popd >& /dev/null
 }
 
@@ -63,6 +85,15 @@ WHICH_READLINE="$(check_sys_readline "$BUILD")"
 
 echo "Using readline: $WHICH_READLINE"
 
+if [ "$WHICH_READLINE" = "ours" ]; then
+  CURSES_LIB="$(check_curses_lib "$BUILD")"
+  if [ -z "$CURSES_LIB" ]; then
+    echo "No terminfo/curses library found; readline will lack line editing."
+  else
+    echo "Using curses library: $CURSES_LIB"
+  fi
+fi
+
 download "$DOWNLOAD" "$OIL_URL" "$OIL_TARBALL"
 if [ "$WHICH_READLINE" = "ours" ]; then
   download "$DOWNLOAD" "$READLINE_URL" "$READLINE_TARBALL"
@@ -75,9 +106,9 @@ pushd "$BUILD"
 if [ "$WHICH_READLINE" = "ours" ]; then
   tar fxz "$DOWNLOAD/$READLINE_TARBALL"
   pushd "$(basename "$READLINE_TARBALL" .tar.gz)"
-  ./configure --prefix="$PREFIX"
-  make -j8
-  make -j8 install
+  ./configure --prefix="$PREFIX" --with-curses
+  make -j8 SHLIB_LIBS="$CURSES_LIB"
+  make -j8 install SHLIB_LIBS="$CURSES_LIB"
   popd
 fi
 

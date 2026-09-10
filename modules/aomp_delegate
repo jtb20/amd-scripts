@@ -269,7 +269,7 @@ func translate_aomp_deps(Comp) {
       rocm_cmake | device_libs | hwloc | hip | gmp | mpfr | \
       aqlprofile {
         # We don't need to build these explicitly with the delegated build.
-        :
+        true
       }
       hipamd {
         append "$[DelegatedCompName[D]]" (NewDeps)

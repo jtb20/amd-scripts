@@ -133,7 +133,7 @@ proc test_aomp_examples {
 
 proc save_results_aomp_examples (; files) {
   # TODO
-  :
+  true
 }
 
 # The "smoke" and "smoke_fails" testsuites (and similar) use the same
@@ -649,5 +649,5 @@ proc test_aomp_openmpapps {
 
 proc save_results_aomp_openmpapps(; files) {
   # TODO
-  :
+  true
 }

@@ -36,11 +36,11 @@ proc hip_tasks {
     '5.2.x' {
       # It's just a script in this version, no build tasks to do as such.
       # add_tasks hip install_modified_scripts
-      :
+      true
     }
     * {
       # No tasks at all otherwise.
-      :
+      true
     }
   }
 }

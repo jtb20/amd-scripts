@@ -64,7 +64,7 @@ func read_sumfile(Dir, File) {
   while read --raw-line (&Res) {
     if (Res ~ Running_exp_file) {
       #write "Found expfile line: $[_group('expfile')]"
-      :
+      true
     } elif (Res ~ ResultLine) {
       #write "Found result '$[_group('result')]' for '$[_group('testname')]'"
       var ThisResult = _group('result')

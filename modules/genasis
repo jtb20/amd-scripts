@@ -77,9 +77,9 @@ proc test_misc_genasis_flang_new() {
 }
 
 proc clean_results_misc_genasis_flang_new() {
-  :
+  true
 }
 
 proc save_results_misc_genasis_flang_new(; files) {
-  :
+  true
 }

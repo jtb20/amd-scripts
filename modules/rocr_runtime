@@ -22,7 +22,7 @@ proc configure_rocr_runtime() {
   var SrcSubdir = Src
   if (not in_list('roct_thunk_interface', Components)) {
     # If we have a combined rocr/roct build, use the top-level dir.
-    :
+    true
   } elif ("$(basename $Src)" !== "hsa-runtime") {
     # There are two arrangements for the rocr_runtime component -- as a
     # component of that name (e.g. for ROCm 6.1) or as a subdirectory of the
