@@ -15,6 +15,10 @@ var ActiveCfg
 var Sources={}
 var Components=[]
 var ComponentVariants={}
+# Build variants requested with --variant: 'all' applies to every component,
+# 'per' maps a component to its own list.  Configs that support variants
+# (configs/aomp/build-variants.inc) act on this; others reject it.
+var VariantRequest = {all: [], per: {}}
 var Testsuites={}
 var SelectTests=null
 var ConfigureOpts={}
@@ -98,6 +102,27 @@ proc parse_args(; argv) {
             setglobal BuildOpts[A] = {}
           }
           setglobal BuildOpts[A].assertions = true
+        }
+      }
+
+      --variant | --variant=* {
+        var VarSpec
+        if (argv[opt] === '--variant') {
+          setvar opt += 1
+          setvar VarSpec = argv[opt]
+        } else {
+          setvar VarSpec = argv[opt]=>trimStart('--variant=')
+        }
+        for Item in (VarSpec=>split(',')) {
+          if (Item ~~ '*=*') {
+            var Parts = Item=>split('=')
+            if (Parts[0] not in VariantRequest.per) {
+              setglobal VariantRequest.per[Parts[0]] = []
+            }
+            append $[Parts[1]] (VariantRequest.per[Parts[0]])
+          } else {
+            append $Item (VariantRequest.all)
+          }
         }
       }
 
@@ -580,6 +605,11 @@ proc elaborate_tasks() {
   } | tsort | while read ordered_comp {
     setvar add_task_fn = "${ordered_comp}_tasks"
     eval "$add_task_fn"
+    # Configs supporting build variants add each component's variant tasks
+    # straight after its own.
+    if (has_proc ('config_variant_tasks')) {
+      config_variant_tasks $ordered_comp
+    }
   }
 }
 
@@ -774,6 +804,12 @@ proc do_tasks (; todo) {
     } elif (t === "list") {
       print_tasks
       exit 0
+    } elif (t === "list-variants") {
+      if (not has_proc ('print_variants')) {
+        error "This config doesn't support build variants"
+      }
+      print_variants
+      exit 0
     } else {
       # Treat anything else like this:
       #   1. Brace-expand (so "{build,install}_llvm" can be written)
@@ -875,6 +911,25 @@ proc discover_variants() {
     if (has_proc("${Comp}_variants")) {
       eval "${Comp}_variants"
     }
+  }
+  if (has_proc ('config_select_variants')) {
+    config_select_variants
+  } elif (len(VariantRequest.all) > 0 or len(VariantRequest.per) > 0) {
+    error "This config doesn't support build variants (--variant)"
+  }
+}
+
+# Run cmake for a component, or for one of its build variants.  Variant
+# support (the CMake settings each variant adds) comes from the config; see
+# configs/aomp/build-variants.inc.  Without a variant this is just cmake.
+proc variant_cmake (comp, variant, ...args) {
+  if (variant) {
+    if (not has_proc ('config_variant_cmake')) {
+      error "No build variant support for $comp variant '$variant'"
+    }
+    config_variant_cmake $comp $variant @args
+  } else {
+    cmake @args
   }
 }
 
@@ -1250,6 +1305,7 @@ source "$SCRIPTDIR/modules/llvm_mos_sdk"
 source "$SCRIPTDIR/modules/rocm_cmake"
 source "$SCRIPTDIR/modules/rocm_systems"
 source "$SCRIPTDIR/modules/rocm_compilersupport"
+source "$SCRIPTDIR/modules/llvm_runtimes"
 source "$SCRIPTDIR/modules/roct_thunk_interface"
 source "$SCRIPTDIR/modules/rocr_runtime"
 source "$SCRIPTDIR/modules/hipamd"

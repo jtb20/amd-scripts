@@ -247,16 +247,37 @@ proc remove_optional_feature(Feat) {
   }
 }
 
+# $ORIGIN rpaths for a build variant's libraries, which live in lib/asan,
+# lib-debug, lib-debug/asan etc.: under the install tree, or under lib/llvm
+# for the OpenMP runtimes.  Look in the variant's own directories first, then
+# the default ones.
+func variant_rpaths(comp, variant) {
+  var Suffix = variant_libdir_suffix (variant)
+  # From the variant's library directory up to the prefix it's under.
+  var Root = "\$ORIGIN/../.." if Suffix ~~ '*/*' else "\$ORIGIN/.."
+  var Here = "$Root/lib$Suffix:$Root/lib"
+  var Other
+  if (comp === 'llvm_runtimes') {
+    setvar Other = "$Root/../../lib$Suffix:$Root/../../lib"
+  } else {
+    setvar Other = "$Root/lib/llvm/lib$Suffix:$Root/lib/llvm/lib"
+  }
+  return ("\$ORIGIN:$Here:$Other")
+}
+
 func config_rpath_opts(comp, variant) {
   if (SetRPathOpts) {
     var AOMPRPaths = "\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../../../lib:\$ORIGIN/../llvm/lib"
+    if (variant) {
+      setvar AOMPRPaths = variant_rpaths (comp, variant)
+    }
     var RPathOpts = :| -DCMAKE_SHARED_LINKER_FLAGS='-Wl,--disable-new-dtags'
                        -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON
                        -DCMAKE_INSTALL_RPATH=$AOMPRPaths |
     case (comp) {
       llvm | comgr | rocm_dbgapi | rocprofiler_register | rocsmilib | roctracer | \
       pgmath | rocminfo | rocprofiler | rocprofiler_sdk | hipamd | rocr_runtime | \
-      offload | flang | openmp {
+      offload | flang | openmp | llvm_runtimes {
         append -- -DLIBOMP_SHARED_LINKER_FLAGS='-Wl,--disable-new-dtags' \
                   -DLIBOMP_INSTALL_RPATH=$AOMPRPaths \
                   -DLIBOMPTARGET_INSTALL_RPATH=$AOMPRPaths (RPathOpts)

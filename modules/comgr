@@ -1,7 +1,7 @@
 #!/usr/bin/env ysh
 
-proc clean_comgr() {
-  clean_component comgr
+proc clean_comgr(var="") {
+  clean_component comgr $var
 }
 
 func get_comgr_src() {
@@ -10,20 +10,20 @@ func get_comgr_src() {
   return (get_src_default ("comgr"))
 }
 
-proc add_symlink_comgr() {
+proc add_symlink_comgr(var="") {
   var LLVM_Src = get_srcdir('llvm')
   var SPIRV_Translator_Src = get_srcdir('spirv_llvm_translator')
   # This doesn't seem completely legit. FIXME?
   ln -sf $SPIRV_Translator_Src/include $LLVM_Src/llvm/include/LLVMSPIRVLib
 }
 
-proc remove_symlink_comgr() {
+proc remove_symlink_comgr(var="") {
   var LLVM_Src = get_srcdir('llvm')
   rm -f $LLVM_Src/llvm/include/LLVMSPIRVLib
 }
 
-proc configure_comgr() {
-  var Build = get_objdir("comgr")
+proc configure_comgr(var="") {
+  var Build = get_objdir("comgr", var) if var else get_objdir("comgr")
   var LLVM_Build = get_objdir("llvm")
   var DevLibs_Build = get_objdir("device_libs")
   var BuildType = get_build_type("comgr")
@@ -31,14 +31,14 @@ proc configure_comgr() {
   var Tool = get_build_tool("comgr")
   var Cfg = ConfigureOpts.comgr
   cd $Build {
-    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+    variant_cmake comgr "$var" -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DCMAKE_PREFIX_PATH="$LLVM_Build;$DevLibs_Build" \
       -DCOMGR_BUILD_SHARED_LIBS=ON \
       -DLLVM_DIR=$LLVM_Build \
       -DClang_DIR=$LLVM_Build \
       @[Cfg.cfg] \
-      @[get_rpath_opts('comgr')] \
+      @[get_rpath_opts('comgr', var)] \
       $Src
   }
 }
@@ -47,12 +47,12 @@ proc default_configure_opts_comgr() {
   set_configure_opts ("comgr", [])
 }
 
-proc build_comgr() {
-  rocm_env cmake_build comgr
+proc build_comgr(var="") {
+  rocm_env cmake_build comgr $var
 }
 
-proc install_comgr() {
-  rocm_env cmake_install comgr
+proc install_comgr(var="") {
+  rocm_env cmake_install comgr $var
 }
 
 func comgr_dependencies() {
@@ -60,9 +60,18 @@ func comgr_dependencies() {
 }
 
 proc comgr_tasks {
+  add_tasks comgr @[comgr_variant_tasks()]
+}
+
+### Build variants (see configs/aomp/build-variants.inc) ###
+
+func comgr_supported_variants() {
+  return (:| asan |)
+}
+
+func comgr_variant_tasks(var=null) {
   if (ConfigureOpts.llvm.spirv_translator) {
-    add_tasks comgr clean add_symlink configure build install remove_symlink
-  } else {
-    standard_tasks comgr
+    return (:| clean add_symlink configure build install remove_symlink |)
   }
+  return (:| clean configure build install |)
 }

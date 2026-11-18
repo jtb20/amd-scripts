@@ -1,19 +1,19 @@
 #!/usr/bin/env ysh
 
-proc clean_rocr_runtime() {
-  clean_component rocr_runtime
+proc clean_rocr_runtime(var="") {
+  clean_component rocr_runtime $var
 }
 
 func get_rocr_runtime_src() {
   return (get_src_default ("rocr_runtime"))
 }
 
-proc apply_patch_rocr_runtime() {
+proc apply_patch_rocr_runtime(var="") {
   aomp_apply_patch rocr_runtime
 }
 
-proc configure_rocr_runtime() {
-  var Build = get_objdir("rocr_runtime")
+proc configure_rocr_runtime(var="") {
+  var Build = get_objdir("rocr_runtime", var) if var else get_objdir("rocr_runtime")
   var BuildType = get_build_type("rocr_runtime")
   var Src = get_srcdir("rocr_runtime")
   var Tool = get_build_tool("rocr_runtime")
@@ -33,26 +33,26 @@ proc configure_rocr_runtime() {
     setvar SrcSubdir = "$Src/src"
   }
   cd $Build {
-    cmake -G $Tool \
+    variant_cmake rocr_runtime "$var" -G $Tool \
       -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_PREFIX_PATH="$INSTALLDIR;$LLVM_Inst" \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DIMAGE_SUPPORT=OFF \
       @Cfg \
-      @[get_rpath_opts('rocr_runtime')] \
+      @[get_rpath_opts('rocr_runtime', var)] \
       $SrcSubdir
   }
 }
 
-proc build_rocr_runtime() {
-  cmake_build rocr_runtime
+proc build_rocr_runtime(var="") {
+  cmake_build rocr_runtime $var
 }
 
-proc install_rocr_runtime() {
-  cmake_install rocr_runtime
+proc install_rocr_runtime(var="") {
+  cmake_install rocr_runtime $var
 }
 
-proc revert_patch_rocr_runtime() {
+proc revert_patch_rocr_runtime(var="") {
   aomp_revert_patch rocr_runtime
 }
 
@@ -71,11 +71,51 @@ func rocr_runtime_dependencies() {
 }
 
 proc rocr_runtime_tasks {
+  add_tasks rocr_runtime @[rocr_runtime_variant_tasks()]
+}
+
+### Build variants (see configs/aomp/build-variants.inc) ###
+
+func rocr_runtime_supported_variants() {
+  return (:| asan debug |)
+}
+
+# Variants build from patched sources, like the default build.  Debug
+# variants also install the sources for source-level debugging.
+func rocr_runtime_variant_tasks(var=null) {
+  var Tasks = :| clean configure build install |
   if (ConfigureOpts.rocr_runtime.aomp_patch) {
-    add_tasks rocr_runtime clean apply_patch configure build install revert_patch
-  } else {
-    standard_tasks rocr_runtime
+    setvar Tasks = :| clean apply_patch configure build install revert_patch |
   }
+  if (var and in_list ('debug', variant_parts (var))) {
+    append postinstall (Tasks)
+  }
+  return (Tasks)
+}
+
+# Copy the sources a debug build refers to (via -fdebug-prefix-map) into the
+# installation, as AOMP's build_rocr.sh does.
+proc postinstall_rocr_runtime(var) {
+  var Src = get_srcdir ('rocr_runtime')
+  var Dest = "$[ompd_src_dir()]/rocr"
+  for D in (:| runtime/hsa-runtime/image runtime/hsa-runtime/inc
+               runtime/hsa-runtime/core runtime/hsa-runtime/loader
+               runtime/hsa-runtime/pcs libhsakmt/src libhsakmt/include |) {
+    if test --dir "$Src/$D" {
+      mkdir -p "$Dest/$D"
+      cp -r "$Src/$D/." "$Dest/$D/"
+    }
+  }
+  # Keep only source files.
+  find $Dest -type f -not -name '*.cpp' -not -name '*.h' -not -name '*.hpp' \
+       -not -name '*.c' -not -name '*.s' -delete
+}
+
+func rocr_runtime_variant_cmake(var) {
+  if (in_list ('debug', variant_parts (var))) {
+    return ({cflags: :| "-fdebug-prefix-map=$[get_srcdir ('rocr_runtime')]=$[ompd_src_dir()]/rocr" |})
+  }
+  return ({})
 }
 
 # Well, this is all a bit of a fiddle.  As well as patching the rocr_runtime

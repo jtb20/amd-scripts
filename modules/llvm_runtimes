@@ -1,0 +1,170 @@
+#!/usr/bin/env ysh
+
+# Build variants (asan, debug, perf, ...) of the LLVM OpenMP runtimes (openmp
+# and offload), as AOMP's build_llvm_runtimes_standalone.sh.  The default
+# runtimes come from the main LLVM build, so this component has no default
+# build of its own: configs register it with add_variant_component (see
+# configs/aomp/build-variants.inc), and it is only built when one of its
+# variants is selected with --variant.
+#
+# Each variant configures llvm-project/runtimes against the installed LLVM and
+# installs into it, with the variant's library directory suffix (lib/asan,
+# lib-debug, ...).  The <variant>-devicertl variants are AOMP's "device runtime
+# library" pass: the same variant again, building only openmp for the amdgcn
+# target.  (AOMP's script used to do that by re-running itself.)
+#
+# The config must add the source, as a subcomponent of llvm:
+#
+#   add_sources ("llvm_runtimes", {type: 'subcomponent', parent: 'llvm',
+#                                  subdir: 'runtimes'})
+
+func get_llvm_runtimes_src() {
+  return (get_src_default ("llvm_runtimes"))
+}
+
+func llvm_runtimes_dependencies() {
+  return (:| llvm device_libs comgr rocr_runtime hwloc |)
+}
+
+proc llvm_runtimes_tasks {
+  # No default build: see above.
+  true
+}
+
+func llvm_runtimes_supported_variants() {
+  var Base = :| asan debug perf perf+asan debug+asan |
+  # The device runtime pass needs the openmp/device sources.
+  if test -f "$[get_srcdir ('llvm')]/openmp/device/CMakeLists.txt" {
+    var DeviceRTL = []
+    for V in (Base) {
+      append "$V-devicertl" (DeviceRTL)
+    }
+    return (Base ++ DeviceRTL)
+  }
+  return (Base)
+}
+
+func llvm_runtimes_variant_tasks(var) {
+  var Tasks = :| clean configure build install |
+  if (var === 'debug') {
+    append postinstall (Tasks)
+  }
+  return (Tasks)
+}
+
+proc clean_llvm_runtimes(var) {
+  clean_component llvm_runtimes $var
+}
+
+proc configure_llvm_runtimes(var) {
+  var Build = get_objdir ('llvm_runtimes', var)
+  var LLVM_Src = get_srcdir ('llvm')
+  var LLVM_Inst = get_installdir ('llvm')
+  var LLVM_Cfg = ConfigureOpts.llvm
+  var Tool = get_build_tool ('llvm_runtimes')
+  var ClangMajor = $($LLVM_Inst/bin/clang --version | grep -oP '(?<=clang version )[0-9]+')
+  var Runtimes = 'openmp;offload'
+  var DeviceOpts = []
+  if (is_devicertl_variant (var)) {
+    setvar Runtimes = 'openmp'
+    setvar DeviceOpts = :| -DLLVM_DEFAULT_TARGET_TRIPLE=amdgcn-amd-amdhsa |
+  }
+  var FortRT = :| -DLIBOMPTARGET_BUILD_DEVICE_FORTRT=ON | if get(LLVM_Cfg, 'flang_rt', false) else []
+  cd $Build {
+    # The offload plugin finds the HSA runtime this way, as for AOMP.
+    with-env HSA_RUNTIME_PATH=$INSTALLDIR {
+      variant_cmake llvm_runtimes $var -G $Tool @[cmake_ccache_option ('llvm_runtimes')] \
+        -DCMAKE_INSTALL_PREFIX=$LLVM_Inst \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_COMPILER=$LLVM_Inst/bin/clang \
+        -DCMAKE_CXX_COMPILER=$LLVM_Inst/bin/clang++ \
+        -DCMAKE_PREFIX_PATH="$INSTALLDIR/lib/cmake;$INSTALLDIR/lib64/cmake" \
+        -DLLVM_ENABLE_RUNTIMES=$Runtimes \
+        -DLLVM_DIR=$LLVM_Inst/lib/cmake/llvm \
+        -DLLVM_BINARY_DIR=$LLVM_Inst \
+        -DLLVM_INSTALL_PREFIX=$LLVM_Inst \
+        -DLLVM_MAIN_INCLUDE_DIR=$LLVM_Src/llvm/include \
+        -DCMAKE_MODULE_PATH=$LLVM_Src/llvm/cmake/modules \
+        -DCLANG_VERSION_MAJOR=$ClangMajor \
+        -DOPENMP_ENABLE_LIBOMPTARGET=1 \
+        -DOPENMP_TEST_C_COMPILER=$LLVM_Inst/bin/clang \
+        -DOPENMP_TEST_CXX_COMPILER=$LLVM_Inst/bin/clang++ \
+        -DLIBOMPTARGET_AMDGCN_GFXLIST=$[LLVM_Cfg.gfxlist=>join(';')] \
+        -DLIBOMPTARGET_ENABLE_DEBUG=ON \
+        -DLIBOMPTARGET_LLVM_INCLUDE_DIRS=$LLVM_Src/llvm/include \
+        -DDEVICELIBS_ROOT=$[get_srcdir ('device_libs')] \
+        -DLIBOMP_COPY_EXPORTS=OFF \
+        -DLIBOMP_USE_HWLOC=ON \
+        -DLIBOMP_HWLOC_INSTALL_DIR=$INSTALLDIR \
+        -DLIBOMPTEST_INSTALL_COMPONENTS=ON \
+        -DLIBOMPTEST_BUILD_STANDALONE=1 \
+        -DCUDA_TOOLKIT_ROOT_DIR=OFF \
+        -DCMAKE_DISABLE_FIND_PACKAGE_CUDAToolkit=ON \
+        @FortRT \
+        @DeviceOpts \
+        @[get_configure_opts ('llvm_runtimes')] \
+        @[get_rpath_opts ('llvm_runtimes', var)] \
+        $LLVM_Src/runtimes
+    }
+  }
+}
+
+# The runtimes take their library directory suffix directly, rather than a
+# CMAKE_INSTALL_LIBDIR.
+func llvm_runtimes_variant_libdir_opts(var) {
+  var Suffix = variant_libdir_suffix (var)
+  return (:| -DOFFLOAD_LIBDIR_SUFFIX=$Suffix -DLLVM_LIBDIR_SUFFIX=$Suffix |)
+}
+
+# The runtimes' own settings for each variant, as AOMP's script.
+func llvm_runtimes_variant_cmake(var) {
+  var Parts = variant_parts (var)
+  var Opts = []
+  var CFlags = []
+  if (in_list ('perf', Parts)) {
+    setvar Opts = Opts ++ :| -DLIBOMPTARGET_ENABLE_DEBUG=OFF -DLIBOMPTARGET_PERF=ON |
+  }
+  if (in_list ('debug', Parts)) {
+    setvar Opts = Opts ++ :| -DLLVM_ENABLE_ASSERTIONS=ON
+                             -DROCM_DIR=$INSTALLDIR
+                             -DLIBOMP_ARCH=x86_64
+                             -DLIBOMP_OMPT_SUPPORT=ON
+                             -DLIBOMP_USE_DEBUGGER=ON
+                             -DLIBOMP_CPPFLAGS=-O0
+                             -DLIBOMP_OMPD_SUPPORT=ON
+                             -DLIBOMP_OMPT_DEBUG=ON |
+    if (not in_list ('asan', Parts)) {
+      append -- "-fdebug-prefix-map=$[get_srcdir ('llvm')]/offload=$[ompd_src_dir()]/offload" (CFlags)
+    }
+  }
+  if (in_list ('asan', Parts)) {
+    setvar Opts = Opts ++ :| -DSANITIZER_AMDGPU=1 -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF |
+  }
+  return ({opts: Opts, cflags: CFlags})
+}
+
+proc build_llvm_runtimes(var) {
+  cmake_build llvm_runtimes $var
+}
+
+proc install_llvm_runtimes(var) {
+  cmake_install llvm_runtimes $var
+}
+
+# Copy the sources the debug runtimes refer to (via -fdebug-prefix-map) into
+# the installation, as AOMP's script does.
+proc postinstall_llvm_runtimes(var) {
+  var Src = get_srcdir ('llvm')
+  var Dest = ompd_src_dir()
+  mkdir -p "$Dest/offload" "$Dest/openmp/runtime" "$Dest/openmp/libompd" "$Dest/openmp/device"
+  for D in (:| offload/libomptarget offload/plugins-nextgen |) {
+    if test --dir "$Src/$D" {
+      cp -rp "$Src/$D" "$Dest/offload"
+    }
+  }
+  for D in (:| runtime libompd device |) {
+    if test --dir "$Src/openmp/$D/src" {
+      cp -rp "$Src/openmp/$D/src" "$Dest/openmp/$D"
+    }
+  }
+}

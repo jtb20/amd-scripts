@@ -100,3 +100,18 @@ add_config_adjustment {
   # library/install don't depend on the tests, so disable them.
   append_configure_opts ("comgr", :| -DBUILD_TESTING=OFF |)
 }
+
+# Build variants (asan, debug, perf, ...) of the HSA runtime, HIP runtime,
+# comgr and the OpenMP runtimes, selected with --variant; see
+# build-variants.inc.  The OpenMP runtimes' default build is part of LLVM's,
+# so their variants are a separate, variant-only component.
+source $CONFIGDIR/aomp/build-variants.inc
+
+var llvm_runtimes_src = {
+  "type" : "subcomponent",
+  "parent" : "llvm",
+  "subdir" : "runtimes"
+}
+
+add_sources ("llvm_runtimes", llvm_runtimes_src)
+add_variant_component llvm_runtimes
