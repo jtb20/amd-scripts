@@ -72,6 +72,118 @@ func absolute_dir (Dir) {
   return ("$WORKDIR/$Dir")
 }
 
+# Brief -h/--help output for amd-build, amd-test and amd-checkout, which share
+# parse_args.  Only the options each script reads are shown; the README has
+# the full story.
+proc show_help() {
+  var IsCheckout = ScriptName === 'amd-checkout'
+  var IsTest = ScriptName === 'amd-test'
+  case (ScriptName) {
+    amd-checkout {
+      write -n """
+      Usage: amd-checkout [OPTION]... CONFIG [COMPONENT]...
+      Clone or update the sources CONFIG needs (or only the named components).
+      """
+    }
+    amd-test {
+      write -n """
+      Usage: amd-test [OPTION]... CONFIG [TASK]...
+      Run CONFIG's test suites against its build, and summarise the results.
+      """
+    }
+    (else) {
+      write -n """
+      Usage: $ScriptName [OPTION]... CONFIG [TASK]...
+      Build CONFIG's components (or the selected tasks), in a bubblewrap sandbox.
+      """
+    }
+  }
+  write -n """
+
+  CONFIG is a path under configs/, e.g. aomp/23/amd-staging-rocm-7.2.cfg.
+  """
+  if (not IsCheckout) {
+    write -n """
+
+    Tasks (run in order; none means all of them):
+      list                 print the numbered task list and exit
+      N, N--M              run task N, or tasks N to M
+      continue             run from the task after the last one to the end
+      PATTERN              run every task whose name contains PATTERN
+    """
+    if (not IsTest) {
+      write "  list-variants        print the build variants on offer and exit"
+    }
+  }
+  write -n """
+
+  Work directory layout (relative paths are relative to the current directory):
+    -s, --source DIR       source checkouts (default: src)
+  """
+  if (IsCheckout) {
+    write "  -d, --downloads DIR    downloaded archives (default: archives)"
+  } else {
+    write -n """
+      -b, --build DIR        build trees (default: obj)
+      -i, --install DIR      install tree (default: install)
+      -l, --logs DIR         task logs (default: logs)
+    """
+    if (IsTest) {
+      write "  -t, --testresults DIR  test results (default: testresults)"
+    }
+  }
+  write -n """
+
+  Configuration:
+    -A, --add MOD[,MOD]    enable optional modules
+  """
+  if (not IsCheckout) {
+    write "  -R, --remove FEAT[,..] disable default features"
+  }
+  if (not IsCheckout and not IsTest) {
+    write -n """
+      -D                     no build variants (same as --variant default)
+          --variant SPEC     variants to build: NAME[,..] or COMP=NAME[,..]
+      -g, --debug            build everything as Debug
+          --debug=COMP[,..]  build the named components as Debug
+          --assertions=COMP[,..]  enable assertions in the named components
+      -r, --rpath            use \$ORIGIN rpaths (default for amd-staging configs)
+          --no-rpath         don't
+      -j N                   build parallelism
+      -C, --clean            empty the install tree first
+    """
+  }
+  write "      --ghuser USER      GitHub username, for configs that clone a fork"
+  if (IsTest) {
+    write -n """
+
+    Testing:
+      -S, --select PATTERN   run only matching tests (syntax depends on the suite)
+          --gpurun=ARGS      extra arguments for gpurun
+          --gpu-offset N     GPU device bias (GPURUN_DEVICE_BIAS)
+          --gpu-devices L    visible GPUs (ROCR_VISIBLE_DEVICES)
+          --aomp DIR         test a preinstalled AOMP
+    """
+  }
+  if (not IsCheckout) {
+    write -n """
+
+    Sandbox:
+      -B, --no-bwrap         don't use the bubblewrap sandbox
+          --share-net        keep network access inside the sandbox
+      -H, --bind-homebrew    make Homebrew's tools available in the sandbox
+      -T, --toolsroot DIR    use DIR as a minimal root filesystem
+          --shell            start a shell in the sandbox instead
+    """
+  }
+  write -n """
+
+    -h, --help             show this help and exit
+
+  Full documentation: $SCRIPTDIR/README.md
+  """
+}
+
 proc parse_args(; argv) {
   var spec
   var tasks
@@ -82,6 +194,11 @@ proc parse_args(; argv) {
   var cfg
   while (opt < argc) {
     case (argv[opt]) {
+      -h | --help {
+        show_help
+        exit 0
+      }
+
       --ghuser {
         setvar opt += 1
         setglobal GithubUsername = argv[opt]

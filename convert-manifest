@@ -1,7 +1,22 @@
 #!/usr/bin/env ysh
 
-if (len(ARGV) !== 1) {
-  error "Usage: $0 <manifest>"
+proc usage(status='0') {
+  write -n """
+  Usage: convert-manifest MANIFEST
+  Turn a ROCm/AOMP repo manifest (XML) into amd-scripts config fragments
+  (add_sources calls), printed on standard output.  Needs xq from python-yq.
+
+    -h, --help             show this help and exit
+
+  Full documentation: $_this_dir/README.md ("Other utilities")
+  """
+  exit $status
+}
+
+if (len(ARGV) === 1 and (ARGV[0] === '-h' or ARGV[0] === '--help')) {
+  usage
+} elif (len(ARGV) !== 1) {
+  usage 1
 }
 
 # There's supposed to be a str=>lower() method, but it doesn't seem to be

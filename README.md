@@ -176,7 +176,8 @@ amd-test     aomp/23/amd-staging-rocm-7.2.cfg
 
 The examples here assume the scripts are on your `PATH`; otherwise call them by
 path, as in `~/amd-scripts/amd-build`. What matters is the directory you run
-*from*, not where the scripts live.
+*from*, not where the scripts live. Every script takes `-h`/`--help`
+for a summary of its arguments.
 
 The checkout takes a while (LLVM plus a dozen ROCm repositories). The build
 prints one line per task as it starts and finishes, and sends the actual build

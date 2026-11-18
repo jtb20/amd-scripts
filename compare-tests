@@ -298,15 +298,26 @@ if ! test -t 1 {
   setglobal UseColour = false
 }
 
-proc usage() {
-  write "Usage: $0 [-c|--colour] <testresults-old> <testresults-new>"
-  exit 0
+proc usage(status='0') {
+  write -n """
+  Usage: compare-tests [OPTION] OLD-TESTRESULTS NEW-TESTRESULTS
+  Compare the .sum files in two test results directories (as written by
+  amd-test), listing regressions, progressions and new or vanished tests.
+
+    -c, --colour           colour the output (the default)
+    -h, --help             show this help and exit
+
+  Full documentation: $_this_dir/README.md ("Comparing test results")
+  """
+  exit $status
 }
 
 var PosArgs = 0
 
-if (len (ARGV) < 2) {
+if (len (ARGV) >= 1 and (ARGV[0] === '-h' or ARGV[0] === '--help')) {
   usage
+} elif (len (ARGV) < 2) {
+  usage 1
 }
 
 case (ARGV[0]) {
@@ -326,7 +337,7 @@ case (ARGV[0]) {
 }
 
 if (len(ARGV) !== 2 + PosArgs) {
-  usage
+  usage 1
 }
 
 var LHS_Dir = ARGV[PosArgs]

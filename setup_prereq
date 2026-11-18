@@ -2,6 +2,29 @@
 
 set -e
 
+usage() {
+  cat <<EOF
+Usage: setup_prereq
+Download and build the YSH interpreter (oils-for-unix) the other scripts need,
+and GNU readline if the system has no usable one.
+
+Environment:
+  DOWNLOAD   where tarballs are fetched (default: \$HOME/downloads)
+  PREFIX     install prefix (default: \$HOME/prefix)
+  BUILD      scratch build directory (default: \$HOME/build-oil)
+
+  -h, --help   show this help and exit
+
+Full documentation: $(dirname "$(readlink -f "$0")")/README.md ("Setup")
+EOF
+}
+
+case "${1-}" in
+  -h|--help) usage; exit 0 ;;
+  "") ;;
+  *) usage >&2; exit 1 ;;
+esac
+
 DOWNLOAD="${DOWNLOAD:-$HOME/downloads}"
 PREFIX="${PREFIX:-$HOME/prefix}"
 BUILD="${BUILD:-$HOME/build-oil}"

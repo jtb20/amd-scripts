@@ -1,7 +1,22 @@
 #!/usr/bin/env ysh
 
-if (len(ARGV) !== 2) {
-  error "Usage: $0 <results.json> <testname>"
+proc usage(status='0') {
+  write -n """
+  Usage: extract_test_output RESULTS.JSON PATTERN
+  Print the result, time and output of each test in a lit JSON results file
+  (as amd-test saves them) whose name contains PATTERN.
+
+    -h, --help             show this help and exit
+
+  Full documentation: $_this_dir/README.md
+  """
+  exit $status
+}
+
+if (len(ARGV) >= 1 and (ARGV[0] === '-h' or ARGV[0] === '--help')) {
+  usage
+} elif (len(ARGV) !== 2) {
+  usage 1
 }
 
 var Results = ARGV[0]
