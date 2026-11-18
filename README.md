@@ -434,7 +434,9 @@ These options are shared by `amd-build` and `amd-test`.
 | `-C`, `--clean` | Delete the contents of `install/` first, as an extra task |
 | `-A`, `--add mod1,mod2` | Enable optional modules |
 | `-R`, `--remove feat1,feat2` | Disable default features |
-| `-r`, `--rpath` | Use AOMP-style `$ORIGIN` rpaths in installed binaries |
+| `-r`, `--rpath` | Use AOMP-style `$ORIGIN` rpaths in installed binaries (the default for `amd-staging` AOMP configs) |
+| `--no-rpath` | Don't, even where the config would by default |
+| `-D` | Build only the default builds, no [build variants](#build-variants) (short for `--variant default`) |
 | `-B`, `--no-bwrap` | Do not use the bubblewrap sandbox |
 | `--share-net` | Keep network access inside the sandbox |
 | `-H`, `--bind-homebrew` | Make Homebrew's `bwrap`, `ccache`, `makeinfo`, `ld.lld` available inside the sandbox |
@@ -480,34 +482,35 @@ alongside the normal build. They follow the layout of AOMP's own builds:
 variant libraries go in `lib/asan`, `lib-debug`, `lib-perf`,
 `lib-debug/asan` and `lib-perf/asan`, next to `lib`.
 
-Nothing extra is built unless you ask for it. To see what a config offers:
+As with AOMP's own builds, every variant on offer is built by default. To
+see what a config offers (`*` marks what would be built):
 
 ```console
 $ amd-build aomp/23/amd-staging-rocm-7.2.cfg list-variants
-rocr_runtime: asan debug
-comgr: asan
-hipamd: asan debug
-llvm_runtimes: asan debug perf perf+asan debug+asan asan-devicertl ... (variants only: its default build is part of llvm)
+rocr_runtime: asan* debug*
+comgr: asan*
+hipamd: asan* debug*
+llvm_runtimes: asan* debug* perf* perf+asan* debug+asan* asan-devicertl* ... (variants only: its default build is part of llvm)
 ```
 
-Then select variants with `--variant`, which takes a comma-separated list:
+`--variant` narrows that down, with the same forms as AOMP's `aomp_build.py`:
 
 | Form | Meaning |
 |------|---------|
-| `--variant asan,debug` | Build these variants of every component that offers them |
-| `--variant rocr_runtime=debug` | Build a variant of one component only |
+| `-D`, `--variant default` | Just the default builds, no variants |
+| `--variant asan,debug` | The default builds, plus these variants of every component that offers them |
+| `--variant rocr_runtime=debug` | The default builds, plus this variant of one component (only) |
 
-The forms can be mixed, as with AOMP's `aomp_build.py`. Pass the same
-`--variant` to every `amd-build` invocation for the work directory, since it
-changes the task list. Variant tasks are named `component/variant/task`:
+The forms can be combined in one comma-separated list. Pass the same options
+to every `amd-build` invocation for the work directory, since they change the
+task list. Variant tasks are named `component/variant/task`, so for example
 
 ```bash
-amd-build --variant asan aomp/23/amd-staging-rocm-7.2.cfg list
-amd-build --variant asan aomp/23/amd-staging-rocm-7.2.cfg asan/
+amd-build aomp/23/amd-staging-rocm-7.2.cfg /asan/
 ```
 
-The second command runs just the asan variant tasks, once the normal build is
-done.
+rebuilds just the asan variants, once the normal build is done. `-D` is handy
+for fast iteration on the default build.
 
 `llvm_runtimes` builds variants of the OpenMP runtimes (`openmp` and
 `offload`) against the installed LLVM. Their default build is part of LLVM's

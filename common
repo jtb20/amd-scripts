@@ -15,9 +15,10 @@ var ActiveCfg
 var Sources={}
 var Components=[]
 var ComponentVariants={}
-# Build variants requested with --variant: 'all' applies to every component,
-# 'per' maps a component to its own list.  Configs that support variants
-# (configs/aomp/build-variants.inc) act on this; others reject it.
+# Build variants requested with --variant (or -D, for --variant default):
+# 'all' applies to every component, 'per' maps a component to its own list.
+# Configs that support variants (configs/aomp/build-variants.inc) act on this;
+# others reject it.
 var VariantRequest = {all: [], per: {}}
 var Testsuites={}
 var SelectTests=null
@@ -43,7 +44,10 @@ var ModifyConfigProcs = []
 var PreinstalledAOMP = null
 var DebugDep = null
 var FlangAdjectiveOverride = null
-var SetRPathOpts = false
+# AOMP-style $ORIGIN rpaths: true with -r/--rpath, false with --no-rpath, and
+# otherwise up to the config (configs/aomp/aomp-config-19-plus.inc turns them
+# on), else off.
+var SetRPathOpts = null
 var ModifyCheckoutProcs = []
 
 proc show_vars {
@@ -105,6 +109,11 @@ proc parse_args(; argv) {
         }
       }
 
+      -D {
+        # Shorthand for --variant default: only the default builds.
+        append default (VariantRequest.all)
+      }
+
       --variant | --variant=* {
         var VarSpec
         if (argv[opt] === '--variant') {
@@ -143,6 +152,10 @@ proc parse_args(; argv) {
 
       -r | --rpath {
         setglobal SetRPathOpts = true
+      }
+
+      --no-rpath {
+        setglobal SetRPathOpts = false
       }
 
       -B | --no-bwrap {
@@ -914,7 +927,8 @@ proc discover_variants() {
   }
   if (has_proc ('config_select_variants')) {
     config_select_variants
-  } elif (len(VariantRequest.all) > 0 or len(VariantRequest.per) > 0) {
+  } elif (len(list_remove (VariantRequest.all, 'default')) > 0 or len(VariantRequest.per) > 0) {
+    # (Asking for just the default builds, e.g. with -D, is fine anywhere.)
     error "This config doesn't support build variants (--variant)"
   }
 }

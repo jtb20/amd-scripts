@@ -101,9 +101,15 @@ add_config_adjustment {
   append_configure_opts ("comgr", :| -DBUILD_TESTING=OFF |)
 }
 
+# AOMP-style $ORIGIN rpaths, as AOMP's own builds use, unless the command
+# line says otherwise (-r/--rpath or --no-rpath).
+if (SetRPathOpts === null) {
+  setglobal SetRPathOpts = true
+}
+
 # Build variants (asan, debug, perf, ...) of the HSA runtime, HIP runtime,
-# comgr and the OpenMP runtimes, selected with --variant; see
-# build-variants.inc.  The OpenMP runtimes' default build is part of LLVM's,
+# comgr and the OpenMP runtimes: all of them by default, as for AOMP's builds,
+# or as selected with --variant (-D for none); see build-variants.inc.  The OpenMP runtimes' default build is part of LLVM's,
 # so their variants are a separate, variant-only component.
 source $CONFIGDIR/aomp/build-variants.inc
 

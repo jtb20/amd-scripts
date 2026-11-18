@@ -14,9 +14,11 @@
 #   runtimes, built by the main LLVM build) is registered here with
 #   add_variant_component.  It only becomes a component when one of its
 #   variants is selected.
-# - Nothing extra is built unless requested with --variant:
-#     --variant asan,debug          every component offering them
-#     --variant rocr_runtime=debug  one component only
+# - As for AOMP's builds, every variant offered is built unless --variant
+#   says otherwise:
+#     --variant default (or -D)     just the default builds
+#     --variant asan,debug          default + these, wherever offered
+#     --variant rocr_runtime=debug  default + this, for one component only
 #   'amd-build <cfg> list-variants' shows what is available.
 # - Each selected variant gets the tasks named by <comp>_variant_tasks(variant)
 #   (default: clean configure build install), as comp/variant/task.  The
@@ -46,9 +48,15 @@ func supported_variants(comp) {
   return (Fn())
 }
 
-# The variants of 'comp' requested by --variant, in the order the module lists
-# them.
+# The variants of 'comp' to build, in the order the module lists them.  As
+# for AOMP's builds: with no --variant at all, every variant offered; with
+# --variant, the default build plus the variants named, either for every
+# component or for one ('comp=v'; with only those, the other components build
+# just their default).  '--variant default' (-D) is the default build only.
 func requested_variants(comp) {
+  if (len(VariantRequest.all) === 0 and len(VariantRequest.per) === 0) {
+    return (supported_variants (comp))
+  }
   var Wanted = VariantRequest.per[comp] if comp in VariantRequest.per else VariantRequest.all
   var Selected = []
   for V in (supported_variants (comp)) {
@@ -145,8 +153,9 @@ proc print_variants() {
     return
   }
   write
-  write "Select with --variant v1,v2 (all components) or --variant comp=v (one"
-  write "component).  '*' marks variants selected by the current --variant."
+  write "'*' marks the variants that would be built.  By default that's all of"
+  write "them; select with --variant v1,v2 (all components), --variant comp=v (one"
+  write "component), or -D (--variant default) for the default builds only."
 }
 
 ### VARIANT CMAKE SETTINGS ###
