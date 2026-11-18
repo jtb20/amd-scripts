@@ -63,7 +63,7 @@ proc comgr_tasks {
   add_tasks comgr @[comgr_variant_tasks()]
 }
 
-### Build variants (see configs/aomp/build-variants.inc) ###
+### Build variants (see "BUILD VARIANTS" in common, and configs/aomp/aomp-variants.inc) ###
 
 func comgr_supported_variants() {
   return (:| asan |)

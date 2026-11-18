@@ -4,8 +4,8 @@
 # and offload), as AOMP's build_llvm_runtimes_standalone.sh.  The default
 # runtimes come from the main LLVM build, so this component has no default
 # build of its own: configs register it with add_variant_component (see
-# configs/aomp/build-variants.inc), and it is only built when one of its
-# variants is selected with --variant.
+# "BUILD VARIANTS" in common, and configs/aomp/aomp-variants.inc), and it is
+# only built when one of its variants is selected.
 #
 # Each variant configures llvm-project/runtimes against the installed LLVM and
 # installs into it, with the variant's library directory suffix (lib/asan,

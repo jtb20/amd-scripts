@@ -15,11 +15,13 @@ var ActiveCfg
 var Sources={}
 var Components=[]
 var ComponentVariants={}
-# Build variants requested with --variant (or -D, for --variant default):
-# 'all' applies to every component, 'per' maps a component to its own list.
-# Configs that support variants (configs/aomp/build-variants.inc) act on this;
-# others reject it.
+# Build variants (see "BUILD VARIANTS" below).  VariantRequest is what was
+# asked for with --variant (or -D, for --variant default): 'all' applies to
+# every component, 'per' maps a component to its own list.
+var VariantsEnabled = false
 var VariantRequest = {all: [], per: {}}
+var SelectedVariants = {}
+var VariantOnlyComponents = []
 var Testsuites={}
 var SelectTests=null
 var ConfigureOpts={}
@@ -618,10 +620,9 @@ proc elaborate_tasks() {
   } | tsort | while read ordered_comp {
     setvar add_task_fn = "${ordered_comp}_tasks"
     eval "$add_task_fn"
-    # Configs supporting build variants add each component's variant tasks
-    # straight after its own.
-    if (has_proc ('config_variant_tasks')) {
-      config_variant_tasks $ordered_comp
+    # Each component's build variant tasks come straight after its own.
+    if (VariantsEnabled) {
+      add_variant_tasks $ordered_comp
     }
   }
 }
@@ -818,7 +819,7 @@ proc do_tasks (; todo) {
       print_tasks
       exit 0
     } elif (t === "list-variants") {
-      if (not has_proc ('print_variants')) {
+      if (not VariantsEnabled) {
         error "This config doesn't support build variants"
       }
       print_variants
@@ -919,32 +920,248 @@ proc add_checkout_adjustment(;;; Block) {
 }
 
 # Find variants for components and populate the ComponentVariants dict.
+# (Legacy: <comp>_variants procs.  See "BUILD VARIANTS" below for the
+# current mechanism.)
 proc discover_variants() {
   for Comp in (Components) {
     if (has_proc("${Comp}_variants")) {
       eval "${Comp}_variants"
     }
   }
-  if (has_proc ('config_select_variants')) {
-    config_select_variants
+  if (VariantsEnabled) {
+    select_variants
   } elif (len(list_remove (VariantRequest.all, 'default')) > 0 or len(VariantRequest.per) > 0) {
     # (Asking for just the default builds, e.g. with -D, is fine anywhere.)
     error "This config doesn't support build variants (--variant)"
   }
 }
 
-# Run cmake for a component, or for one of its build variants.  Variant
-# support (the CMake settings each variant adds) comes from the config; see
-# configs/aomp/build-variants.inc.  Without a variant this is just cmake.
-proc variant_cmake (comp, variant, ...args) {
-  if (variant) {
-    if (not has_proc ('config_variant_cmake')) {
-      error "No build variant support for $comp variant '$variant'"
-    }
-    config_variant_cmake $comp $variant @args
-  } else {
-    cmake @args
+### BUILD VARIANTS ###
+#
+# A build variant is an extra build of a component (e.g. with AddressSanitizer,
+# or a debug build) alongside its default build.  This is the generic
+# machinery; what each variant means (its compiler flags, where it installs)
+# comes from the config family that uses them, e.g. configs/aomp/aomp-variants.inc.
+#
+# - A config family turns variants on with enable_variants, and supplies
+#   config_variant_settings(comp, variant) (see variant_cmake).
+# - A module says which variants it can build with <comp>_supported_variants(),
+#   e.g. :| asan debug |.
+# - A component with no default build of its own (e.g. one whose default build
+#   happens inside another component's) is registered by the config with
+#   add_variant_component, and only becomes a component when one of its
+#   variants is selected.
+# - With no --variant, every variant offered is built.  --variant default (or
+#   -D) builds just the default builds; --variant v1,v2 adds those variants to
+#   them wherever offered, and --variant comp=v for one component only (with
+#   only such requests, other components build just their default).
+#   'list-variants' shows what is available.
+# - Each selected variant gets the tasks named by <comp>_variant_tasks(variant)
+#   (default: clean configure build install), as comp/variant/task.  The
+#   module's task procs take the variant as their argument, and configure with
+#   variant_cmake.
+
+proc enable_variants() {
+  setglobal VariantsEnabled = true
+}
+
+proc add_variant_component(comp) {
+  if (not in_list (comp, VariantOnlyComponents)) {
+    append $comp (VariantOnlyComponents)
   }
+}
+
+func supported_variants(comp) {
+  try {
+    var Fn = lookup_func("${comp}_supported_variants")
+  }
+  if (_error.code !== 0) {
+    clear_error
+    return ([])
+  }
+  return (Fn())
+}
+
+# The variants of 'comp' to build, in the order the module lists them.
+func requested_variants(comp) {
+  if (len(VariantRequest.all) === 0 and len(VariantRequest.per) === 0) {
+    return (supported_variants (comp))
+  }
+  var Wanted = VariantRequest.per[comp] if comp in VariantRequest.per else VariantRequest.all
+  var Selected = []
+  for V in (supported_variants (comp)) {
+    if (in_list (V, Wanted)) {
+      append $V (Selected)
+    }
+  }
+  return (Selected)
+}
+
+func variant_tasks(comp, variant) {
+  try {
+    var Fn = lookup_func("${comp}_variant_tasks")
+  }
+  if (_error.code !== 0) {
+    clear_error
+    return (:| clean configure build install |)
+  }
+  return (Fn(variant))
+}
+
+# Check the --variant request, add any selected variant-only components, and
+# record each component's selected variants.
+proc select_variants() {
+  var Candidates = Components ++ VariantOnlyComponents
+  var Offered = []
+  for C in (Candidates) {
+    setvar Offered = Offered ++ supported_variants (C)
+  }
+  for V in (VariantRequest.all) {
+    if (V !== 'default' and not in_list (V, Offered)) {
+      error "Unknown build variant '$V' (see 'list-variants')"
+    }
+  }
+  for C, Vs in (VariantRequest.per) {
+    if (not in_list (C, Candidates)) {
+      error "Bad --variant: no component '$C' in this config"
+    }
+    for V in (Vs) {
+      if (V !== 'default' and not in_list (V, supported_variants (C))) {
+        error "Bad --variant: component '$C' has no '$V' variant (see 'list-variants')"
+      }
+    }
+  }
+  for C in (VariantOnlyComponents) {
+    if (len(requested_variants (C)) > 0) {
+      add_components $C
+    }
+  }
+  for C in (Components) {
+    var Sel = requested_variants (C)
+    if (len(Sel) > 0) {
+      setglobal SelectedVariants[C] = Sel
+    }
+  }
+}
+
+proc add_variant_tasks(comp) {
+  if (comp in SelectedVariants) {
+    for V in (SelectedVariants[comp]) {
+      for T in (variant_tasks (comp, V)) {
+        add_task (comp, V, T)
+      }
+    }
+  }
+}
+
+# The 'list-variants' selector.
+proc print_variants() {
+  var Any = false
+  var Listed = Components ++ []
+  for C in (VariantOnlyComponents) {
+    if (not in_list (C, Listed)) {
+      setvar Listed = Listed ++ [C]
+    }
+  }
+  for C in (Listed) {
+    var Vs = supported_variants (C)
+    if (len(Vs) === 0) {
+      continue
+    }
+    setvar Any = true
+    var Sel = SelectedVariants[C] if C in SelectedVariants else []
+    var Marked = []
+    for V in (Vs) {
+      append $[V ++ ('*' if in_list (V, Sel) else '')] (Marked)
+    }
+    var Note = ' (variants only: no default build of its own)' if in_list (C, VariantOnlyComponents) else ''
+    write "$C: $[Marked=>join(' ')]$Note"
+  }
+  if (not Any) {
+    write "No components in this config offer build variants."
+    return
+  }
+  write
+  write "'*' marks the variants that would be built.  By default that's all of"
+  write "them; select with --variant v1,v2 (all components), --variant comp=v (one"
+  write "component), or -D (--variant default) for the default builds only."
+}
+
+# The CMake settings a variant adds to a component's own: a dict of 'opts'
+# (plain -D options, applied last), 'cflags' (added to CMAKE_C_FLAGS and
+# CMAKE_CXX_FLAGS) and 'prefix' (put first in CMAKE_PREFIX_PATH).  The config
+# family's config_variant_settings(comp, variant) comes first, then anything
+# from the module's <comp>_variant_cmake(variant).
+func variant_cmake_settings(comp, variant) {
+  try {
+    var ConfigFn = lookup_func('config_variant_settings')
+  }
+  if (_error.code !== 0) {
+    error "No build variant settings for $comp variant '$variant' (no config_variant_settings)"
+  }
+  var Base = ConfigFn(comp, variant)
+  var Opts = get(Base, 'opts', [])
+  var CFlags = get(Base, 'cflags', [])
+  var Prefix = get(Base, 'prefix', [])
+  try {
+    var CompFn = lookup_func("${comp}_variant_cmake")
+  }
+  if (_error.code === 0) {
+    var Extra = CompFn(variant)
+    setvar Opts = Opts ++ get(Extra, 'opts', [])
+    setvar CFlags = CFlags ++ get(Extra, 'cflags', [])
+    setvar Prefix = get(Extra, 'prefix', []) ++ Prefix
+  } else {
+    clear_error
+  }
+  return ({opts: Opts, cflags: CFlags, prefix: Prefix})
+}
+
+# Run cmake for a component, or for one of its build variants.  Without a
+# variant this is just cmake.  With one, the variant's settings
+# (variant_cmake_settings) are added to the component's own 'args': its
+# compiler flags are added to any CMAKE_C_FLAGS/CMAKE_CXX_FLAGS already there,
+# rather than replacing them, and its prefix path entries go before any
+# CMAKE_PREFIX_PATH there.
+proc variant_cmake (comp, variant, ...args) {
+  if (not variant) {
+    cmake @args
+    return
+  }
+  var V = variant_cmake_settings (comp, variant)
+  var Plain = []
+  var CFlags = []
+  var CXXFlags = []
+  var Prefix = []
+  for A in (args) {
+    if (A ~~ '-DCMAKE_C_FLAGS=*') {
+      append $[A=>trimStart('-DCMAKE_C_FLAGS=')] (CFlags)
+    } elif (A ~~ '-DCMAKE_CXX_FLAGS=*') {
+      append $[A=>trimStart('-DCMAKE_CXX_FLAGS=')] (CXXFlags)
+    } elif (A ~~ '-DCMAKE_PREFIX_PATH=*') {
+      append $[A=>trimStart('-DCMAKE_PREFIX_PATH=')] (Prefix)
+    } else {
+      append -- $A (Plain)
+    }
+  }
+  setvar CFlags = CFlags ++ V.cflags
+  setvar CXXFlags = CXXFlags ++ V.cflags
+  setvar Prefix = V.prefix ++ Prefix
+  var Merged = []
+  if (len(CFlags) > 0) {
+    append -- "-DCMAKE_C_FLAGS=$[CFlags=>join(' ')]" (Merged)
+  }
+  if (len(CXXFlags) > 0) {
+    append -- "-DCMAKE_CXX_FLAGS=$[CXXFlags=>join(' ')]" (Merged)
+  }
+  if (len(Prefix) > 0) {
+    append -- "-DCMAKE_PREFIX_PATH=$[Prefix=>join(';')]" (Merged)
+  }
+  write "Configuring $comp variant '$variant':"
+  write "  variant options: $[V.opts=>join(' ')]"
+  write "  C/C++ flags:     $[V.cflags=>join(' ')]"
+  write "  prefix first:    $[V.prefix=>join(';')]"
+  cmake @Plain @Merged @[V.opts]
 }
 
 # Optionally modify default configure options (etc.) after added modules and

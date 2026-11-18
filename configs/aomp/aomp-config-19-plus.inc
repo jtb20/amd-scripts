@@ -109,9 +109,10 @@ if (SetRPathOpts === null) {
 
 # Build variants (asan, debug, perf, ...) of the HSA runtime, HIP runtime,
 # comgr and the OpenMP runtimes: all of them by default, as for AOMP's builds,
-# or as selected with --variant (-D for none); see build-variants.inc.  The OpenMP runtimes' default build is part of LLVM's,
-# so their variants are a separate, variant-only component.
-source $CONFIGDIR/aomp/build-variants.inc
+# or as selected with --variant (-D for none); see aomp-variants.inc.  The
+# OpenMP runtimes' default build is part of LLVM's, so their variants are a
+# separate, variant-only component.
+source $CONFIGDIR/aomp/aomp-variants.inc
 
 var llvm_runtimes_src = {
   "type" : "subcomponent",

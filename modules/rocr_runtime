@@ -74,7 +74,7 @@ proc rocr_runtime_tasks {
   add_tasks rocr_runtime @[rocr_runtime_variant_tasks()]
 }
 
-### Build variants (see configs/aomp/build-variants.inc) ###
+### Build variants (see "BUILD VARIANTS" in common, and configs/aomp/aomp-variants.inc) ###
 
 func rocr_runtime_supported_variants() {
   return (:| asan debug |)

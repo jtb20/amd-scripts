@@ -39,7 +39,7 @@ proc roct_thunk_interface_tasks {
   standard_tasks roct_thunk_interface
 }
 
-### Build variants (see configs/aomp/build-variants.inc) ###
+### Build variants (see "BUILD VARIANTS" in common, and configs/aomp/aomp-variants.inc) ###
 
 func roct_thunk_interface_supported_variants() {
   return (:| asan debug |)

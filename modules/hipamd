@@ -69,7 +69,7 @@ proc hipamd_tasks {
   add_tasks hipamd llvm_symlink
 }
 
-### Build variants (see configs/aomp/build-variants.inc) ###
+### Build variants (see "BUILD VARIANTS" in common, and configs/aomp/aomp-variants.inc) ###
 
 func hipamd_supported_variants() {
   return (:| asan debug |)

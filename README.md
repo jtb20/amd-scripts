@@ -497,7 +497,7 @@ $ amd-build aomp/23/amd-staging-rocm-7.2.cfg list-variants
 rocr_runtime: asan* debug*
 comgr: asan*
 hipamd: asan* debug*
-llvm_runtimes: asan* debug* perf* perf+asan* debug+asan* asan-devicertl* ... (variants only: its default build is part of llvm)
+llvm_runtimes: asan* debug* perf* perf+asan* debug+asan* asan-devicertl* ... (variants only: no default build of its own)
 ```
 
 `--variant` narrows that down, with the same forms as AOMP's `aomp_build.py`:
@@ -533,13 +533,15 @@ debugger can find them.
 a component (the compiler included) to a Debug build, rather than adding a
 second one.
 
-Supporting variants in a module means listing them in
+The variant machinery itself (selection, tasks, `list-variants`, and
+`variant_cmake`, which adds a variant's settings to a component's own CMake
+options) is generic, in `common`. What AOMP's variants are (their compilers,
+sanitizer flags and library directories) is in
+`configs/aomp/aomp-variants.inc`, which turns variants on for the configs
+that source it. Supporting variants in a module means listing them in
 `<comp>_supported_variants()`, accepting the variant as an argument in its
-task procs, and configuring with `variant_cmake`, which adds each variant's
-settings to the component's own. The shared settings (compilers, sanitizer
-flags, library directories and so on) are in
-`configs/aomp/build-variants.inc`; a module adds its own extras with
-`<comp>_variant_cmake(variant)`.
+task procs, and configuring with `variant_cmake`; a module adds its own
+extras with `<comp>_variant_cmake(variant)`.
 
 ## The bubblewrap sandbox
 
