@@ -86,6 +86,31 @@ func llvm_dependencies() {
 proc llvm_tasks() {
   standard_tasks llvm
   add_tasks llvm install_filecheck
+  # The configs' relative ROCm path assumes the lib/llvm install layout.
+  if (get_configure_key ('llvm', 'rocm_cfg', false) and
+      get_configure_key ('llvm', 'append_install_dir', null) === 'lib/llvm') {
+    add_tasks llvm install_cfg
+  }
+}
+
+# Install clang/flang configuration files that point the compiler at the ROCm
+# tree it is installed in, as TheRock does (base/aux-overlay): rocm.cfg, plus a
+# driver-named file for each driver that just includes it.  <CFGDIR> is the
+# directory the config file is in (lib/llvm/bin), so the ROCm path is the
+# install root.  Configs enable this with
+#
+#   set_configure_key ("llvm", "rocm_cfg", true)
+#
+# (only for the lib/llvm install layout).
+proc install_cfg_llvm() {
+  var LLVM_Inst = get_installdir('llvm')
+  var Major = $($LLVM_Inst/bin/clang --version | grep -oP '(?<=clang version )[0-9]+')
+  write -- "\$-Wl,--enable-new-dtags" "--rocm-path='<CFGDIR>/../../..'" -frtlib-add-rpath > $LLVM_Inst/bin/rocm.cfg
+  for Name in (:| clang-$Major.cfg clang++.cfg clang.cfg clang-cl.cfg clang-cpp.cfg flang.cfg |) {
+    write -- '@rocm.cfg' > $LLVM_Inst/bin/$Name
+  }
+  write "Installed rocm.cfg and driver configs in $LLVM_Inst/bin"
+  cat $LLVM_Inst/bin/rocm.cfg
 }
 
 proc default_configure_opts_llvm() {

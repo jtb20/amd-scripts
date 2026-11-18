@@ -1,0 +1,60 @@
+#!/usr/bin/env ysh
+
+# rocJITsu: ROCm's GPU simulation, virtualization and instrumentation suite
+# (librocjitsu, its HSA hot-swap plugin and tools).  From rocm-systems
+# emulation/rocjitsu (TheRock emulation/CMakeLists.txt, THEROCK_ENABLE_ROCJITSU;
+# TheRock's separate rocjitsu-hotswap artifact just re-stages the hot-swap
+# library this installs).
+#
+# Its CMake fetches googletest and flatbuffers at configure time; we fetch them
+# with amd-checkout instead (at the tags rocJITsu asks for), and build fully
+# disconnected from the network, with FetchContent's work area in the build
+# directory rather than the source tree.
+
+proc clean_rocjitsu() {
+  clean_component rocjitsu
+}
+
+func get_rocjitsu_src() {
+  return (get_src_default ("rocjitsu"))
+}
+
+proc configure_rocjitsu() {
+  var Build = get_objdir("rocjitsu")
+  var Src = get_srcdir("rocjitsu")
+  var Tool = get_build_tool("rocjitsu")
+  var BuildType = get_build_type("rocjitsu")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DBUILD_TESTING=OFF \
+      -DFETCHCONTENT_FULLY_DISCONNECTED=ON \
+      -DFETCHCONTENT_BASE_DIR=$Build/_deps \
+      -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=$[get_srcdir ('googletest')] \
+      -DFETCHCONTENT_SOURCE_DIR_FLATBUFFERS=$[get_srcdir ('flatbuffers')] \
+      @[get_configure_opts('rocjitsu')] \
+      @[get_rpath_opts('rocjitsu')] \
+      $Src
+  }
+}
+
+proc build_rocjitsu() {
+  cmake_build rocjitsu
+}
+
+proc install_rocjitsu() {
+  cmake_install rocjitsu
+}
+
+func rocjitsu_dependencies() {
+  # TheRock: RUNTIME_DEPS libdrm only (taken from the host here).  Its CMake
+  # also fetches googletest and flatbuffers with FetchContent, which TheRock
+  # provides itself; here they are sources of their own (see configure).
+  return (:| googletest flatbuffers |)
+}
+
+proc rocjitsu_tasks() {
+  standard_tasks rocjitsu
+}

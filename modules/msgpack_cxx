@@ -1,0 +1,48 @@
+#!/usr/bin/env ysh
+
+# msgpack-cxx, the header-only C++ MessagePack library: a build dependency of
+# rocm_kpack.  TheRock builds it from the upstream release tarball
+# (third-party/msgpack-cxx), with Boost support turned off.
+
+proc clean_msgpack_cxx() {
+  clean_component msgpack_cxx
+}
+
+func get_msgpack_cxx_src() {
+  return (get_src_default ("msgpack_cxx"))
+}
+
+proc configure_msgpack_cxx() {
+  var Build = get_objdir("msgpack_cxx")
+  var Src = get_srcdir("msgpack_cxx")
+  var Tool = get_build_tool("msgpack_cxx")
+  var BuildType = get_build_type("msgpack_cxx")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DMSGPACK_USE_BOOST=OFF \
+      -DMSGPACK_BUILD_TESTS=OFF \
+      -DMSGPACK_BUILD_EXAMPLES=OFF \
+      @[get_configure_opts('msgpack_cxx')] \
+      @[get_rpath_opts('msgpack_cxx')] \
+      $Src
+  }
+}
+
+proc build_msgpack_cxx() {
+  cmake_build msgpack_cxx
+}
+
+proc install_msgpack_cxx() {
+  cmake_install msgpack_cxx
+}
+
+func msgpack_cxx_dependencies() {
+  return ([])
+}
+
+proc msgpack_cxx_tasks() {
+  standard_tasks msgpack_cxx
+}

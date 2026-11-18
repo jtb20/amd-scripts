@@ -83,7 +83,8 @@ add_config_adjustment {
   var HipSrc = get_srcdir("hip")
   var HipCCBuild = get_objdir("hipcc")
   var LLVM_Inst = get_installdir('llvm')
-  set_configure_opts ('hipamd', :| -DHIP_COMMON_DIR=$HipSrc
+  # (Appended, so that the config's ROCm sources can add their own.)
+  append_configure_opts ('hipamd', :| -DHIP_COMMON_DIR=$HipSrc
                                    -DHIP_PLATFORM=amd
                                    -DHIP_COMPILER=clang
                                    -DCMAKE_HIP_ARCHITECTURES=OFF
@@ -99,6 +100,17 @@ add_config_adjustment {
   # command line" on llvm::sys::PrintStackTraceOnErrorSignal.  The comgr
   # library/install don't depend on the tests, so disable them.
   append_configure_opts ("comgr", :| -DBUILD_TESTING=OFF |)
+}
+
+# As TheRock (and srock) builds do: build MLIR's tools (MLIR itself is built
+# anyway, for flang) and install LLVM's utilities (FileCheck, not, count,
+# split-file, yaml2obj, ...), and install clang/flang config files pointing the
+# compiler at its ROCm tree (see install_cfg_llvm in modules/llvm).
+# 'mlir' can be dropped with --remove mlir.
+set_configure_key ("llvm", "projects", ConfigureOpts.llvm.projects ++ ['mlir'])
+set_configure_key ("llvm", "rocm_cfg", true)
+add_config_adjustment {
+  append_configure_opts ("llvm", :| -DLLVM_INSTALL_UTILS=ON |)
 }
 
 # AOMP-style $ORIGIN rpaths, as AOMP's own builds use, unless the command

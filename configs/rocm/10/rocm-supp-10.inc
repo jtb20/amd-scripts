@@ -49,3 +49,15 @@ var openmpi_src = {
 }
 
 add_sources ("openmpi", openmpi_src)
+
+# msgpack-cxx, a build dependency of rocm_kpack (as TheRock's
+# third-party/msgpack-cxx, which mirrors this upstream release tarball).
+var msgpack_cxx_src = {
+  "url" : "https://github.com/msgpack/msgpack-c/releases/download/cpp-7.0.0/msgpack-cxx-7.0.0.tar.gz",
+  "type" : "archive",
+  "version" : "7.0.0",
+  "version_name" : "7.0.0",
+  "md5" : "4f634a36531fb2ba5b92038c42483871"
+}
+
+add_sources ("msgpack_cxx", msgpack_cxx_src)

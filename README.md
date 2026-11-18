@@ -280,9 +280,15 @@ rocm-smi-lib, roctracer, aqlprofile, ROCdbgapi and the rest now live in
 instead of having a repository each. `configs/rocm/10/` therefore checks out one
 monorepo as the `rocm_systems` component and declares everything inside it as a
 `subcomponent`. `rocm_systems` is a placeholder with no tasks of its own; the
-component names, modules and task list are exactly as they were for ROCm 7.2.
+component names and modules are as they were for ROCm 7.2.
 `aomp/23/amd-staging-rocm-10.cfg` pairs it with LLVM `amd-staging`, and
 `aomp/23/mainline+amd-staging-rocm-10.cfg` with upstream `main`.
+
+The ROCm 10 configs also build the components TheRock (and srock) builds
+that the 7.x configs don't: `amdsmi` (amd-smi), `rocm_core`, `rocm_kpack`
+(with the `msgpack_cxx` library it needs) and `rocjitsu` (rocJITsu), and they
+build the HIP runtime with kpack support, as TheRock does. Their
+dependencies follow TheRock's own declarations.
 
 Building the HIP runtime (`hipamd`) needs a Python module on the host:
 `cxxheaderparser` for ROCm 10, `CppHeaderParser` for the ROCm 7.x
@@ -601,7 +607,15 @@ For AOMP-family configs (`configs/aomp/aomp-common.inc`):
 | `smoke_dev`, `openmp_examples`, `genasis` | Extra testsuites |
 
 Removable with `-R`: `flang_new`, `flang_rt`, `clang_tools_extra`,
-`spirv_translator`.
+`spirv_translator`, `mlir`.
+
+Like TheRock's builds, the `amd-staging` (and `mainline+amd-staging`) configs
+build MLIR's tools, install LLVM's utilities (`FileCheck`, `not`, `count`,
+`split-file`, `yaml2obj` and so on) and the SPIR-V translator
+(`amd-llvm-spirv`), and install clang and flang configuration files
+(`rocm.cfg`, `clang.cfg`, ...) in `lib/llvm/bin`. Those point the compiler at
+the ROCm tree it is installed in (`--rocm-path`), and add rpaths for its
+runtime libraries to the programs it links.
 
 `llvm/mainline.cfg` adds `openmp_project` (build OpenMP as a project rather than
 a runtime, for old revisions), `sollve_vv` and `taskgraph`. `rocm/6.3/rocm-6.3.cfg`

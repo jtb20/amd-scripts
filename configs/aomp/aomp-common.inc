@@ -233,6 +233,11 @@ proc remove_optional_feature(Feat) {
       set_configure_key ('llvm', 'projects', P)
     }
 
+    mlir {
+      setvar P = list_remove (ConfigureOpts.llvm.projects, 'mlir')
+      set_configure_key ('llvm', 'projects', P)
+    }
+
     spirv_translator {
       set_configure_key ("llvm", "spirv_translator", false)
     }

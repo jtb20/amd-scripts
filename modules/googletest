@@ -1,0 +1,19 @@
+#!/usr/bin/env ysh
+
+# Source only: googletest is fetched by amd-checkout so that components which would
+# otherwise download it at configure time (CMake FetchContent) can be pointed
+# at it instead, e.g. with -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=<this source>.
+# See modules/rocjitsu.
+
+func get_googletest_src() {
+  return (get_src_default ("googletest"))
+}
+
+func googletest_dependencies() {
+  return ([])
+}
+
+proc googletest_tasks {
+  # No tasks!
+  true
+}

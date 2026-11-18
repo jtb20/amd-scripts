@@ -41,13 +41,26 @@ var hipfort_src = {
   "deps" : :| llvm |
 }
 
-var rocprofiler_register_src = {
-  "url" : "https://github.com/ROCm/rocprofiler-register",
+# The rocprofiler repositories are archived: their ROCm 7.2 sources are now
+# taken from the ROCm/rocm-systems monorepo's release branch.  The monorepo is
+# a placeholder component (see modules/rocm_systems and configs/rocm/10), only
+# cloned when one of these is built, and the submodules they need are
+# initialised after checkout (below).
+
+var rocm_systems_src = {
+  "url" : "https://github.com/ROCm/rocm-systems",
   "type" : "git",
   "version" : "release/rocm-rel-7.2",
   "version_name" : "7.2",
   "shallow_clone" : false,
-  "submodules" : true
+  "blobless_clone" : true
+}
+
+var rocprofiler_register_src = {
+  "type" : "subcomponent",
+  "parent" : "rocm_systems",
+  "subdir" : "projects/rocprofiler-register",
+  "deps" : :| rocm_systems rocm_cmake llvm |
 }
 
 var roctracer_src = {
@@ -99,12 +112,10 @@ var aqlprofile_src = {
 }
 
 var rocprofiler_sdk_src = {
-  "url" : "https://github.com/ROCm/rocprofiler-sdk",
-  "type" : "git",
-  "version" : "release/rocm-rel-7.2",
-  "version_name" : "7.2",
-  "shallow_clone" : false,
-  "submodules" : true
+  "type" : "subcomponent",
+  "parent" : "rocm_systems",
+  "subdir" : "projects/rocprofiler-sdk",
+  "deps" : :| rocm_systems rocm_dbgapi hipamd device_libs rocprofiler_register rocminfo |
 }
 
 var hipify_src = {
@@ -122,6 +133,7 @@ add_sources ("hip", hip_src)
 add_sources ("hipfort", hipfort_src)
 add_sources ("composable_kernel", composable_kernel_src)
 add_sources ("roctracer", roctracer_src)
+add_sources ("rocm_systems", rocm_systems_src)
 add_sources ("rocprofiler_register", rocprofiler_register_src)
 add_sources ("opencl_icd_loader", opencl_icd_loader_src)
 add_sources ("opencl_headers", opencl_headers_src)
@@ -129,3 +141,16 @@ add_sources ("rocminfo", rocminfo_src)
 add_sources ("aqlprofile", aqlprofile_src)
 add_sources ("rocprofiler_sdk", rocprofiler_sdk_src)
 add_sources ("hipify", hipify_src)
+
+add_checkout_adjustment {
+  var SubmodulePaths = []
+  if (in_list('rocprofiler_register', Components)) {
+    append 'projects/rocprofiler-register' (SubmodulePaths)
+  }
+  if (in_list('rocprofiler_sdk', Components)) {
+    append 'projects/rocprofiler-sdk' (SubmodulePaths)
+  }
+  if (len(SubmodulePaths) > 0) {
+    rocm_systems_submodules @SubmodulePaths
+  }
+}

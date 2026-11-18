@@ -1,0 +1,78 @@
+#!/usr/bin/env ysh
+
+# amd-smi: the AMD System Management Interface library and tool (libamd_smi,
+# amd-smi), successor to rocm_smi_lib.  From rocm-systems projects/amdsmi
+# (TheRock core/CMakeLists.txt, THEROCK_ENABLE_CORE_AMDSMI).  Needs libdrm,
+# and Python 3 with its development headers, on the host.
+#
+# amd-smi's CMake downloads AMD's esmi_ib_library (EPYC CPU support) into its
+# own source directory at configure time, at a commit pinned in its
+# CMakeLists.txt, unless it is already there.  amdsmi_fetch_esmi does that at
+# checkout time instead (configs call it from an add_checkout_adjustment), so
+# the build itself needs no network.
+
+proc clean_amdsmi() {
+  clean_component amdsmi
+}
+
+func get_amdsmi_src() {
+  return (get_src_default ("amdsmi"))
+}
+
+proc configure_amdsmi() {
+  var Build = get_objdir("amdsmi")
+  var Src = get_srcdir("amdsmi")
+  var Tool = get_build_tool("amdsmi")
+  var BuildType = get_build_type("amdsmi")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DBUILD_TESTS=OFF \
+      -DENABLE_WSL_BACKEND=ON \
+      @[get_configure_opts('amdsmi')] \
+      @[get_rpath_opts('amdsmi')] \
+      $Src
+  }
+}
+
+proc build_amdsmi() {
+  cmake_build amdsmi
+}
+
+proc install_amdsmi() {
+  cmake_install amdsmi
+}
+
+func amdsmi_dependencies() {
+  # TheRock: RUNTIME_DEPS rocm-core (and libdrm, libmnl, libnl, taken from the
+  # host here); its googletest build dep is only for the tests.
+  return (:| rocm_core |)
+}
+
+proc amdsmi_tasks() {
+  standard_tasks amdsmi
+}
+
+# Clone esmi_ib_library into amd-smi's source directory, at the commit its
+# CMakeLists.txt pins (ESMI_GIT_HASH), as its configure step would.
+proc amdsmi_fetch_esmi() {
+  var Src = get_srcdir ("amdsmi")
+  var Hash = $(sed -nE 's/^ *set\(ESMI_GIT_HASH "([0-9a-f]+)"\).*/\1/p' $Src/CMakeLists.txt)
+  if (not Hash) {
+    write "amdsmi: no ESMI_GIT_HASH in $Src/CMakeLists.txt; leaving esmi_ib_library to its CMake"
+    return
+  }
+  var Dest = "$Src/esmi_ib_library"
+  if test --dir "$Dest/.git" {
+    if ($(git -C $Dest rev-parse HEAD) === Hash) {
+      write "amdsmi: esmi_ib_library already at $Hash"
+      return
+    }
+    rm -rf $Dest
+  }
+  write "amdsmi: fetching esmi_ib_library at $Hash"
+  git clone --quiet https://github.com/amd/esmi_ib_library.git $Dest
+  git -C $Dest checkout --quiet --detach $Hash
+}

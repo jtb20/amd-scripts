@@ -135,7 +135,8 @@ proc fetch_tar (;; url, tmpdir, md5_expected) {
       return 0
     }
     try {
-      curl -O $url
+      # -L: follow redirects (e.g. GitHub release downloads).
+      curl -L -O $url
     }
     if (_status !== 0) {
       error "download failed for $url"

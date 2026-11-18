@@ -1,0 +1,49 @@
+#!/usr/bin/env ysh
+
+# rocm-kpack: TheRock's device code packaging library (librocm_kpack), which
+# the HIP runtime (clr) uses when built with ROCM_KPACK_ENABLED.  From
+# rocm-systems shared/kpack (TheRock core/CMakeLists.txt).
+
+proc clean_rocm_kpack() {
+  clean_component rocm_kpack
+}
+
+func get_rocm_kpack_src() {
+  return (get_src_default ("rocm_kpack"))
+}
+
+proc configure_rocm_kpack() {
+  var Build = get_objdir("rocm_kpack")
+  var Src = get_srcdir("rocm_kpack")
+  var Tool = get_build_tool("rocm_kpack")
+  var BuildType = get_build_type("rocm_kpack")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DBUILD_TESTING=OFF \
+      -DBUILD_SHARED_LIBS=ON \
+      @[get_configure_opts('rocm_kpack')] \
+      @[get_rpath_opts('rocm_kpack')] \
+      $Src
+  }
+}
+
+proc build_rocm_kpack() {
+  cmake_build rocm_kpack
+}
+
+proc install_rocm_kpack() {
+  cmake_install rocm_kpack
+}
+
+func rocm_kpack_dependencies() {
+  # TheRock: BUILD_DEPS therock-msgpack-cxx, RUNTIME_DEPS zstd (taken from the
+  # host here).
+  return (:| msgpack_cxx |)
+}
+
+proc rocm_kpack_tasks() {
+  standard_tasks rocm_kpack
+}

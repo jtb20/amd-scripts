@@ -1,0 +1,48 @@
+#!/usr/bin/env ysh
+
+# rocm-core: ROCm version information and path helpers (librocm-core), used by
+# the HIP and OpenCL runtimes and amd-smi.  From rocm-systems projects/rocm-core
+# (TheRock base/CMakeLists.txt).  The ROCm version it reports comes from the
+# "rocm_version" configure key, set by the config's ROCm sources.
+
+proc clean_rocm_core() {
+  clean_component rocm_core
+}
+
+func get_rocm_core_src() {
+  return (get_src_default ("rocm_core"))
+}
+
+proc configure_rocm_core() {
+  var Build = get_objdir("rocm_core")
+  var Src = get_srcdir("rocm_core")
+  var Tool = get_build_tool("rocm_core")
+  var BuildType = get_build_type("rocm_core")
+  cd $Build {
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_PREFIX_PATH=$INSTALLDIR \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DBUILD_SHARED_LIBS=ON \
+      -DROCM_VERSION=$[get_configure_key ('rocm_core', 'rocm_version', '0.0.0')] \
+      @[get_configure_opts('rocm_core')] \
+      @[get_rpath_opts('rocm_core')] \
+      $Src
+  }
+}
+
+proc build_rocm_core() {
+  cmake_build rocm_core
+}
+
+proc install_rocm_core() {
+  cmake_install rocm_core
+}
+
+func rocm_core_dependencies() {
+  return ([])
+}
+
+proc rocm_core_tasks() {
+  standard_tasks rocm_core
+}

@@ -81,7 +81,7 @@ var qmcpack_src = {
 add_sources ("qmcpack", qmcpack_src)
 
 var sollve_vv_src = {
-  "url" : "https://github.com/SOLLVE/sollve_vv",
+  "url" : "https://github.com/OpenMP-Validation-and-Verification/OpenMP_VV",
   "type" : "git",
   "version" : "master",
   "version_name" : "master",
@@ -100,11 +100,13 @@ var openmp_vv_src = {
 
 add_sources ("openmp_vv", openmp_vv_src)
 
+# UoB-HPC/fortran-babelstream no longer exists; BabelStream itself includes
+# the Fortran version (src/fortran).
 var babelstream_src = {
-  "url" : "https://github.com/UoB-HPC/fortran-babelstream",
+  "url" : "https://github.com/UoB-HPC/BabelStream",
   "type" : "git",
-  "version" : "develop",
-  "version_name" : "develop",
+  "version" : "main",
+  "version_name" : "main",
   "shallow_clone" : false
 }
 
