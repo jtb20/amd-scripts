@@ -284,6 +284,10 @@ component names, modules and task list are exactly as they were for ROCm 7.2.
 `aomp/23/amd-staging-rocm-10.cfg` pairs it with LLVM `amd-staging`, and
 `aomp/23/mainline+amd-staging-rocm-10.cfg` with upstream `main`.
 
+Building the HIP runtime (`hipamd`) needs a Python module on the host:
+`cxxheaderparser` for ROCm 10, `CppHeaderParser` for the ROCm 7.x
+configs. Its CMake configure step fails, naming the module, without it.
+
 Two consequences worth knowing about:
 
 - The monorepo is about 7.7GB to clone in full, so `configs/rocm/10/rocm-10.inc`
