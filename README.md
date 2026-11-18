@@ -215,6 +215,7 @@ Building and testing then work exactly as above.
 | Goal | Config |
 |------|--------|
 | Current AOMP-like stack | `aomp/23/amd-staging-rocm-7.2.cfg` |
+| Closest to a current TheRock or AOMP build (`amd-staging` with ROCm 10) | `aomp/23/amd-staging-rocm-10.cfg` |
 | Upstream LLVM `main` with the ROCm stack | `aomp/23/mainline+amd-staging-rocm-7.2.cfg` |
 | Upstream LLVM `main` with the ROCm 10 stack | `aomp/23/mainline+amd-staging-rocm-10.cfg` |
 | Previous ROCm release | `aomp/22/amd-staging-rocm-7.1.cfg` |
@@ -280,6 +281,8 @@ instead of having a repository each. `configs/rocm/10/` therefore checks out one
 monorepo as the `rocm_systems` component and declares everything inside it as a
 `subcomponent`. `rocm_systems` is a placeholder with no tasks of its own; the
 component names, modules and task list are exactly as they were for ROCm 7.2.
+`aomp/23/amd-staging-rocm-10.cfg` pairs it with LLVM `amd-staging`, and
+`aomp/23/mainline+amd-staging-rocm-10.cfg` with upstream `main`.
 
 Two consequences worth knowing about:
 
