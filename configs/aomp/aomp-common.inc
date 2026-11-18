@@ -40,6 +40,12 @@ set_configure_key ("llvm", "append_install_dir", "lib/llvm")
 set_configure_key ("llvm", "spirv_translator", true)
 set_configure_key ("llvm", "flang_rt", true)
 set_configure_key ("llvm", "gpu_runtimes", [])
+# Build the Fortran runtime (flang-rt, with the libc and libc++ it needs) for
+# the GPU in the runtimes build, as current AOMP and TheRock do.  Older LLVM
+# revisions used -DLIBOMPTARGET_BUILD_DEVICE_FORTRT=ON instead (which is still
+# passed, and is a no-op where it's gone).  Configs for revisions that have it
+# turn this on; --add gpu_flang_rt and --remove gpu_flang_rt switch it.
+set_configure_key ("llvm", "gpu_flang_rt", false)
 
 # set_build_tool ("rocm_cmake", "Unix Makefiles")
 # set_build_tool ("rocr_runtime", "Unix Makefiles")
@@ -70,12 +76,39 @@ add_testsuites aomp examples smoke smoke_fails smoke_limbo \
 
 add_testsuites misc sollve_vv nekbone ovo
 
+# The Fortran smoke tests this AOMP version has (smoke-fort, smoke-fort-limbo),
+# for configs that build a Fortran compiler.  (smoke-fort-dev goes with
+# --add smoke_dev.)
+proc add_fortran_smoke_testsuites() {
+  for T in (:| smoke_fort smoke_fort_limbo |) {
+    if (T in Sources and not ('aomp' in Testsuites and in_list (T, Testsuites.aomp))) {
+      add_testsuites aomp $T
+    }
+  }
+}
+
 proc add_optional_module (Mod) {
   var R
   case (Mod) {
     # Optional testsuites
     smoke_dev {
       add_testsuites aomp smoke_dev
+      if ('smoke_fort_dev' in Sources) {
+        add_testsuites aomp smoke_fort_dev
+      }
+    }
+
+    smoke_asan {
+      # AddressSanitizer smoke tests: these need the asan build variants, and
+      # make deliberate out-of-bounds accesses on the GPU, which can leave the
+      # GPU driver wedged on some systems.  Never run by default.
+      if ('smoke_asan' not in Sources) {
+        error "This AOMP version has no smoke-asan tests"
+      }
+      if (not VariantsEnabled) {
+        error "smoke_asan needs a config with build variants (for the asan runtimes)"
+      }
+      add_testsuites aomp smoke_asan
     }
 
     openmp_examples {
@@ -93,11 +126,13 @@ proc add_optional_module (Mod) {
     flang {
       add_components flang flang_runtime hipfort
       add_testsuites flang legacy
+      add_fortran_smoke_testsuites
     }
 
     flang_legacy {
       add_components flang_legacy flang flang_runtime hipfort
       add_testsuites flang legacy
+      add_fortran_smoke_testsuites
     }
 
     openmp_legacy {
@@ -208,6 +243,10 @@ proc add_optional_module (Mod) {
                                         -DLIBOMPTARGET_HRX_INCLUDE_PATH=$[get_srcdir('hrx_system')]/libhrx/include |)
     }
 
+    gpu_flang_rt {
+      set_configure_key ('llvm', 'gpu_flang_rt', true)
+    }
+
     gpu_libc {
       setvar R = ConfigureOpts.llvm.gpu_runtimes
       set_configure_key ('llvm', 'gpu_runtimes', ['libc'] ++ R)
@@ -226,6 +265,15 @@ proc remove_optional_feature(Feat) {
       setvar P = list_remove (ConfigureOpts.llvm.projects, 'flang')
       set_configure_key ('llvm', 'projects', P)
       set_configure_key ('llvm', 'flang_rt', false)
+      # No Fortran compiler, so no Fortran tests.
+      if ('llvm' in Testsuites) {
+        setglobal Testsuites.llvm = list_remove (Testsuites.llvm, 'flang')
+      }
+      if ('aomp' in Testsuites) {
+        setglobal Testsuites.aomp = list_remove (Testsuites.aomp, 'smoke_fort',
+                                                 'smoke_fort_limbo', 'smoke_fort_dev',
+                                                 'fortran_babelstream')
+      }
     }
 
     clang_tools_extra {
@@ -244,6 +292,11 @@ proc remove_optional_feature(Feat) {
 
     flang_rt {
       set_configure_key ('llvm', 'flang_rt', false)
+    }
+
+    gpu_flang_rt {
+      # Back to the older -DLIBOMPTARGET_BUILD_DEVICE_FORTRT=ON way.
+      set_configure_key ('llvm', 'gpu_flang_rt', false)
     }
 
     * {

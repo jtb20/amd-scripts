@@ -293,6 +293,9 @@ dependencies follow TheRock's own declarations.
 Building the HIP runtime (`hipamd`) needs a Python module on the host:
 `cxxheaderparser` for ROCm 10, `CppHeaderParser` for the ROCm 7.x
 configs. Its CMake configure step fails, naming the module, without it.
+Building the GPU Fortran runtime (`gpu_flang_rt`, on by default for the
+`amd-staging` configs) builds LLVM's GPU libc, whose header generator needs
+`PyYAML` (`import yaml`).
 
 Two consequences worth knowing about:
 
@@ -604,10 +607,14 @@ For AOMP-family configs (`configs/aomp/aomp-common.inc`):
 | `hrx_system` | The HRX alternative HIP runtime |
 | `taskgraph` | Experimental OpenMP taskgraph support in libomp |
 | `gpu_libc` | Adds `libc` to the GPU runtimes |
-| `smoke_dev`, `openmp_examples`, `genasis` | Extra testsuites |
+| `gpu_flang_rt` | Builds the Fortran runtime for the GPU as current AOMP does: `flang-rt`, with LLVM's GPU `libc` and `libc++`, in the amdgcn runtimes build (the default for the `amd-staging` configs) |
+| `smoke_dev`, `openmp_examples`, `genasis` | Extra testsuites (`smoke_dev` also brings `smoke_fort_dev` where the AOMP revision has it) |
+| `smoke_asan` | AOMP's `smoke-asan` suite (AOMP 19+, and only with build variants enabled). It runs deliberately faulting programs under device ASan: don't use it on a shared machine |
 
 Removable with `-R`: `flang_new`, `flang_rt`, `clang_tools_extra`,
-`spirv_translator`, `mlir`.
+`spirv_translator`, `mlir`, `gpu_flang_rt` (back to the older
+`LIBOMPTARGET_BUILD_DEVICE_FORTRT` way of building the GPU Fortran runtime, for
+LLVM revisions before the runtimes-based one).
 
 Like TheRock's builds, the `amd-staging` (and `mainline+amd-staging`) configs
 build MLIR's tools, install LLVM's utilities (`FileCheck`, `not`, `count`,
@@ -665,9 +672,17 @@ amd-test aomp/23/amd-staging-rocm-7.2.cfg clean_test_dirs test_aomp_smoke save
 DejaGNU-style `.sum` files into `testresults/`, plus a `report.txt` summary that
 is also printed at the end of the run.
 
+The AOMP suites include the Fortran smoke family (`smoke_fort` for AOMP 17+,
+`smoke_fort_limbo` for 19+), which is dropped along with the other Fortran
+suites by `-R flang_new`. On AOMP 19+ configs, BabelStream is run in its C++
+(`babelstream`: `omp-default`, `omp-fast`, `hip`) and Fortran
+(`fortran_babelstream`: `omp-default`, `omp-fast`, `omp-loop`, `omp-loop-fast`)
+forms through AOMP's run scripts, with one `.sum` result per mode. `examples` and
+`openmpapps` also produce `.sum` files.
+
 Some test sources are checked out but not wired into the default suites (Kokkos,
-QMCPack, BabelStream, RAJAPerf and others, listed in the
-`configs/aomp/*/aomp-tests-*.inc` files). They are there for manual use.
+QMCPack, RAJAPerf and others, listed in the `configs/aomp/*/aomp-tests-*.inc`
+files). They are there for manual use.
 
 ### Selecting individual tests
 
@@ -677,7 +692,8 @@ underlying suite supports:
 | Suite | `--select` takes |
 |-------|------------------|
 | `test_llvm_*` | A **regex**, passed to lit as `LIT_FILTER` |
-| `smoke`, `smoke_fails`, `smoke_limbo`, `smoke_dev`, `usm`, `omp5` | A **glob** matching test names |
+| `smoke`, `smoke_fails`, `smoke_limbo`, `smoke_dev`, `smoke_fort*`, `smoke_asan`, `usm`, `omp5` | A **glob** matching test names |
+| `babelstream`, `fortran_babelstream` | A glob matching run modes (e.g. `omp-*`) |
 | `llnl` | A glob, filtering the suite's test list |
 | `sollve_vv` | `4.5`, `5.0`, `5.1` or `5.2` for an OpenMP version, otherwise a glob matching one test |
 | `examples`, `hip_openmp`, `openmpapps`, `nekbone`, `openmp_examples` | Not supported (the run errors out) |

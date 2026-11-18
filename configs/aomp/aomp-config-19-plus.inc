@@ -66,12 +66,32 @@ add_config_adjustment {
     append_configure_opts ("llvm", :| -DLIBOMPTARGET_BUILD_DEVICE_FORTRT=ON |)
   }
 
-  if (ConfigureOpts.llvm.gpu_runtimes) {
-    var Runtimes = ConfigureOpts.llvm.gpu_runtimes=>join(';')
+  var GPURuntimes = ConfigureOpts.llvm.gpu_runtimes
+  var GPUFlangRT = ConfigureOpts.llvm.flang_rt and ConfigureOpts.llvm.gpu_flang_rt
+  if (GPUFlangRT) {
+    # As AOMP's build_project.sh: flang-rt for the GPU, built against LLVM's
+    # own GPU libc and libc++.
+    var FlangRTRuntimes = :| compiler-rt libc libcxx libcxxabi flang-rt openmp |
+    for Rt in (GPURuntimes) {
+      if (not in_list (Rt, FlangRTRuntimes)) {
+        append $Rt (FlangRTRuntimes)
+      }
+    }
+    setvar GPURuntimes = FlangRTRuntimes
+    var LLVMSrc = get_srcdir ('llvm')
+    append_configure_opts ('llvm', :| -DRUNTIMES_amdgcn-amd-amdhsa_FLANG_RT_LIBC_PROVIDER=llvm
+                                      -DRUNTIMES_amdgcn-amd-amdhsa_FLANG_RT_LIBCXX_PROVIDER=llvm
+                                      "-DRUNTIMES_amdgcn-amd-amdhsa_CACHE_FILES=$LLVMSrc/compiler-rt/cmake/caches/AMDGPU.cmake;$LLVMSrc/libcxx/cmake/caches/AMDGPU.cmake" |)
+  }
+
+  if (GPURuntimes) {
+    var Runtimes = GPURuntimes=>join(';')
     append_configure_opts ('llvm', :| -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=$Runtimes
                                       -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                       -DLLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa" |)
-    if (in_list('libc', ConfigureOpts.llvm.gpu_runtimes)) {
+    # (The older way of building the GPU libc; not with flang-rt, which has
+    # it as a runtime of the amdgcn target.)
+    if (in_list('libc', GPURuntimes) and not GPUFlangRT) {
       append_configure_opts ('llvm', :| -DLLVM_LIBC_GPU_BUILD=ON |)
     }
   }
@@ -134,3 +154,19 @@ var llvm_runtimes_src = {
 
 add_sources ("llvm_runtimes", llvm_runtimes_src)
 add_variant_component llvm_runtimes
+
+# Test suites AOMP's CI runs that need these configs' Fortran compiler (flang,
+# built by default here), and BabelStream: AOMP's run_babelstream.sh and
+# run_fBabel.sh, per mode (see modules/aomp).  The Fortran ones are dropped
+# again by --remove flang_new.
+add_fortran_smoke_testsuites
+if ('babelstream' in Sources) {
+  var fortran_babelstream_src = {
+    "type" : "subcomponent",
+    "parent" : "babelstream",
+    "subdir" : "."
+  }
+  add_sources ("fortran_babelstream", fortran_babelstream_src)
+  add_components babelstream
+  add_testsuites aomp babelstream fortran_babelstream
+}

@@ -209,48 +209,67 @@ proc test_aomp_examples {
   }
 }
 
+# check_examples.sh records results per category directory (fortran, hip,
+# openmp), in the same files as the smoke tests; name the tests
+# "<category>/<test>" so they stay distinct.
 proc save_results_aomp_examples (; files) {
-  # TODO
-  true
+  var Obj = get_objdir ("examples")
+  rm -f $Obj/examples-tmp.sum
+  for Category in (:| fortran hip openmp |) {
+    if test --dir $Obj/$Category {
+      cd $Obj/$Category {
+        smoketests_sum_lines (prefix="$Category/") >> $Obj/examples-tmp.sum
+      }
+    }
+  }
+  sort --key=2 $Obj/examples-tmp.sum > $TESTRESULTSDIR/examples.sum
+  rm -f $Obj/examples-tmp.sum
+  call files->setValue (:| examples.sum |)
 }
 
 # The "smoke" and "smoke_fails" testsuites (and similar) use the same
 # arrangement to report their test results.  Process that into a .sum file
 # here.
 
+# Write .sum lines for the passing-tests.txt, failing-tests.txt and
+# make-fail.txt in the current directory, naming each test "<prefix><test>".
+proc smoketests_sum_lines(;; prefix='', known_fails=null) {
+  if test --exists passing-tests.txt {
+    cat passing-tests.txt | while read n {
+      if (known_fails !== null and in_list(n, known_fails)) {
+        write "XPASS: $prefix$n"
+      } else {
+        write "PASS: $prefix$n"
+      }
+    }
+  }
+  if test --exists failing-tests.txt {
+    cat failing-tests.txt | while read n {
+      if (known_fails !== null and in_list(n, known_fails)) {
+        write "XFAIL: $prefix$n"
+      } else {
+        write "FAIL: $prefix$n"
+      }
+    }
+  }
+  if test --exists make-fail.txt {
+    var n
+    cat make-fail.txt | while read n {
+      setvar n = n=>trimEnd(": Make Failed")
+      if (known_fails !== null and in_list(n, known_fails)) {
+        write "XFAIL: $prefix$n"
+      } else {
+        write "ERROR: $prefix$n"
+      }
+    }
+  }
+}
+
 proc gather_smoketests_results(which, reldir; known_fails=null) {
   var BuildDir = get_objdir (which)
   cd $BuildDir/$reldir {
     rm -f ${which}-tmp.sum
-    if test --exists passing-tests.txt {
-      cat passing-tests.txt | while read n {
-        if (known_fails !== null and in_list(n, known_fails)) {
-          write "XPASS: $n"
-        } else {
-          write "PASS: $n"
-        }
-      } >> ${which}-tmp.sum
-    }
-    if test --exists failing-tests.txt {
-      cat failing-tests.txt | while read n {
-        if (known_fails !== null and in_list(n, known_fails)) {
-          write "XFAIL: $n"
-        } else {
-          write "FAIL: $n"
-        }
-      } >> ${which}-tmp.sum
-    }
-    if test --exists make-fail.txt {
-      var n
-      cat make-fail.txt | while read n {
-        setvar n = n=>trimEnd(": Make Failed")
-        if (known_fails !== null and in_list(n, known_fails)) {
-          write "XFAIL: $n"
-        } else {
-          write "ERROR: $n"
-        }
-      } >> ${which}-tmp.sum
-    }
+    smoketests_sum_lines (known_fails=known_fails) >> ${which}-tmp.sum
     sort --key=2 ${which}-tmp.sum > $TESTRESULTSDIR/$which.sum
     rm -f ${which}-tmp.sum
   }
@@ -726,6 +745,226 @@ proc test_aomp_openmpapps {
 }
 
 proc save_results_aomp_openmpapps(; files) {
-  # TODO
+  gather_smoketests_results openmpapps .
+  call files->setValue (:| openmpapps.sum |)
+}
+
+### SMOKE SUITES SHARING check_smoke.sh ###
+#
+# smoke-fort, smoke-fort-limbo, smoke-fort-dev and smoke-asan each run the
+# smoke directory's check_smoke.sh (their check_*.sh is a symlink to it), and
+# record their results as the smoke tests do.
+
+proc run_smoke_style_suite(comp, dirname, script) {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Source = get_srcdir (comp)
+  var Obj = get_objdir (comp)
+  var GPUs = get_amd_gpus ()
+  # These tests write into their source directory.  Copy to obj dir and run
+  # from there, with the parts of the AOMP tree they refer to alongside.
+  rm -rf $Obj
+  copy_dir $Source $Obj/test/$dirname
+  ln -sf $AOMP_Src/bin $Obj/bin
+  ln -sf $AOMP_Src/test/Makefile.defs $Obj/test
+  mkdir -p $Obj/test/smoke
+  ln -sf $AOMP_Src/test/smoke/Makefile.rules $Obj/test/smoke
+  ln -sf $AOMP_Src/test/smoke/check_smoke.sh $Obj/test/smoke
+  cd $Obj/test/$dirname {
+    with-env AOMP_PARALLEL_SMOKE=1 \
+             AOMP_GPU="$[GPUs[0]]" \
+             SHELL=/bin/bash \
+             CLEANUP=0 {
+      if (SelectTests !== null) {
+        select_smoke_tests (SelectTests)
+        setglobal ENV.AOMP_PARALLEL_SMOKE=0
+      }
+      rocm_env gpu_opts ./$script
+      rocm_env ./$script gatherdata
+    }
+  }
+}
+
+func get_smoke_fort_src() {
+  return (get_src_default ("smoke_fort"))
+}
+
+proc clean_results_aomp_smoke_fort() {
+  clean_component smoke_fort
+}
+
+proc test_aomp_smoke_fort {
+  run_smoke_style_suite smoke_fort smoke-fort check_smoke_fort.sh
+}
+
+proc save_results_aomp_smoke_fort (; files) {
+  gather_smoketests_results smoke_fort test/smoke-fort
+  call files->setValue (:| smoke_fort.sum |)
+}
+
+func get_smoke_fort_limbo_src() {
+  return (get_src_default ("smoke_fort_limbo"))
+}
+
+proc clean_results_aomp_smoke_fort_limbo() {
+  clean_component smoke_fort_limbo
+}
+
+proc test_aomp_smoke_fort_limbo {
+  run_smoke_style_suite smoke_fort_limbo smoke-fort-limbo check_smoke_fort_limbo.sh
+}
+
+proc save_results_aomp_smoke_fort_limbo (; files) {
+  gather_smoketests_results smoke_fort_limbo test/smoke-fort-limbo
+  call files->setValue (:| smoke_fort_limbo.sum |)
+}
+
+func get_smoke_fort_dev_src() {
+  return (get_src_default ("smoke_fort_dev"))
+}
+
+proc clean_results_aomp_smoke_fort_dev() {
+  clean_component smoke_fort_dev
+}
+
+proc test_aomp_smoke_fort_dev {
+  run_smoke_style_suite smoke_fort_dev smoke-fort-dev check_smoke_fort_dev.sh
+}
+
+proc save_results_aomp_smoke_fort_dev (; files) {
+  gather_smoketests_results smoke_fort_dev test/smoke-fort-dev
+  call files->setValue (:| smoke_fort_dev.sum |)
+}
+
+# smoke-asan's tests deliberately make out-of-bounds and use-after-free
+# accesses on the GPU, with XNACK enabled, for AddressSanitizer to catch.
+# They need the asan builds of the runtimes (build variants), and on some
+# systems a device-side fault like this can leave the GPU driver wedged, so
+# the suite is only run when asked for (--add smoke_asan).
+func get_smoke_asan_src() {
+  return (get_src_default ("smoke_asan"))
+}
+
+proc clean_results_aomp_smoke_asan() {
+  clean_component smoke_asan
+}
+
+proc test_aomp_smoke_asan {
+  run_smoke_style_suite smoke_asan smoke-asan check_smoke_asan.sh
+}
+
+proc save_results_aomp_smoke_asan (; files) {
+  gather_smoketests_results smoke_asan test/smoke-asan
+  call files->setValue (:| smoke_asan.sum |)
+}
+
+### BABELSTREAM ###
+#
+# AOMP's run_babelstream.sh and run_fBabel.sh build and run BabelStream (C++,
+# and its Fortran version) in several modes, and record one result for the
+# lot.  Run them once per mode instead, on a private copy of the BabelStream
+# repository (run_babelstream.sh checks out a particular commit and patches
+# it), and record a result for each mode: "<comp>/<mode>".  --select
+# takes a glob matching mode names.
+
+func get_babelstream_src() {
+  return (get_src_default ("babelstream"))
+}
+
+func babelstream_dependencies() {
+  return ([])
+}
+
+proc babelstream_tasks {
+  # No tasks!
   true
+}
+
+func get_fortran_babelstream_src() {
+  return (get_src_default ("fortran_babelstream"))
+}
+
+func fortran_babelstream_dependencies() {
+  return (:| babelstream |)
+}
+
+proc fortran_babelstream_tasks {
+  # No tasks!
+  true
+}
+
+# Run AOMP's 'script' for each of 'modes' with the result files in a private
+# copy of BabelStream; 'var_prefix' is the script's prefix for its _REPO and
+# _BUILD variables.  Writes $Obj/results-tmp.sum.
+proc run_babelstream_suite(comp, script, var_prefix;; modes) {
+  var AOMP_Src = get_srcdir ("aomp")
+  var Obj = get_objdir (comp)
+  var LLVM_Inst = get_installdir ('llvm')
+  var GPUs = get_amd_gpus ()
+  var Repo = "$Obj/repo/babelstream"
+  rm -rf $Obj
+  copy_dir $[get_srcdir ("babelstream")] $Repo
+  var Lines = []
+  for Mode in (modes) {
+    if (SelectTests !== null and not (Mode ~~ SelectTests)) {
+      continue
+    }
+    cd $Repo {
+      rm -f passing-tests.txt failing-tests.txt make-fail.txt
+    }
+    write "=== $comp: $Mode ==="
+    try {
+      with-env AOMP=$LLVM_Inst \
+               AOMPHIP=$INSTALLDIR \
+               GPURUN_BINDIR=$LLVM_Inst/bin \
+               AOMP_GPU="$[GPUs[0]]" \
+               AOMP_REPOS_TEST=$Obj/repo \
+               AOMP_BABELSTREAM_REPO_NAME=babelstream \
+               "${var_prefix}_REPO=$Repo" \
+               "${var_prefix}_BUILD=$Obj/build-$Mode" \
+               RUN_OPTIONS=$Mode {
+        rocm_env bash $AOMP_Src/bin/$script
+      }
+    }
+    var Result = 'FAIL'
+    if test --exists $Repo/passing-tests.txt {
+      setvar Result = 'PASS'
+    } elif test --exists $Repo/make-fail.txt {
+      setvar Result = 'ERROR'
+    }
+    append "$Result: $comp/$Mode" (Lines)
+  }
+  write -- @Lines > $Obj/results-tmp.sum
+}
+
+proc clean_results_aomp_babelstream() {
+  clean_component babelstream
+}
+
+proc test_aomp_babelstream {
+  # run_babelstream.sh's defaults for AMD GPUs without unified shared memory,
+  # less "stdpar", which needs rocThrust (not built here).
+  run_babelstream_suite babelstream run_babelstream.sh BABELSTREAM (
+    modes=:| omp-default omp-fast hip |)
+}
+
+proc save_results_aomp_babelstream (; files) {
+  var Obj = get_objdir ("babelstream")
+  sort --key=2 $Obj/results-tmp.sum > $TESTRESULTSDIR/babelstream.sum
+  call files->setValue (:| babelstream.sum |)
+}
+
+proc clean_results_aomp_fortran_babelstream() {
+  clean_component fortran_babelstream
+}
+
+proc test_aomp_fortran_babelstream {
+  # run_fBabel.sh's defaults for AMD GPUs.
+  run_babelstream_suite fortran_babelstream run_fBabel.sh FABELSTREAM (
+    modes=:| omp-default omp-fast omp-loop omp-loop-fast |)
+}
+
+proc save_results_aomp_fortran_babelstream (; files) {
+  var Obj = get_objdir ("fortran_babelstream")
+  sort --key=2 $Obj/results-tmp.sum > $TESTRESULTSDIR/fortran_babelstream.sum
+  call files->setValue (:| fortran_babelstream.sum |)
 }

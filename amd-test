@@ -159,6 +159,7 @@ parse_args (ARGV)
 source $CONFIGDIR/$ActiveCfg
 
 add_optional_modules
+remove_optional_features
 modify_defaults
 
 elaborate_tests

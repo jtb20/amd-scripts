@@ -56,6 +56,30 @@ var examples_src = {
 
 add_sources ("examples", examples_src)
 
+var smoke_fort_src = {
+  "type" : "subcomponent",
+  "parent" : "aomp",
+  "subdir" : "test/smoke-fort"
+}
+
+add_sources ("smoke_fort", smoke_fort_src)
+
+var smoke_fort_limbo_src = {
+  "type" : "subcomponent",
+  "parent" : "aomp",
+  "subdir" : "test/smoke-fort-limbo"
+}
+
+add_sources ("smoke_fort_limbo", smoke_fort_limbo_src)
+
+var smoke_asan_src = {
+  "type" : "subcomponent",
+  "parent" : "aomp",
+  "subdir" : "test/smoke-asan"
+}
+
+add_sources ("smoke_asan", smoke_asan_src)
+
 var hip_openmp_src = {
   "type" : "subcomponent",
   "parent" : "aomp",
