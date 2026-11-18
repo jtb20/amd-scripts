@@ -69,7 +69,18 @@ proc install_filecheck_llvm() {
 }
 
 func llvm_dependencies() {
-  return ([])
+  var Deps = []
+  # Some eras build LLVM (its openmp runtime, really) against patched rocr
+  # sources and a roct include tree with an extra "hsakmt" symlink, as AOMP's
+  # own build_project.sh did.  See modules/rocr_runtime and
+  # modules/roct_thunk_interface for the matching undo steps.
+  if (get_configure_key('rocr_runtime', 'patch_during_llvm', false)) {
+    append rocr_runtime_patch (Deps)
+  }
+  if (get_configure_key('roct_thunk_interface', 'hsakmt_symlink', false)) {
+    setvar Deps = Deps ++ :| roct_thunk_interface roct_thunk_add_symlink |
+  }
+  return (Deps)
 }
 
 proc llvm_tasks() {

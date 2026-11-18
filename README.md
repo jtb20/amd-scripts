@@ -235,6 +235,41 @@ kept for archaeology: reproducing and bisecting behaviour in released compilers.
 `configs/misc/llvm-mos.cfg` is an unrelated experiment that happens to be a good
 minimal example of the config format.
 
+### Historical AOMP releases
+
+Each AOMP release from 15 to 18 has a config pairing it with the ROCm release
+it shipped against, as recorded in AOMP's `manifests/aomp_<version>.xml`:
+
+| AOMP | ROCm | Config |
+|------|------|--------|
+| 15.0-3 | 5.2 | `aomp/15/aomp-15.0-rocm-5.2.cfg` |
+| 16.0-3 | 5.4.0 | `aomp/16/aomp-16.0-3-rocm-5.4.cfg` |
+| 17.0-3 | 5.6.0 | `aomp/17/aomp-17.0-3-rocm-5.6.cfg` |
+| 18.0-1 | 6.0.0 | `aomp/18/aomp-18.0-1-rocm-6.0.cfg` |
+| 18.0-1 | 6.1 | `aomp/18/aomp-18.0-1-rocm-6.1.cfg` (the next ROCm release) |
+
+These build standalone, like the current configs: nothing comes from a system
+ROCm. Each pins exact revisions, including the comgr and device-libs commits
+that releases before 18 took from their own repositories. They share
+`configs/aomp/aomp-config-15-18.inc`, which reproduces how AOMP's scripts
+built each release. For example, 15 to 17 build OpenMP as a separate
+component after LLVM, while 18 builds it as an LLVM runtime.
+
+Each release applies the patches from its own AOMP release branch. Where AOMP
+later fixed one of those patches, a config can take the fixed version from
+that later upstream revision with `set_aomp_patch` (see `modules/aomp`); 16
+does this for its rocr-runtime patch. `amd-checkout` fetches such revisions
+from the `aomp` repository itself if the clone lacks them.
+
+One quirk of the original pairing: AOMP 17's clang defaults to code object
+v5, which ROCm 5.6's HIP runtime can't load, so HIP code built with it needs
+`-mcode-object-version=4`. OpenMP offloading works as is.
+
+These sources predate GCC 13, so the configs build with **GCC 11** (`gcc-11`
+and `g++-11` must be on `PATH`), via `set_host_compiler`. The clang they build
+uses GCC 11's C++ library by default, rather than the newest one on the
+system.
+
 ### ROCm 10 and the monorepo
 
 ROCm rearranged its repositories for ROCm 10: rocr-runtime, clr, rocminfo,
@@ -766,6 +801,8 @@ The main entry points a config can use:
 | `add_config_adjustment { ... }` | Defer a block until after `--add`/`--remove` have been processed |
 | `add_checkout_adjustment { ... }` | Run a block after checkout, e.g. to switch branches |
 | `func <comp>_conditional_deps()` | Extra dependencies that depend on the configuration |
+| `set_aomp_patch (comp=..., file=..., rev=...)` | Patch a component with a file from AOMP's `bin/patches` at a given upstream revision |
+| `set_host_compiler (cc=..., cxx=...)` | Build with a particular host compiler, e.g. an older GCC for old sources |
 
 A real config is mostly `source` lines assembling these fragments. For example
 `configs/aomp/23/amd-staging-rocm-7.2.cfg` pulls in the LLVM `amd-staging`
@@ -777,6 +814,35 @@ by all AOMP configs.
 Order matters in one respect: conditional dependency functions must be defined
 before the component that uses them is added, which is why configs sometimes
 define a `func` between two `source` lines.
+
+### Dependencies
+
+A component's dependencies come from three places:
+
+1. **The module's `<comp>_dependencies()` function.** This is the normal case.
+   A module can consult configure keys here, read with
+   `get_configure_key (comp, key, default)`, when a dependency only exists
+   in some eras. For example, `llvm` depends on `rocr_runtime_patch` only if
+   the config sets `rocr_runtime`'s `patch_during_llvm` key.
+2. **A `"deps"` list in the `add_sources` dict.** This *replaces* the module's
+   list for that source. Use it when a particular release of a component
+   really does have different dependencies, e.g. hipamd before ROCm 5.6
+   needing ROCclr and the OpenCL runtime.
+3. **A `<comp>_conditional_deps()` function in the config.** This adds to
+   (1) or (2). YSH lets a later definition silently replace an earlier one,
+   so only one file should define each of these. Shared includes such as
+   `aomp-common.inc` should prefer configure keys and (1).
+
+Keys that change the dependency graph must be set *before* the components
+that read them are added. `amd-build --showdep <comp>` shows which of the
+three places each edge came from.
+
+### Pinning exact revisions
+
+A `git` source may carry a `"commit"` alongside its `"version"` branch.
+`amd-checkout` clones the branch, then detaches at that commit (fetching it if
+needed), so a checkout can reproduce a release manifest exactly. A checkout
+with local modifications is left alone and listed under "Skipped updates".
 
 ## Adding a component
 

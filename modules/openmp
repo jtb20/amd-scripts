@@ -56,7 +56,9 @@ proc install_openmp(var="") {
 }
 
 func openmp_dependencies() {
-  return (:| llvm device_libs hwloc |)
+  # The amdgpu plugin is configured against the installed HSA runtime (found
+  # via CMAKE_PREFIX_PATH), so rocr_runtime must be installed first.
+  return (:| llvm device_libs hwloc rocr_runtime |)
 }
 
 proc openmp_tasks {

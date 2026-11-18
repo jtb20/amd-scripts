@@ -1,7 +1,11 @@
 
 # Define conditional deps before adding their associated component.
 func llvm_conditional_deps() {
-  var deps = :| @llvm_more_conditional_deps hwloc |
+  # Older configs pass extra LLVM dependencies in via this variable.  Newer
+  # ones leave it undefined and set configure keys that the llvm module's own
+  # dependency function understands (see modules/llvm).
+  var More = getVar('llvm_more_conditional_deps')
+  var deps = :| @[More or []] hwloc |
   # The amdgpu_hsx plugin links the external libhsastream static library, which
   # must be built and installed before llvm/offload configures (it is located
   # via find_package(libhsastream CONFIG)). Only pull it in when the plugin is

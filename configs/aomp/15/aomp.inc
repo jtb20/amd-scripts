@@ -111,8 +111,8 @@ add_sources ("pgmath", pgmath_src)
 var aomp_extras_src = {
   "url" : "https://github.com/ROCm/aomp-extras",
   "type" : "git",
-  "version" : "aomp-dev",
-  "version_name" : "aomp_dev",
+  "version" : "aomp-15.0-3",
+  "version_name" : "aomp-15",
   "shallow_clone" : false
 }
 

@@ -83,8 +83,8 @@ add_sources ("omp5", omp5_src)
 var flang_src = {
   "url" : "https://github.com/ROCm/flang",
   "type" : "git",
-  "version" : "aomp-dev",
-  "version_name" : "aomp_dev",
+  "version" : "aomp-18.0-1",
+  "version_name" : "aomp-18",
   "shallow_clone" : false
 }
 
@@ -129,8 +129,8 @@ add_sources ("llvm_legacy", llvm_legacy_src)
 var aomp_extras_src = {
   "url" : "https://github.com/ROCm/aomp-extras",
   "type" : "git",
-  "version" : "aomp-dev",
-  "version_name" : "aomp_dev",
+  "version" : "aomp-18.0-1",
+  "version_name" : "aomp-18",
   "shallow_clone" : false
 }
 

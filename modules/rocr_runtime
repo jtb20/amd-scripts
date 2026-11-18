@@ -57,7 +57,17 @@ proc revert_patch_rocr_runtime() {
 }
 
 func rocr_runtime_dependencies() {
-  return (:| llvm roct_thunk_interface |)
+  var Deps = :| llvm roct_thunk_interface |
+  # Configs that build LLVM against temporarily-modified rocr/roct sources
+  # (see the bracketing below) set these keys, so that the matching "undo"
+  # steps are pulled in automatically and run before rocr_runtime builds.
+  if (get_configure_key('rocr_runtime', 'patch_during_llvm', false)) {
+    append rocr_runtime_unpatch (Deps)
+  }
+  if (get_configure_key('roct_thunk_interface', 'hsakmt_symlink', false)) {
+    append roct_thunk_remove_symlink (Deps)
+  }
+  return (Deps)
 }
 
 proc rocr_runtime_tasks {
@@ -71,9 +81,15 @@ proc rocr_runtime_tasks {
 # Well, this is all a bit of a fiddle.  As well as patching the rocr_runtime
 # sources for the build proper, we also have to patch them for building *llvm*.
 # So this complicated arrangement makes llvm depend on rocr_runtime_patch,
-# and rocr_runtime_unpatch depend on llvm.  Then we must manually add
-# rocr_runtime_unpatch as a component in the config file, e.g.
-# aomp-amd-staging.cfg.
+# and rocr_runtime_unpatch depend on llvm.
+#
+# Older configs wire this up by hand: adding rocr_runtime_patch to llvm's
+# conditional deps, and rocr_runtime_unpatch as a component.  Newer ones set
+#
+#   set_configure_key ("rocr_runtime", "patch_during_llvm", true)
+#
+# before the llvm and rocr_runtime components are added, and the llvm and
+# rocr_runtime dependency functions take care of the rest.
 # See also symlink handling in roct_thunk_interface.
 # We could do all this patching/unpatching just once, but that would seem to
 # make "bracketing" the operation a bit more fragile.

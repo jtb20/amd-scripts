@@ -1,9 +1,13 @@
+# LLVM for AOMP 18.0-1.  From this release on comgr, device-libs and hipcc
+# live in the llvm-project monorepo under amd/.
+
 var llvm_src = {
-  "url" : "github-ent:AMD-Lightning-Internal/llvm-project",
+  "url" : "https://github.com/ROCm/llvm-project",
   "type" : "git",
   "version" : "aomp-18.0-1",
   "version_name" : "aomp-18",
-  "shallow_clone" : false
+  "shallow_clone" : false,
+  "blobless_clone" : true
 }
 
 var comgr_src = {

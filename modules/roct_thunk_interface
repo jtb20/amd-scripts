@@ -40,7 +40,12 @@ proc roct_thunk_interface_tasks {
 }
 
 # See also patch/unpatch handling in rocr_runtime, which is handled similarly
-# to the making of this symlink below.
+# to the making of this symlink below.  Setting
+#
+#   set_configure_key ("roct_thunk_interface", "hsakmt_symlink", true)
+#
+# before llvm is added brackets the LLVM build with the add/remove steps,
+# via the llvm and rocr_runtime dependency functions.
 
 var roct_thunk_symlink_src = {
   "type" : "subcomponent"

@@ -1,0 +1,20 @@
+#!/usr/bin/env ysh
+
+# The ROCm-CompilerSupport repository, which held comgr (under lib/comgr)
+# until comgr moved into llvm-project's amd/ directory (ROCm 6.0 / AOMP 18).
+# Like rocm_systems, this is a placeholder with no tasks of its own: configs
+# check it out as a component, and declare comgr as a subcomponent of it with
+# "deps" naming this component, so amd-checkout clones it.
+
+func get_rocm_compilersupport_src() {
+  return (get_src_default ("rocm_compilersupport"))
+}
+
+func rocm_compilersupport_dependencies() {
+  return ([])
+}
+
+proc rocm_compilersupport_tasks {
+  # No tasks!
+  true
+}

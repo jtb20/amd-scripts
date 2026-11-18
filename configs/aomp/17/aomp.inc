@@ -108,11 +108,30 @@ var pgmath_src = {
 
 add_sources ("pgmath", pgmath_src)
 
+# AOMP 17 introduced flang-legacy (see aomp/bin/build_flang-legacy.sh).  At
+# this release it lives directly in the flang repo's flang-legacy directory;
+# from AOMP 18 it moved into a per-LLVM-version subdirectory.
+var flang_legacy_src = {
+  "type" : "subcomponent",
+  "parent" : "flang",
+  "subdir" : "flang-legacy"
+}
+
+add_sources ("flang_legacy", flang_legacy_src)
+
+var llvm_legacy_src = {
+  "type" : "subcomponent",
+  "parent" : "flang",
+  "subdir" : "flang-legacy/llvm-legacy"
+}
+
+add_sources ("llvm_legacy", llvm_legacy_src)
+
 var aomp_extras_src = {
   "url" : "https://github.com/ROCm/aomp-extras",
   "type" : "git",
-  "version" : "aomp-dev",
-  "version_name" : "aomp_dev",
+  "version" : "aomp-17.0-3",
+  "version_name" : "aomp-17",
   "shallow_clone" : false
 }
 

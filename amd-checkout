@@ -45,17 +45,50 @@ proc try_git_update (;; srcdir, destname, url, branch) {
   }
 }
 
-proc git_checkout (;; srcdir, destname, url, branch, shallow, submods, blobless) {
+# Move a checkout to a pinned commit (a detached HEAD), fetching it from
+# 'origin' first if the clone doesn't have it.  Local modifications are never
+# discarded: such a checkout is left alone and reported as a skipped update.
+proc git_pin_commit (;; srcdir, destname, commit) {
+  var Head = $(git rev-parse HEAD)
+  if (Head === $(git rev-parse --verify --quiet "$commit^{commit}" || echo none)) {
+    write "Already at pinned commit $commit"
+    return
+  }
+  if ($(git status --porcelain --untracked-files=no) !== "") {
+    write "Couldn't move to pinned commit: local modifications in '$srcdir/$destname'"
+    append $destname (SkippedUpdates)
+    return
+  }
+  if ! git cat-file -e "$commit^{commit}" 2>/dev/null {
+    git fetch origin $commit
+  }
+  git checkout --detach $commit
+}
+
+proc git_checkout (;; srcdir, destname, url, branch, shallow, submods, blobless,
+                      commit=null) {
+  if (commit and shallow) {
+    error "$destname: 'commit' pins can't be combined with shallow clones"
+  }
   if test --dir "$srcdir/$destname" {
     cd "$srcdir/$destname" {
-      try_git_update (srcdir=srcdir, destname=destname, url=url, branch=branch)
-    } 
+      if (commit) {
+        git_pin_commit (srcdir=srcdir, destname=destname, commit=commit)
+      } else {
+        try_git_update (srcdir=srcdir, destname=destname, url=url, branch=branch)
+      }
+    }
   } else {
     cd $srcdir {
       var shallow_opt = :| --depth 1 | if shallow else ()
       var submod_opt = :| --recurse-submodules | if submods else ()
       var filter_opt = :| --filter=blob:none | if blobless else ()
       git clone @shallow_opt @submod_opt @filter_opt --branch $branch $url $destname
+    }
+    if (commit) {
+      cd "$srcdir/$destname" {
+        git_pin_commit (srcdir=srcdir, destname=destname, commit=commit)
+      }
     }
   }
 }
@@ -154,13 +187,17 @@ proc do_downloads (; comps) {
         if ('blobless_clone' in Sources[comp]) {
           setvar Blobless = Sources[comp].blobless_clone
         }
+        # Optionally pin to an exact commit on (or reachable from) the branch,
+        # e.g. to reproduce the revisions recorded in an AOMP release manifest.
+        var Commit = Sources[comp].commit if 'commit' in Sources[comp] else null
         git_checkout (srcdir=SRCDIR,
                       destname=dirname_in_srcdir,
                       url=Sources[comp].url,
                       branch=Sources[comp].version,
                       shallow=Sources[comp].shallow_clone,
                       submods=SubMods,
-                      blobless=Blobless)
+                      blobless=Blobless,
+                      commit=Commit)
       }
 
       "archive" {

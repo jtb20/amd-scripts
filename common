@@ -444,6 +444,63 @@ func get_configure_opts(comp, variant=null) {
   }
 }
 
+# Read a key set with set_configure_key, or 'default' if the component or key
+# has not been set.  Handy for modules whose dependencies or tasks depend on
+# era-specific settings that most configs never mention.
+
+func get_configure_key(comp, key, default=null) {
+  if (comp in ConfigureOpts and key in ConfigureOpts[comp]) {
+    return (ConfigureOpts[comp][key])
+  }
+  return (default)
+}
+
+# Use a particular host compiler for the whole build, e.g. an older GCC for
+# historical configs whose sources predate the system compiler.  CMake picks
+# CC/CXX up from the environment when a build directory is first configured
+# (so run a component's 'clean' task after changing this), and autotools
+# builds get them via autotools_ccache_option.  Components that are
+# explicitly built with the new LLVM are unaffected.
+
+var HostCC = 'gcc'
+var HostCXX = 'g++'
+var HostCompilerSet = false
+
+proc set_host_compiler(;; cc, cxx) {
+  if (not have_binary (cc) or not have_binary (cxx)) {
+    error "This config needs the host compilers '$cc' and '$cxx', which aren't on PATH"
+  }
+  setglobal HostCompilerSet = true
+  setglobal HostCC = cc
+  setglobal HostCXX = cxx
+  setglobal ENV.CC = cc
+  setglobal ENV.CXX = cxx
+}
+
+# For components built with the *new* clang: a --gcc-toolchain prefix that
+# makes it use the set_host_compiler GCC's C++ library, rather than the newest
+# GCC on the system (whose headers may be too new for old sources).  Clang
+# picks the newest GCC under the prefix, so the prefix holds only that one.
+# Returns null if no host compiler was set.  Call from add_config_adjustment
+# blocks, so that it only runs in amd-build.
+
+func host_gcc_toolchain() {
+  if (not HostCompilerSet) {
+    return (null)
+  }
+  var Dir = "$OBJDIR/host-gcc-toolchain"
+  if ! test --dir "$Dir/lib/gcc" {
+    var InstallDir = $(dirname $($HostCC -print-libgcc-file-name))
+    var Version = $(basename $InstallDir)
+    var Triple = $(basename $(dirname $InstallDir))
+    var Prefix = $(realpath "$InstallDir/../../../..")
+    mkdir -p "$Dir/lib/gcc/$Triple"
+    ln -sfn $InstallDir "$Dir/lib/gcc/$Triple/$Version"
+    ln -sfn "$Prefix/include" "$Dir/include"
+  }
+  return (Dir)
+}
+
 proc set_build_key(; comp, key, value) {
   if (comp not in BuildOpts) {
     setglobal BuildOpts[comp] = {}
@@ -605,7 +662,7 @@ func autotools_ccache_option(comp) {
       var ccache_bin = $(which ccache)
     }
     if (_status === 0) {
-      return (:| CC="$ccache_bin gcc" CXX="$ccache_bin g++" |)
+      return (:| CC="$ccache_bin $HostCC" CXX="$ccache_bin $HostCXX" |)
     } else {
       return ([])
     }
@@ -866,6 +923,10 @@ proc unset_varlist() {
   var env_whitelist = :| _ PATH ENV HOME TERM LANG PWD OLDPWD USER LOGNAME SHELL
                          NAME SHLVL HOSTTYPE LINES COLUMNS
                          GCN_PLUGIN_IMPL GCN_DEBUG GOMP_DEBUG |
+  if (HostCompilerSet) {
+    # Set by the config via set_host_compiler, not inherited from the caller.
+    setvar env_whitelist = env_whitelist ++ :| CC CXX |
+  }
 
   for x in (current) {
     if (x ~ bashfunc) {
@@ -1188,6 +1249,7 @@ source "$SCRIPTDIR/modules/binutils"
 source "$SCRIPTDIR/modules/llvm_mos_sdk"
 source "$SCRIPTDIR/modules/rocm_cmake"
 source "$SCRIPTDIR/modules/rocm_systems"
+source "$SCRIPTDIR/modules/rocm_compilersupport"
 source "$SCRIPTDIR/modules/roct_thunk_interface"
 source "$SCRIPTDIR/modules/rocr_runtime"
 source "$SCRIPTDIR/modules/hipamd"

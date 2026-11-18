@@ -53,7 +53,7 @@ var hipamd_src = {
   "version" : "rocm-5.2.x",
   "version_name" : "5.2.x",
   "shallow_clone" : false,
-  "deps" : :| roct_thunk_interface rocr_runtime hip comgr rocclr |
+  "deps" : :| roct_thunk_interface rocr_runtime hip comgr rocclr opencl_runtime |
 }
 
 var hip_src = {
@@ -100,3 +100,6 @@ add_sources ("hip", hip_src)
 add_sources ("hipfort", hipfort_src)
 add_sources ("composable_kernel", composable_kernel_src)
 add_sources ("rocminfo", rocminfo_src)
+
+# hipamd takes the ROCclr and OpenCL runtime sources as paths.
+source $CONFIGDIR/rocm/hipamd-rocclr.inc

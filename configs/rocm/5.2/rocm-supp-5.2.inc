@@ -8,6 +8,10 @@ var rocsmilib_src = {
 
 add_sources ("rocsmilib", rocsmilib_src)
 
+# This release relies on <cstring> arriving via other headers, which newer
+# host compilers (GCC 13) no longer arrange.
+set_configure_opts ("rocsmilib", :| "-DCMAKE_CXX_FLAGS=-include cstring" |)
+
 var hwloc_src = {
   "url" : "https://github.com/open-mpi/hwloc",
   "type" : "git",

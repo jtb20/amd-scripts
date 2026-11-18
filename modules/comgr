@@ -5,15 +5,9 @@ proc clean_comgr() {
 }
 
 func get_comgr_src() {
-  case (get_version_name('comgr')) {
-    5.* {
-      return ("$[get_src_default ('comgr')]/lib/comgr")
-    }
-
-    * {
-      return (get_src_default ("comgr"))
-    }
-  }
+  # Before ROCm 6.0, comgr lived in the ROCm-CompilerSupport repository; such
+  # configs declare it as a subcomponent (see modules/rocm_compilersupport).
+  return (get_src_default ("comgr"))
 }
 
 proc add_symlink_comgr() {

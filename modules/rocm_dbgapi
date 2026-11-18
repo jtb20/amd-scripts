@@ -43,7 +43,9 @@ proc install_rocm_dbgapi() {
 }
 
 func rocm_dbgapi_dependencies() {
-  return (:| hipcc hipamd llvm |)
+  # Before ROCm 5.6 there is no separate hipcc component.
+  var HipCC = :| hipcc | if 'hipcc' in Sources else []
+  return (HipCC ++ :| hipamd llvm |)
 }
 
 proc rocm_dbgapi_tasks() {

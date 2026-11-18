@@ -36,10 +36,74 @@ func aomp_module_to_patch_control_name(comp) {
   }
 }
 
-func find_aomp_patch(comp) {
+# Patches come from the 'aomp' checkout's bin/patches directory, chosen by the
+# patch control file named by ConfigureOpts.aomp.patch_control.  A config can
+# override the patch for a component with one taken from a particular revision
+# of the AOMP repository, e.g. a later fix to the same patch that never made it
+# onto the release branch being built:
+#
+#   set_aomp_patch (comp='rocr_runtime', file='rocr-runtime-numa.patch',
+#                   rev='<full sha>')
+#
+# The file is read from that revision with 'git show', so neither the 'aomp'
+# working tree nor the build needs to change, or have network access.  If the
+# 'aomp' clone doesn't have the revision, amd-checkout fetches it from the
+# 'aomp' source's own URL, and pins it under refs/amd-scripts/ so 'git gc'
+# won't discard it.
+
+proc set_aomp_patch (;; comp, file, rev) {
+  var Overrides = get_configure_key ('aomp', 'patch_overrides', {})
+  setvar Overrides[comp] = {file: file, rev: rev}
+  set_configure_key ("aomp", "patch_overrides", Overrides)
+  if (len(Overrides) === 1) {
+    add_checkout_adjustment {
+      fetch_aomp_patch_revs
+    }
+  }
+}
+
+proc fetch_aomp_patch_revs() {
   var AOMP_Src = get_srcdir ("aomp")
-  var PatchDir = "$AOMP_Src/bin/patches"
-  var ControlFile = "$PatchDir/$[ConfigureOpts.aomp.patch_control]"
+  var Url = Sources.aomp.url
+  for Comp, Patch in (get_configure_key ('aomp', 'patch_overrides', {})) {
+    var Rev = Patch.rev
+    cd $AOMP_Src {
+      if ! git cat-file -e "$Rev^{commit}" 2>/dev/null {
+        write "Fetching aomp revision $Rev (patch for $Comp) from $Url..."
+        git fetch --no-tags $Url $Rev
+      }
+      git update-ref "refs/amd-scripts/aomp-patches/$Rev" $Rev
+      write "$Comp patch $[Patch.file] pinned at aomp revision $Rev"
+    }
+  }
+}
+
+# Return a filesystem path for 'Name' (a file in bin/patches): in the 'aomp'
+# working tree, or materialised from revision 'Rev' if given.
+func aomp_patch_path(Name, Rev=null) {
+  var AOMP_Src = get_srcdir ("aomp")
+  if (not Rev) {
+    return ("$AOMP_Src/bin/patches/$Name")
+  }
+  var Dir = "$OBJDIR/aomp-patches-$Rev"
+  mkdir -p $Dir
+  try {
+    git -C $AOMP_Src show "$Rev:bin/patches/$Name" > "$Dir/$Name"
+  }
+  if (_error.code !== 0) {
+    error "Can't read bin/patches/$Name at aomp revision $Rev (did amd-checkout run?)"
+  }
+  return ("$Dir/$Name")
+}
+
+# The patch for 'comp', as {file, rev} (rev null for the working tree), or null
+# if there isn't one.
+func find_aomp_patch(comp) {
+  var Overrides = get_configure_key ('aomp', 'patch_overrides', {})
+  if (comp in Overrides) {
+    return (Overrides[comp])
+  }
+  var ControlFile = aomp_patch_path (ConfigureOpts.aomp.patch_control)
   var CtrlLine = / s* <capture !s+ as compname> s* ':' s* <capture !s+ as patchfile> s* /
   var BlankPatchLine = / s* <capture !s+ as compname> s* ':' /
   var ControlName = aomp_module_to_patch_control_name (comp)
@@ -48,7 +112,7 @@ func find_aomp_patch(comp) {
       var CompName = _group('compname')
       var PatchFile = _group('patchfile')
       if (CompName === ControlName) {
-        return (PatchFile)
+        return ({file: PatchFile, rev: null})
       }
     } elif (n ~ BlankPatchLine) {
       setvar CompName = _group('compname')
@@ -63,51 +127,65 @@ func find_aomp_patch(comp) {
 }
 
 proc aomp_apply_patch(comp) {
-  var AOMP_Src = get_srcdir ("aomp")
-  var PatchDir = "$AOMP_Src/bin/patches"
-  var PatchFile = find_aomp_patch(comp)
+  var Patch = find_aomp_patch(comp)
   var Src = get_srcdir (comp)
-  if (not PatchFile) {
+  if (not Patch) {
     return
   }
-  write "Found patch file: $PatchFile"
+  var PatchFile = aomp_patch_path (Patch.file, Patch.rev)
+  write "Found patch file: $[Patch.file]$[' at aomp ' ++ Patch.rev if Patch.rev else '']"
   cd $Src {
     try {
-      patch -p1 --dry-run < $PatchDir/$PatchFile
+      patch -p1 --dry-run < $PatchFile
     }
     if (_status !== 0) {
       # Check if we already have this exact patch applied to the sources,
       # for convenience.
-      if patch -p1 -R --dry-run < $PatchDir/$PatchFile {
+      if patch -p1 -R --dry-run < $PatchFile {
         write "Patch already applied."
         # NOTE: ysh control flow, this only breaks out of the 'cd' block.
         return
       }
       error "Patch for $comp doesn't apply, bailing out"
     } else {
-      patch -p1 < $PatchDir/$PatchFile
+      patch -p1 < $PatchFile
       write "Patch applied successfully!"
+      # Only a patch applied here is reverted by aomp_revert_patch.
+      touch $[aomp_patch_marker (comp)]
     }
   }
 }
 
+# Marks that aomp_apply_patch applied the patch for 'comp' to its sources.
+# If it found the patch "already applied" instead (which can also mean the
+# source already contains an equivalent change), reverting it would damage
+# the source, so aomp_revert_patch only reverts a marked patch.
+func aomp_patch_marker(comp) {
+  return ("$OBJDIR/.aomp-patch-applied-$comp")
+}
+
 proc aomp_revert_patch(comp) {
-  var AOMP_Src = get_srcdir ("aomp")
-  var PatchDir = "$AOMP_Src/bin/patches"
-  var PatchFile = find_aomp_patch(comp)
-  if (not PatchFile) {
+  var Patch = find_aomp_patch(comp)
+  if (not Patch) {
     return
   }
+  var Marker = aomp_patch_marker (comp)
+  if ! test --exists $Marker {
+    write "Patch for $comp wasn't applied by aomp_apply_patch, so not reverting it."
+    return
+  }
+  var PatchFile = aomp_patch_path (Patch.file, Patch.rev)
   var Src = get_srcdir (comp)
-  write "Found patch file: $PatchFile"
+  write "Found patch file: $[Patch.file]$[' at aomp ' ++ Patch.rev if Patch.rev else '']"
   cd $Src {
     try {
-      patch -p1 -R --dry-run < $PatchDir/$PatchFile
+      patch -p1 -R --dry-run < $PatchFile
     }
     if (_status !== 0) {
       error "Patch for $comp doesn't revert, bailing out"
     } else {
-      patch -p1 -R < $PatchDir/$PatchFile
+      patch -p1 -R < $PatchFile
+      rm -f $Marker
       write "Patch reverted successfully!"
     }
   }
