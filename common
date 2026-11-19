@@ -916,7 +916,9 @@ proc do_task_number (; num; standalone=null) {
 
 proc do_tasks (; todo) {
   var task = -1
-  var nexttask = -1
+  # A "continue" with nothing before it continues from the start: leaving this
+  # at -1 would index backwards from the end of TASKARR instead.
+  var nexttask = 1
   var Range = / ^ <capture digit+ as start : int> '--' <capture digit+ as end : int> $ /
   if (len(todo) === 0) {
     setvar todo = ("1", "continue")
