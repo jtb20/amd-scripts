@@ -29,12 +29,24 @@ proc configure_llvm() {
   var Tool = get_build_tool("llvm")
   var CCache_opt = cmake_ccache_option("llvm")
   var Assertions_opt = :| -DLLVM_ENABLE_ASSERTIONS=ON | if get_assertions('llvm') else []
+  var LLVM_Inst = get_installdir('llvm')
+  # Run the openmp/offload lit suites with the *installed* clang rather than the
+  # build-tree one.  Clang locates the ROCm device libraries relative to its own
+  # binary, and only the install tree has amdgcn/bitcode in the right place
+  # ($INSTALLDIR/amdgcn/bitcode, reached from $INSTALLDIR/lib/llvm/bin/clang).
+  # The build-tree clang finds nothing there and falls back to the system
+  # /opt/rocm -- which do_bwrap hides behind an empty tmpfs, so the device
+  # compile fails with "cannot find ROCm device library".  Outside the sandbox
+  # it is worse than a failure: it silently builds against system ROCm.
+  # OPENMP_ is a forwarded prefix, so these reach the runtimes sub-build.
   cd $BuildDir {
     cmake -G $Tool @CCache_opt \
           -DLLVM_ENABLE_PROJECTS=$[join(Cfg.projects, ';')] \
           -DLLVM_TARGETS_TO_BUILD=$[join(Cfg.targets, ';')] \
           -DCMAKE_BUILD_TYPE=$BuildType \
-          -DCMAKE_INSTALL_PREFIX=$[get_installdir ('llvm')] \
+          -DCMAKE_INSTALL_PREFIX=$LLVM_Inst \
+          -DOPENMP_TEST_C_COMPILER=$LLVM_Inst/bin/clang \
+          -DOPENMP_TEST_CXX_COMPILER=$LLVM_Inst/bin/clang++ \
           @[Cfg.cfg] -DLLVM_ENABLE_RUNTIMES=$[join(Cfg.runtimes, ';')] \
           @Assertions_opt \
           @[get_rpath_opts('llvm')] \
