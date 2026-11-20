@@ -1,0 +1,52 @@
+#!/usr/bin/env ysh
+
+# zstd, the compression library: a dependency of rocm_kpack.  TheRock builds
+# its own from the upstream release tarball (third-party/sysdeps/common/zstd)
+# rather than using the host's, and so do we: rocm_kpack says
+# find_package(zstd), and older distributions' zstd packages (Ubuntu 22.04's
+# libzstd-dev 1.4.8, for instance) have no CMake package to find.
+
+proc clean_zstd() {
+  clean_component zstd
+}
+
+func get_zstd_src() {
+  return (get_src_default ("zstd"))
+}
+
+proc configure_zstd() {
+  var Build = get_objdir("zstd")
+  var Src = get_srcdir("zstd")
+  var Tool = get_build_tool("zstd")
+  var BuildType = get_build_type("zstd")
+  cd $Build {
+    # zstd's CMake build is in a subdirectory of its sources.
+    cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+      -DCMAKE_BUILD_TYPE=$BuildType \
+      -DCMAKE_INSTALL_LIBDIR=lib \
+      -DZSTD_BUILD_SHARED=ON \
+      -DZSTD_BUILD_STATIC=OFF \
+      -DZSTD_BUILD_PROGRAMS=OFF \
+      -DZSTD_BUILD_TESTS=OFF \
+      -DZSTD_LEGACY_SUPPORT=OFF \
+      @[get_configure_opts('zstd')] \
+      @[get_rpath_opts('zstd')] \
+      $Src/build/cmake
+  }
+}
+
+proc build_zstd() {
+  cmake_build zstd
+}
+
+proc install_zstd() {
+  cmake_install zstd
+}
+
+func zstd_dependencies() {
+  return ([])
+}
+
+proc zstd_tasks() {
+  standard_tasks zstd
+}

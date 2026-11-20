@@ -291,9 +291,9 @@ and `aomp/24/mainline+amd-staging-rocm-10.*.cfg` with upstream `main`.
 
 The ROCm 10 configs also build the components TheRock (and srock) builds
 that the 7.x configs don't: `amdsmi` (amd-smi), `rocm_core`, `rocm_kpack`
-(with the `msgpack_cxx` library it needs) and `rocjitsu` (rocJITsu), and they
-build the HIP runtime with kpack support, as TheRock does. Their
-dependencies follow TheRock's own declarations.
+(with the `msgpack_cxx` and `zstd` libraries it needs) and `rocjitsu`
+(rocJITsu), and they build the HIP runtime with kpack support, as TheRock
+does. Their dependencies follow TheRock's own declarations.
 
 Building the HIP runtime (`hipamd`) needs a Python module on the host:
 `cxxheaderparser` for ROCm 10, `CppHeaderParser` for the ROCm 7.x

@@ -61,3 +61,16 @@ var msgpack_cxx_src = {
 }
 
 add_sources ("msgpack_cxx", msgpack_cxx_src)
+
+# zstd, which rocm_kpack links against (as TheRock's
+# third-party/sysdeps/common/zstd, which mirrors this upstream release
+# tarball).
+var zstd_src = {
+  "url" : "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz",
+  "type" : "archive",
+  "version" : "1.5.7",
+  "version_name" : "1.5.7",
+  "md5" : "780fc1896922b1bc52a4e90980cdda48"
+}
+
+add_sources ("zstd", zstd_src)

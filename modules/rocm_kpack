@@ -39,9 +39,8 @@ proc install_rocm_kpack() {
 }
 
 func rocm_kpack_dependencies() {
-  # TheRock: BUILD_DEPS therock-msgpack-cxx, RUNTIME_DEPS zstd (taken from the
-  # host here).
-  return (:| msgpack_cxx |)
+  # TheRock: BUILD_DEPS therock-msgpack-cxx, RUNTIME_DEPS therock-zstd.
+  return (:| msgpack_cxx zstd |)
 }
 
 proc rocm_kpack_tasks() {

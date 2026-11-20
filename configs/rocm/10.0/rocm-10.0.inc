@@ -63,7 +63,7 @@ var rocm_kpack_src = {
   "type" : "subcomponent",
   "parent" : "rocm_systems",
   "subdir" : "shared/kpack",
-  "deps" : :| rocm_systems msgpack_cxx |
+  "deps" : :| rocm_systems msgpack_cxx zstd |
 }
 
 var amdsmi_src = {
