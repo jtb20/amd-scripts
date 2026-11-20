@@ -13,12 +13,18 @@ proc configure_rocprofiler_register() {
   var Src = get_srcdir("rocprofiler_register")
   var BuildType = get_build_type("rocprofiler_register")
   var Tool = get_build_tool("rocprofiler_register")
+  # The CI build turns on -Werror, and GCC 15 warns about the code: a
+  # (false) -Wmaybe-uninitialized from inlined std::function code, seen with
+  # ROCm 7.2's rocprofiler-register built in a build-toolsroot toolsroot.  So
+  # build without it there.  (Older GCCs and clang keep the CI build.)
+  var GCCMajor = host_gcc_major()
+  var BuildCI = 0 if (GCCMajor !== null and GCCMajor >= 15) else 1
   cd $Build {
     cmake -G $Tool -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
       -DCMAKE_BUILD_TYPE=$BuildType \
       -DBUILD_SHARED_LIBS=YES \
       -DENABLE_LDCONFIG=OFF \
-      -DROCPROFILER_REGISTER_BUILD_CI=1 \
+      -DROCPROFILER_REGISTER_BUILD_CI=$BuildCI \
       -DROCPROFILER_REGISTER_BUILD_TESTS=1 \
       -DROCPROFILER_REGISTER_BUILD_SAMPLES=1 \
       @[get_rpath_opts('rocprofiler_register')] \

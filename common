@@ -642,6 +642,23 @@ proc set_host_compiler(;; cc, cxx) {
   setglobal ENV.CXX = cxx
 }
 
+# The major version of the host C++ compiler if it is GCC, or null if it is
+# something else (clang defines __GNUC__ too, so check for that).  For
+# modules whose sources need adjusting for newer GCCs.
+
+func host_gcc_major() {
+  var Major = null
+  var Lines = $(echo | $HostCXX -dM -E -x c++ - 2>/dev/null)=>split(u'\n')
+  for Line in (Lines) {
+    if (Line=>startsWith('#define __clang__ ')) {
+      return (null)
+    } elif (Line=>startsWith('#define __GNUC__ ')) {
+      setvar Major = int(Line=>replace('#define __GNUC__ ', ''))
+    }
+  }
+  return (Major)
+}
+
 # For components built with the *new* clang: a --gcc-toolchain prefix that
 # makes it use the set_host_compiler GCC's C++ library, rather than the newest
 # GCC on the system (whose headers may be too new for old sources).  Clang
