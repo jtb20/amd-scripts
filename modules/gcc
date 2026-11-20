@@ -18,7 +18,156 @@ proc build_gcc() {
 
 proc install_gcc() {
   standard_install gcc
+  var SystemCXX = get_configure_key ('gcc', 'system_cxx_runtime')
+  if (SystemCXX) {
+    gcc_use_system_cxx_runtime $SystemCXX
+  }
 }
+
+# A GCC that compiles with its own (new) compiler but against the *system's*
+# C++ runtime: the system g++'s libstdc++ headers and libraries, and the
+# system's libgcc_s.  Programs it builds then only need the runtime libraries
+# that the system already has, so they run on other machines with the same or
+# a newer one.  This is how build-toolsroot's GCC is set up; see
+# configs/toolsroot/toolsroot-gcc.inc.
+#
+# To use it, set the 'system_cxx_runtime' configure key to the system's g++,
+# configure with --disable-libstdcxx (and the other target libraries off), and
+# pass --with-gxx-include-dir=$[gcc_system_cxx_include_dir()].  After
+# installing, the include directory is filled in with links to the system's
+# C++ headers, and the C++ libraries are links to the system's.
+
+func gcc_system_cxx_include_dir() {
+  return ("$INSTALLDIR/include/c++/system")
+}
+
+proc gcc_use_system_cxx_runtime(SystemCXX) {
+  var NewGCC = "$INSTALLDIR/bin/gcc"
+  var Triple = $($NewGCC -dumpmachine)
+  var OldLibDir = $(dirname $($SystemCXX -print-libgcc-file-name))
+  var NewLibDir = $(dirname $($NewGCC -print-libgcc-file-name))
+
+  # The headers.  The system compiler's search list has the generic C++
+  # header directory first, then (on Debian-style multiarch systems) a
+  # separate target-specific one with bits/c++config.h in, which GCC expects
+  # to find in a "<triple>" subdirectory of the generic one.  Make a directory
+  # with that layout out of links.
+  var CxxDirs = []
+  var InList = false
+  var Lines = $(echo | $SystemCXX -x c++ -E -v - 2>&1 >/dev/null)=>split(u'\n')
+  for Line in (Lines) {
+    if (Line=>startsWith('#include <...> search starts here')) {
+      setvar InList = true
+    } elif (Line=>startsWith('End of search list')) {
+      setvar InList = false
+    } elif (InList and Line ~~ '*/c++/*') {
+      call CxxDirs->append($(readlink -f $[Line=>trim()]))
+    }
+  }
+  if (len(CxxDirs) === 0) {
+    error "Can't find the C++ header directories of $SystemCXX"
+  }
+  var Generic = CxxDirs[0]
+  var IncDir = gcc_system_cxx_include_dir()
+  rm -rf $IncDir
+  mkdir -p $IncDir
+  for Entry in (glob("$Generic/*")) {
+    ln -s $Entry "$IncDir/$(basename $Entry)"
+  }
+  for D in (CxxDirs[1:]) {
+    if (not D=>startsWith("$Generic/")) {
+      ln -sfn $D "$IncDir/$Triple"
+    }
+  }
+
+  # The C++ runtime libraries.  libatomic, too: it is off in these builds
+  # (it's a runtime library like the others), but some code needs -latomic.
+  for Pattern in (['libstdc++*', 'libsupc++*', 'libatomic*']) {
+    for Lib in (glob("$OldLibDir/$Pattern")) {
+      ln -sfn $Lib "$NewLibDir/$(basename $Lib)"
+    }
+  }
+  if ! test --exists "$NewLibDir/libstdc++.so" {
+    error "No libstdc++.so in $OldLibDir (is the system's libstdc++ -dev package installed?)"
+  }
+
+  # A few runtime functions are called by the compiler's own code generation,
+  # not through the headers, so the old headers don't keep a newer compiler
+  # from needing them.  Supply any that the old libstdc++ lacks from a small
+  # static library, like the libstdc++_nonshared.a of Red Hat's Developer
+  # Toolset, and link it after the system's libstdc++ by making libstdc++.so
+  # a linker script.  The functions are hidden, so each executable or shared
+  # library gets its own copy and none interposes on the real one.
+  var OldLibstdcxx = $(readlink -f "$OldLibDir/libstdc++.so")
+  var Exported = $(nm -D --defined-only $OldLibstdcxx | awk '{ print $3 }' | sed 's/@.*//')=>split(u'\n')
+  var CompatDefs = []
+  for Sym in (gcc_compat_symbols) {
+    if (not in_list (Sym, Exported)) {
+      call CompatDefs->append("-DCOMPAT_$Sym")
+    }
+  }
+  if (len(CompatDefs) > 0) {
+    var CompatDir = "$[get_objdir ('gcc')]/libstdc++-compat"
+    mkdir -p $CompatDir
+    write -- $gcc_compat_source > "$CompatDir/compat.cc"
+    "$INSTALLDIR/bin/g++" -O2 -fPIC @CompatDefs -c "$CompatDir/compat.cc" -o "$CompatDir/compat.o"
+    rm -f "$NewLibDir/libstdc++_compat.a"
+    ar rcs "$NewLibDir/libstdc++_compat.a" "$CompatDir/compat.o"
+    rm -f "$NewLibDir/libstdc++.so"
+    write -- "/* The system's libstdc++, and what this compiler needs that it lacks:" \
+             "   see modules/gcc in amd-scripts.  */" \
+             "INPUT ( $OldLibstdcxx $NewLibDir/libstdc++_compat.a )" > "$NewLibDir/libstdc++.so"
+  }
+
+  # libgcc_s: the new one may have symbol versions that the system's lacks.
+  # Link against the system's, so that a program needing something newer
+  # fails to link rather than failing to load later.  Remove the new one
+  # entirely so nothing can pick it up at run time either.
+  var OldLibgccS = $(readlink -f $($SystemCXX -print-file-name=libgcc_s.so.1))
+  var NewLibgccS = $($NewGCC -print-file-name=libgcc_s.so)
+  if (not NewLibgccS=>startsWith('/') or not OldLibgccS=>startsWith('/')) {
+    error "Can't find libgcc_s ($NewLibgccS, $OldLibgccS)"
+  }
+  rm -f "$(dirname $NewLibgccS)/libgcc_s.so.1"
+  write -- "/* Use the system's libgcc_s: see modules/gcc in amd-scripts.  */" \
+           "GROUP ( $OldLibgccS -lgcc )" > $NewLibgccS
+
+  write "$NewGCC: using the C++ runtime of $SystemCXX"
+  write "  headers: $IncDir -> $Generic"
+  write "  libraries: $OldLibDir, $OldLibgccS"
+  if (len(CompatDefs) > 0) {
+    write "  supplied by libstdc++_compat.a: $[join(CompatDefs, ' ')]"
+  }
+}
+
+# The compiler-emitted runtime functions that gcc_use_system_cxx_runtime can
+# supply, and their source, each under #ifdef COMPAT_<name>.
+
+var gcc_compat_symbols = :| __cxa_call_terminate |
+
+var gcc_compat_source = '''
+#include <cxxabi.h>
+#include <exception>
+
+#ifdef COMPAT___cxa_call_terminate
+// GCC 14 and later call this when an exception tries to leave a noexcept
+// function, or a destructor during unwinding.  libstdc++ exports it from
+// GCC 14 on (CXXABI_1.3.15); older ones only define it internally.  The real
+// one runs the terminate handler that was current when the exception was
+// thrown; this runs the current one, which is nearly always the same.
+//
+// The compiler has its own declaration of this, with default visibility, so
+// a visibility attribute here is ignored; hide it in the assembler instead.
+__asm__(".hidden __cxa_call_terminate");
+extern "C" __attribute__((noreturn, cold)) void
+__cxa_call_terminate(void *ue) noexcept
+{
+  if (ue)
+    __cxxabiv1::__cxa_begin_catch(ue);
+  std::terminate();
+}
+#endif
+'''
 
 func gcc_dependencies() {
   return (:| binutils isl mpc mpfr gmp |)

@@ -172,7 +172,7 @@ proc show_help() {
       -B, --no-bwrap         don't use the bubblewrap sandbox
           --share-net        keep network access inside the sandbox
       -H, --bind-homebrew    make Homebrew's tools available in the sandbox
-      -T, --toolsroot DIR    use DIR as a minimal root filesystem
+      -T, --toolsroot DIR    use DIR (see build-toolsroot) as the root filesystem
           --shell            start a shell in the sandbox instead
     """
   }
@@ -1340,6 +1340,10 @@ proc unset_varlist() {
     # Set by the config via set_host_compiler, not inherited from the caller.
     setvar env_whitelist = env_whitelist ++ :| CC CXX |
   }
+  if (ToolsRoot and NoBWrap) {
+    # Inside a -T sandbox: set by do_bwrap, not inherited from the caller.
+    setvar env_whitelist = env_whitelist ++ :| CCACHE_DIR |
+  }
 
   for x in (current) {
     if (x ~ bashfunc) {
@@ -1626,18 +1630,69 @@ proc do_bwrap {
   }
 
   if (ToolsRoot) {
-    # This bit is for rocm-dbgapi's cmake stuff.
-    var PCIIdsOpt = []
-    if test --dir /usr/share/misc {
-      setvar PCIIdsOpt = :| --bind /usr/share/misc /usr/share/misc |
-    } elif test --dir /usr/share/hwdata {
-      setvar PCIIdsOpt = :| --bind /usr/share/hwdata /usr/share/hwdata |
+    # A root filesystem from build-toolsroot (or any similar one): its
+    # programs and libraries replace the host's entirely.
+    var TR = $(readlink -f $ToolsRoot)
+    if ! test --dir "$TR/usr/bin" {
+      error "--toolsroot $ToolsRoot doesn't look like a root filesystem (no usr/bin)"
     }
+
+    # /bin, /lib etc. are directories in older releases and symlinks into
+    # /usr in merged-/usr ones.
+    var RootDirOpts = []
+    for D in bin sbin lib lib32 lib64 libx32 {
+      if test -L "$TR/$D" {
+        setvar RootDirOpts = RootDirOpts ++ :| --symlink $(readlink "$TR/$D") /$D |
+      } elif test --dir "$TR/$D" {
+        setvar RootDirOpts = RootDirOpts ++ :| --ro-bind "$TR/$D" /$D |
+      }
+    }
+
+    # The toolsroot's own /etc, so that the dynamic linker cache, alternatives
+    # and so on match its libraries, but the host's idea of users and the
+    # network.
+    var EtcOpts = :| --ro-bind "$TR/etc" /etc |
+    for F in passwd group hosts resolv.conf {
+      if test --exists "/etc/$F" && test --exists "$TR/etc/$F" {
+        setvar EtcOpts = EtcOpts ++ :| --ro-bind /etc/$F /etc/$F |
+      }
+    }
+
+    # rocm-dbgapi's cmake wants pci.ids.  build-toolsroot installs it; for an
+    # older toolsroot without it, borrow the host's.
+    var PCIIdsOpt = []
+    if ! test --exists "$TR/usr/share/misc/pci.ids" && test --dir "$TR/usr/share/misc" {
+      if test --exists /usr/share/misc/pci.ids {
+        setvar PCIIdsOpt = :| --ro-bind /usr/share/misc /usr/share/misc |
+      } elif test --exists /usr/share/hwdata/pci.ids {
+        setvar PCIIdsOpt = :| --ro-bind /usr/share/hwdata /usr/share/misc |
+      }
+    }
+
+    # Nothing outside the binds below exists in the sandbox, including the
+    # scripts themselves (unless they happen to be in $HOME or the work
+    # directory) and any symlinked path to them or to the work directory.  So
+    # bind the scripts in, and use real paths for them and the directory to
+    # start in.
+    var RealScriptDir = $(readlink -f $SCRIPTDIR)
+    var Cmd = [$(readlink -f $[ARGV[0]])] ++ ARGV[1:]
+
+    # The same goes for the ccache cache directory, which is bound in under
+    # its real path, but which the toolsroot's ccache may look for through a
+    # symlink (like ~/.ccache).  Tell it where the cache is.
+    var CCacheEnvOpt = []
+    if (CCacheDir) {
+      setvar CCacheEnvOpt = :| --setenv CCACHE_DIR $CCacheDir |
+    }
+
+    # The host's PATH could find host programs first (like a ysh built against
+    # the host's newer glibc, through $HOME), so use the toolsroot's.
     bwrap --tmpfs / \
           --bind /tmp /tmp \
           @BwrapExtraOpts \
           @CCacheDirOpt \
           --bind $[ENV.HOME] $[ENV.HOME] \
+          --ro-bind $RealScriptDir $RealScriptDir \
           --bind $RealWD $RealWD \
           @DirBinds \
           --tmpfs /opt \
@@ -1647,19 +1702,18 @@ proc do_bwrap {
           --dev-bind /dev/dri /dev/dri \
           --proc /proc \
           --bind /run /run \
-          --ro-bind $ToolsRoot/bin /bin \
-          --ro-bind /etc /etc \
-          --ro-bind $ToolsRoot/lib /lib \
-          --ro-bind $ToolsRoot/lib64 /lib64 \
-          --ro-bind $ToolsRoot/sbin /sbin \
-          --ro-bind $ToolsRoot/usr /usr \
-          --ro-bind $ToolsRoot/etc/alternatives /etc/alternatives \
+          --ro-bind "$TR/usr" /usr \
+          @RootDirOpts \
+          @EtcOpts \
+          @PCIIdsOpt \
           --unshare-pid \
           @NetSharingOpt \
-          @PCIIdsOpt \
           @HostSpecificOpts \
+          --setenv PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+          @CCacheEnvOpt \
+          --chdir $RealWD \
           --die-with-parent \
-          @ARGV
+          @Cmd
   } else {
     # The .parallel bind is needed for smoke tests (GNU Parallel) to work.
     bwrap --ro-bind / / \

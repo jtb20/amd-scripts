@@ -43,6 +43,7 @@ builds will fail in confusing ways if they are missing.
 - [Build options](#build-options)
 - [Build variants](#build-variants)
 - [The bubblewrap sandbox](#the-bubblewrap-sandbox)
+- [Building for older systems](#building-for-older-systems)
 - [Optional modules and removable features](#optional-modules-and-removable-features)
 - [amd-test](#amd-test)
 - [Comparing test results](#comparing-test-results)
@@ -475,7 +476,7 @@ These options are shared by `amd-build` and `amd-test`.
 | `-B`, `--no-bwrap` | Do not use the bubblewrap sandbox |
 | `--share-net` | Keep network access inside the sandbox |
 | `-H`, `--bind-homebrew` | Make Homebrew's `bwrap`, `ccache`, `makeinfo`, `ld.lld` available inside the sandbox |
-| `-T`, `--toolsroot DIR` | Build against a minimal root filesystem instead of the host's |
+| `-T`, `--toolsroot DIR` | Build in a root filesystem from [`build-toolsroot`](#building-for-older-systems) instead of the host's |
 | `--shell` | Start an interactive shell inside the sandbox instead of building |
 | `--flang-name NAME` | Override the flang flavour (`classic`, `legacy`, ...) |
 | `--ghuser USER` | GitHub username, for configs that clone a fork |
@@ -599,6 +600,101 @@ When something does not work under the sandbox, the usual escape hatches are:
 
 Delegated AOMP and TheRock builds enable network access themselves, because
 those build systems fetch sources and Python packages as they go.
+
+## Building for older systems
+
+A toolchain built on a recent distribution needs that distribution's glibc,
+libstdc++ and `libgcc_s` at run time, so it won't load on a machine with older
+ones. To build toolchains that run on older systems too, build them inside an
+older distribution's root filesystem, a *toolsroot*. The result then needs
+only that release's versions of those libraries, and runs on any system with
+the same versions or newer ones, using the system's own copies.
+
+`build-toolsroot` makes one, from a Debian release in a docker or podman
+container. It needs no VM and no sudo:
+
+```bash
+amd-scripts/build-toolsroot ~/toolsroots/bullseye            # a directory
+amd-scripts/build-toolsroot ~/toolsroots/bullseye.tar.zst    # or a tarball
+```
+
+and `-T`/`--toolsroot` uses it in place of the host's root filesystem inside
+the [sandbox](#the-bubblewrap-sandbox):
+
+```bash
+amd-build -T ~/toolsroots/bullseye aomp/23/amd-staging-rocm-7.2.cfg
+```
+
+Unpack a tarball before using it with `-T`; an ordinary user can do that.
+
+The default release is Debian 11 "bullseye" (glibc 2.31, GCC 10), so the
+results run on Debian 11, Ubuntu 20.04 (whose libstdc++ also comes from
+GCC 10), RHEL 9, and their successors. Pick another
+with `-r`/`--release`. Releases past their end of life are fetched from
+archive.debian.org, which is used automatically when it has the release.
+
+The toolsroot contains:
+
+- the Debian packages the builds need: compilers, autotools, Python, and the
+  development packages for the libraries the components link against;
+- a recent CMake (3.x) and Ninja from PyPI, plus `CppHeaderParser` and `PyYAML`;
+- `ysh`, built by `setup_prereq`, because the host's will not run against an
+  older glibc;
+- a newer GCC in `/usr/local`, which comes first on `PATH` as `cc`, `gcc`, `c++`
+  and `g++`.
+
+Other packages can be added with `-p`/`--packages` (Debian) and `--pip`
+(Python). Be careful which libraries you add, because builds link against
+whatever they find. libxml2, OpenSSL and libffi are left out deliberately: each
+has changed its soname in newer distributions, and LLVM uses libxml2 and libffi
+whenever they are present.
+
+### The toolsroot's GCC
+
+The old release's own GCC is too old to build current LLVM. A newer GCC with
+its own libstdc++, however, would make everything it builds depend on that
+newer libstdc++, which defeats the purpose. So `build-toolsroot` builds a
+newer compiler that uses the release's C++ runtime: the system's libstdc++
+headers and libraries, and the system's `libgcc_s`. A binary built with it can
+only refer to symbol versions the old release has; if new code needs something
+newer, it fails to *link*, rather than failing to *load* on someone's machine
+later. Clang built in the toolsroot picks up the system GCC's libstdc++ in the
+same way.
+
+The old headers keep code from using newer library features, but a few runtime
+functions are called by the compiler itself. GCC 14 and later call
+`__cxa_call_terminate` when an exception would leave a `noexcept` function,
+and bullseye's libstdc++ doesn't export it. Functions like this come from a
+small static `libstdc++_compat.a` that is linked in after the system's
+libstdc++, as a hidden symbol in each binary (the same idea as the
+`libstdc++_nonshared.a` in Red Hat's Developer Toolset). The list is in
+`modules/gcc`, and an entry is only used when the system's libstdc++ lacks it.
+
+The GCC is built in the container by amd-scripts itself, with
+`configs/toolsroot/gcc-15.cfg` (GCC 15.3, the default) or `gcc-16.cfg` (GCC
+16.2), chosen with `-g`/`--gcc`. GCC 16 defaults to `-std=gnu++20`, which
+bullseye's GCC 10 headers only support experimentally. Code that chooses its
+own standard, such as LLVM, is not affected. The runtime libraries that need to
+match the compiler are not built: the sanitizers, OpenMP (`-fopenmp`), libitm
+and libquadmath are unavailable with this GCC. These configs only make sense
+inside a toolsroot container; see `configs/toolsroot/toolsroot-gcc.inc`.
+
+`/etc/amd-scripts-toolsroot` in the toolsroot records what went into it.
+
+### What `-T` changes in the sandbox
+
+With `-T`, the sandbox starts from an empty root rather than the host's. It
+binds the toolsroot's `/usr`, `/bin`, `/lib*` and `/etc` (with the host's
+`passwd`, `group`, `hosts` and `resolv.conf`), `$HOME`, `/tmp`, `/run`, the
+amd-scripts directory, the work directory, and anything moved out of it with
+`-s`/`-b`/`-i`/`-t`/`-l`/`-d`, all under their real paths. `PATH` is reset to
+the toolsroot's standard directories, and `CCACHE_DIR` is set to the real path
+of the host's ccache cache. Nothing else on the host is visible. In
+particular, a symlink in `$HOME` that points elsewhere (say `~/.cache` ->
+`/work/me/.cache`) dangles inside the sandbox unless its target is under one of
+those directories.
+
+The toolsroot is read-only under `-T`. To change one, rebuild it.
 
 ## Optional modules and removable features
 

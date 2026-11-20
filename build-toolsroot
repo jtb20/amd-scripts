@@ -1,0 +1,404 @@
+#!/bin/bash
+#
+# Build a root filesystem ("toolsroot") for amd-build/amd-test -T, in a podman
+# or docker container.  See "Building for older systems" in README.md.
+
+set -euo pipefail
+
+SCRIPTDIR="$(dirname "$(readlink -f "$0")")"
+
+usage() {
+  cat <<EOF
+Usage: build-toolsroot [options] OUTPUT
+
+Build a root filesystem ("toolsroot") for amd-build -T/--toolsroot from an
+older Debian release, using a podman or docker container.  A toolchain
+built in it needs only that release's glibc, libstdc++ and libgcc_s at run
+time, so it runs on systems that have those versions or newer ones.
+
+The toolsroot gets the packages the builds need, a recent CMake and Ninja,
+ysh, and a newer GCC.  That GCC is built in the container by amd-build
+(configs/toolsroot/gcc-VERSION.cfg), and it compiles against the release's
+own C++ runtime.
+
+OUTPUT is a directory to create, or a tarball if its name ends in .tar,
+.tar.gz, .tgz, .tar.xz, .txz, .tar.zst or .tzst.  Unpack a tarball (as an
+ordinary user is fine) before passing it to -T.
+
+Options:
+  -r, --release NAME    Debian release (default: bullseye, glibc 2.31)
+      --image IMAGE     base image (default: debian:RELEASE)
+  -g, --gcc VERSION     GCC to build, from configs/toolsroot/gcc-VERSION.cfg
+                        (default: 15); 'none' keeps only the release's GCC
+  -e, --engine NAME     docker or podman (default: whichever works, docker
+                        first)
+  -j, --jobs N          parallel build jobs (default: $(nproc))
+  -m, --mirror URL      Debian mirror instead of http://deb.debian.org/debian
+      --archive         use archive.debian.org (the default for releases
+                        that are there, i.e. past their end of life)
+      --no-archive      use the mirrors even so
+  -p, --packages LIST   extra Debian packages (comma separated)
+      --pip LIST        extra Python packages (comma separated)
+  -f, --force           replace OUTPUT if it exists (a directory only if it
+                        is a previous toolsroot)
+  -k, --keep-container  don't delete the container afterwards
+  -h, --help            show this help and exit
+
+Full documentation: $SCRIPTDIR/README.md ("Building for older systems")
+EOF
+}
+
+die() {
+  echo "build-toolsroot: $*" >&2
+  exit 1
+}
+
+RELEASE=bullseye
+IMAGE=
+GCC=15
+ENGINE=
+JOBS="$(nproc)"
+MIRROR=
+ARCHIVE=
+EXTRA_PKGS=
+EXTRA_PIP=
+FORCE=
+KEEP=
+OUTPUT=
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    -r|--release) RELEASE="$2"; shift ;;
+    --image) IMAGE="$2"; shift ;;
+    -g|--gcc) GCC="$2"; shift ;;
+    -e|--engine) ENGINE="$2"; shift ;;
+    -j|--jobs) JOBS="$2"; shift ;;
+    -j*) JOBS="${1#-j}" ;;
+    -m|--mirror) MIRROR="$2"; shift ;;
+    --archive) ARCHIVE=1 ;;
+    --no-archive) ARCHIVE=0 ;;
+    -p|--packages) EXTRA_PKGS="$2"; shift ;;
+    --pip) EXTRA_PIP="$2"; shift ;;
+    -f|--force) FORCE=1 ;;
+    -k|--keep-container) KEEP=1 ;;
+    -*) usage >&2; die "unknown option $1" ;;
+    *)
+      [ -z "$OUTPUT" ] || die "more than one OUTPUT given"
+      OUTPUT="$1"
+      ;;
+  esac
+  shift
+done
+
+[ -n "$OUTPUT" ] || { usage >&2; exit 1; }
+IMAGE="${IMAGE:-debian:$RELEASE}"
+[[ "$JOBS" =~ ^[0-9]+$ ]] || die "bad --jobs value '$JOBS'"
+if [ "$GCC" != none ] && ! [ -f "$SCRIPTDIR/configs/toolsroot/gcc-$GCC.cfg" ]; then
+  die "no config for GCC '$GCC' (have: $(cd "$SCRIPTDIR/configs/toolsroot" && ls gcc-*.cfg | sed 's/gcc-\(.*\)\.cfg/\1/' | tr '\n' ' '))"
+fi
+
+case "$OUTPUT" in
+  *.tar) COMPRESS=(cat) ;;
+  *.tar.gz|*.tgz) COMPRESS=(gzip -c) ;;
+  *.tar.xz|*.txz) COMPRESS=(xz -T0 -c) ;;
+  *.tar.zst|*.tzst) COMPRESS=(zstd -T0 -q -c) ;;
+  *) COMPRESS=() ;;
+esac
+OUTPUT="$(readlink -m "$OUTPUT")"
+
+# Check OUTPUT before spending an hour building.
+if [ -e "$OUTPUT" ]; then
+  if [ ${#COMPRESS[@]} -eq 0 ] && [ -d "$OUTPUT" ] && [ -z "$(ls -A "$OUTPUT")" ]; then
+    true  # An empty directory is fine.
+  elif [ -z "$FORCE" ]; then
+    die "$OUTPUT already exists (use -f to replace it)"
+  elif [ ${#COMPRESS[@]} -eq 0 ] && ! [ -f "$OUTPUT/etc/amd-scripts-toolsroot" ]; then
+    die "$OUTPUT exists and isn't a toolsroot; not replacing it even with -f"
+  fi
+fi
+mkdir -p "$(dirname "$OUTPUT")"
+
+# Releases past their end of life move to archive.debian.org, and leave the
+# mirrors (not necessarily all at once: bullseye's security updates went
+# first).  The archive never changes, which suits a toolsroot anyway.
+if [ -z "$ARCHIVE" ] && [ -z "$MIRROR" ]; then
+  if curl -fsI --max-time 30 \
+       "http://archive.debian.org/debian/dists/$RELEASE/Release" >/dev/null 2>&1; then
+    ARCHIVE=1
+  fi
+fi
+[ "$ARCHIVE" = 1 ] || ARCHIVE=
+
+if [ -z "$ENGINE" ]; then
+  for E in docker podman; do
+    if command -v $E >/dev/null && $E info >/dev/null 2>&1; then
+      ENGINE=$E
+      break
+    fi
+  done
+  [ -n "$ENGINE" ] || die "neither docker nor podman is usable (try -e)"
+fi
+
+# Everything below runs in the container, as root.  It is passed to 'bash -s'
+# with its settings in the environment.
+in_container() {
+  set -euo pipefail
+  export DEBIAN_FRONTEND=noninteractive
+  export PIP_BREAK_SYSTEM_PACKAGES=1 PIP_ROOT_USER_ACTION=ignore PIP_NO_CACHE_DIR=1
+  log() { echo "*** build-toolsroot: $*"; }
+
+  # Package sources.  Older images have sources.list, newer ones deb822
+  # files in sources.list.d.
+  local Sources
+  Sources="$(ls /etc/apt/sources.list /etc/apt/sources.list.d/*.list \
+                /etc/apt/sources.list.d/*.sources 2>/dev/null || true)"
+  if [ -n "$TR_ARCHIVE" ]; then
+    log "using archive.debian.org"
+    sed -i -e 's#://deb\.debian\.org/#://archive.debian.org/#' \
+           -e 's#://security\.debian\.org/debian-security#://archive.debian.org/debian-security#' \
+           -e 's#://security\.debian\.org/#://archive.debian.org/debian-security/#' \
+           $Sources
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99archive
+  fi
+  if [ -n "$TR_MIRROR" ]; then
+    log "using mirror $TR_MIRROR"
+    sed -i -e "s#http://deb\.debian\.org/debian\([[:space:]]\|\$\)#$TR_MIRROR\1#" $Sources
+  fi
+  if ! apt-get update; then
+    log "apt-get update failed (--archive or --mirror may help)"
+    exit 1
+  fi
+
+  # What the amd-scripts builds need, from the release itself.  CMake and
+  # Ninja come from PyPI below, as the release's are too old for LLVM.
+  #
+  # Be careful adding libraries: anything a build finds, it may link against,
+  # and the result then needs that library's soname on the machines it runs
+  # on.  Those in this list have kept theirs for many years.  Some common ones
+  # have not (libxml2.so.2 became .so.16, libssl 1.1 became 3, libffi 7
+  # became 8), and LLVM uses libxml2 and libffi if they are there, so they
+  # are left out.  Add them with --packages if a build needs them and the
+  # target systems have the same versions.
+  local Pkgs=(
+    build-essential ca-certificates curl wget git file patch rsync less
+    xz-utils bzip2 zstd unzip m4 autoconf automake libtool pkg-config
+    texinfo bison flex gawk ccache parallel locales
+    python3 python3-dev python3-pip python3-venv python3-setuptools
+    lld
+    zlib1g-dev libzstd-dev liblzma-dev libexpat1-dev libreadline-dev
+    libncurses-dev libnuma-dev libdrm-dev libelf-dev libgl-dev libglx-dev
+    libgmp-dev libmpfr-dev libmpc-dev libisl-dev
+  )
+  # Packages that were split out of others in later releases: xxd (from
+  # vim-common) and pci.ids (from pciutils) have their own from bullseye on.
+  local Pkg
+  for Pkg in xxd:vim-common pci.ids:pciutils; do
+    if apt-cache show "${Pkg%%:*}" >/dev/null 2>&1; then
+      Pkgs+=("${Pkg%%:*}")
+    else
+      Pkgs+=("${Pkg#*:}")
+    fi
+  done
+  if [ -n "$TR_EXTRA_PKGS" ]; then
+    Pkgs+=(${TR_EXTRA_PKGS//,/ })
+  fi
+  log "installing packages"
+  apt-get install -y --no-install-recommends "${Pkgs[@]}"
+
+  # The host's locale (passed through by amd-build) and en_US.UTF-8, to keep
+  # perl and friends quiet.
+  local Loc
+  for Loc in en_US.UTF-8 "$TR_LANG"; do
+    case "$Loc" in
+      *.UTF-8|*.utf8) sed -i "s/^# *\(${Loc%%.*}\.UTF-8 UTF-8\)/\1/" /etc/locale.gen ;;
+    esac
+  done
+  locale-gen
+
+  # The release's pip may be too old to understand the manylinux tags on the
+  # CMake and Ninja wheels.  CMake 4 drops compatibility with
+  # cmake_minimum_required(VERSION < 3.5), which older components use.
+  log "installing Python packages"
+  python3 -m pip install --upgrade pip
+  local Pip=('cmake>=3.25,<4' ninja CppHeaderParser PyYAML)
+  if [ -n "$TR_EXTRA_PIP" ]; then
+    Pip+=(${TR_EXTRA_PIP//,/ })
+  fi
+  python3 -m pip install "${Pip[@]}"
+  hash -r
+
+  log "building ysh"
+  DOWNLOAD=/tmp/tr-download PREFIX=/usr/local BUILD=/tmp/tr-oil \
+    /tmp/amd-scripts/setup_prereq
+
+  local GCCDesc="none (the release's own GCC only)"
+  if [ "$TR_GCC" != none ]; then
+    log "building GCC with amd-scripts (configs/toolsroot/gcc-$TR_GCC.cfg)"
+    mkdir -p /tmp/tr-work
+    cd /tmp/tr-work
+    ysh /tmp/amd-scripts/amd-checkout toolsroot/gcc-$TR_GCC.cfg
+    if ! ysh /tmp/amd-scripts/amd-build -B -i /usr/local -j "$TR_JOBS" \
+           toolsroot/gcc-$TR_GCC.cfg; then
+      local Log
+      Log="$(ls -t /tmp/tr-work/logs/* | head -n 1)"
+      log "GCC build failed; the end of $Log:"
+      tail -n 50 "$Log"
+      exit 1
+    fi
+    cd /
+    # GCC doesn't install 'cc' (Debian's comes from the alternatives system),
+    # and CMake looks for that first, then for a C++ compiler next to it.
+    ln -sfn gcc /usr/local/bin/cc
+    hash -r
+
+    # Check the result: the new compiler, the old C++ runtime.  Linking is
+    # the real test, since the only libstdc++ and libgcc_s it can see are the
+    # system's: it fails if the new compiler's code needs anything newer.
+    log "checking the new GCC"
+    local Prog
+    for Prog in cc gcc c++ g++; do
+      [ "$(command -v $Prog)" = /usr/local/bin/$Prog ] ||
+        { log "$Prog isn't /usr/local/bin/$Prog"; exit 1; }
+    done
+    mkdir /tmp/tr-test
+    cd /tmp/tr-test
+    cat > lib.cc <<'EOF'
+#include <iostream>
+struct Guard {
+  ~Guard() { std::cout << "cleanup, "; }
+};
+__attribute__((noinline)) void may_throw(int x) {
+  if (x > 100)
+    throw x;
+}
+// A cleanup in a noexcept function: GCC 14 and later call
+// __cxa_call_terminate from it, which older libstdc++ doesn't export.
+void nothrow_cleanup(int x) noexcept {
+  Guard g;
+  may_throw(x);
+}
+EOF
+    cat > main.cc <<'EOF'
+#include <filesystem>
+#include <iostream>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <variant>
+void nothrow_cleanup(int x) noexcept;
+int main(int argc, char **) {
+  std::optional<std::string> s = std::filesystem::path("/a/ok").filename().string();
+  std::variant<int, std::string> v = *s;
+  std::thread t([] {});
+  t.join();
+  nothrow_cleanup(argc);
+  try {
+    throw std::runtime_error("exceptions");
+  } catch (const std::exception &e) {
+    std::cout << std::get<std::string>(v) << ": " << e.what() << '\n';
+  }
+}
+EOF
+    g++ -std=c++17 -O2 -fPIC -shared lib.cc -o libtrtest.so
+    g++ -std=c++17 -O2 -pthread main.cc lib.cc -o static-lib
+    g++ -std=c++17 -O2 -pthread main.cc -L. -ltrtest -Wl,-rpath,/tmp/tr-test -o shared-lib
+    ./static-lib
+    ./shared-lib
+    if ldd static-lib shared-lib libtrtest.so | grep -E 'lib(stdc\+\+|gcc_s)' | grep /usr/local; then
+      log "the test programs use the new GCC's runtime libraries"
+      exit 1
+    fi
+    # libstdc++_compat.a's functions must stay private to each binary.
+    if nm -D --defined-only libtrtest.so | grep -w __cxa_call_terminate; then
+      log "libtrtest.so exports libstdc++_compat.a's __cxa_call_terminate"
+      exit 1
+    fi
+    cd /
+    local CxxRT
+    CxxRT="$(echo '#include <cstddef>' | g++ -x c++ -dM -E - | sed -n 's/^#define __GLIBCXX__ //p')"
+    GCCDesc="$(gcc -dumpfullversion) in /usr/local, with the system's libstdc++ ($CxxRT) and libgcc_s"
+  fi
+
+  log "cleaning up"
+  apt-get clean
+  rm -rf /var/lib/apt/lists/* /tmp/* /tmp/.[!.]* /root/.cache /root/.ccache \
+         /root/.wget-hsts
+
+  . /etc/os-release
+  cat > /etc/amd-scripts-toolsroot <<EOF
+Built by amd-scripts build-toolsroot ($TR_REVISION) on $(date -u +%Y-%m-%d)
+Image:   $TR_IMAGE ($PRETTY_NAME, Debian $(cat /etc/debian_version))
+glibc:   $(ldd --version | sed -n '1s/.* //p')
+GCC:     $GCCDesc
+System GCC: $(/usr/bin/gcc -dumpfullversion)
+CMake:   $(cmake --version | sed -n '1s/.* //p')
+Ninja:   $(ninja --version)
+EOF
+  cat /etc/amd-scripts-toolsroot
+}
+
+REVISION="$(git -C "$SCRIPTDIR" describe --always --dirty 2>/dev/null || echo unknown)"
+CTR="build-toolsroot-$$"
+
+cleanup() {
+  if [ -n "$KEEP" ]; then
+    echo "build-toolsroot: keeping container $CTR ($ENGINE rm -f $CTR to delete it)"
+  else
+    $ENGINE rm -f "$CTR" >/dev/null 2>&1 || true
+  fi
+  rm -rf "$OUTPUT.partial-$$" "$OUTPUT.partial-$$.tar"
+}
+trap cleanup EXIT
+
+echo "build-toolsroot: $IMAGE with GCC $GCC, using $ENGINE, into $OUTPUT"
+
+ProxyOpts=()
+for V in http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY; do
+  if [ -n "${!V-}" ]; then
+    ProxyOpts+=(-e "$V=${!V}")
+  fi
+done
+
+$ENGINE run -d --name "$CTR" "${ProxyOpts[@]}" "$IMAGE" sleep infinity >/dev/null
+
+# The scripts (as they are, uncommitted changes included) for the GCC build.
+tar -C "$SCRIPTDIR" --exclude=.git -cf - . |
+  $ENGINE exec -i "$CTR" sh -c 'mkdir -p /tmp/amd-scripts && tar -C /tmp/amd-scripts -xf -'
+
+{ declare -f in_container; echo 'in_container </dev/null'; } |
+  $ENGINE exec -i \
+    -e TR_RELEASE="$RELEASE" -e TR_IMAGE="$IMAGE" -e TR_GCC="$GCC" \
+    -e TR_JOBS="$JOBS" -e TR_MIRROR="$MIRROR" -e TR_ARCHIVE="$ARCHIVE" \
+    -e TR_EXTRA_PKGS="$EXTRA_PKGS" -e TR_EXTRA_PIP="$EXTRA_PIP" \
+    -e TR_LANG="${LANG-}" -e TR_REVISION="$REVISION" \
+    "${ProxyOpts[@]}" \
+    "$CTR" bash -s
+
+echo "build-toolsroot: exporting the root filesystem"
+$ENGINE stop -t 1 "$CTR" >/dev/null
+# Unpacking as an ordinary user drops the root ownership, which the sandbox
+# doesn't need.  Make everything writable by the user so that the tree can be
+# deleted later, and remove the files that mark a container root, which some
+# build scripts look for.
+Partial="$OUTPUT.partial-$$"
+mkdir "$Partial"
+$ENGINE export "$CTR" | tar -C "$Partial" -xpf -
+rm -f "$Partial/.dockerenv" "$Partial/run/.containerenv"
+chmod -R u+w "$Partial"
+if [ ${#COMPRESS[@]} -eq 0 ]; then
+  if [ -e "$OUTPUT" ]; then
+    rm -rf "$OUTPUT"
+  fi
+  mv "$Partial" "$OUTPUT"
+else
+  tar -C "$Partial" --owner=0 --group=0 --numeric-owner -cf - . |
+    "${COMPRESS[@]}" > "$Partial.tar"
+  mv -f "$Partial.tar" "$OUTPUT"
+fi
+
+echo "build-toolsroot: done: $OUTPUT"
+if [ ${#COMPRESS[@]} -eq 0 ]; then
+  echo "Use it with, e.g.: amd-build -T $OUTPUT <config>"
+fi
