@@ -177,6 +177,16 @@ proc add_optional_module (Mod) {
       add_components composable_kernel
     }
 
+    rocjitsu {
+      # rocJITsu, ROCm's GPU emulation suite (ROCm 10 configs only).  Opt-in:
+      # it is C++20 and uses <format>, so the host compiler must be GCC 13 or
+      # later, and no other component uses it.
+      if ('rocjitsu' not in Sources) {
+        error "This config has no rocjitsu source (it needs the ROCm 10 components)"
+      }
+      add_components rocjitsu
+    }
+
     taskgraph {
       append_configure_opts ("llvm", :| -DLIBOMP_TASKGRAPH_EXPERIMENTAL=ON |)
     }

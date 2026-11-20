@@ -290,10 +290,11 @@ The `aomp/24/amd-staging-rocm-10.*.cfg` configs pair it with LLVM `amd-staging`,
 and `aomp/24/mainline+amd-staging-rocm-10.*.cfg` with upstream `main`.
 
 The ROCm 10 configs also build the components TheRock (and srock) builds
-that the 7.x configs don't: `amdsmi` (amd-smi), `rocm_core`, `rocm_kpack`
-(with the `msgpack_cxx` and `zstd` libraries it needs) and `rocjitsu`
-(rocJITsu), and they build the HIP runtime with kpack support, as TheRock
-does. Their dependencies follow TheRock's own declarations.
+that the 7.x configs don't: `amdsmi` (amd-smi), `rocm_core` and `rocm_kpack`
+(with the `msgpack_cxx` and `zstd` libraries it needs), and they build the
+HIP runtime with kpack support, as TheRock does. Their dependencies follow
+TheRock's own declarations. `rocjitsu` (rocJITsu) is available with
+`--add rocjitsu`; it needs a host GCC 13 or later.
 
 Building the HIP runtime (`hipamd`) needs a Python module on the host:
 `cxxheaderparser` for ROCm 10, `CppHeaderParser` for the ROCm 7.x
@@ -719,6 +720,7 @@ For AOMP-family configs (`configs/aomp/aomp-common.inc`):
 | `installdir_legacy` | Installs LLVM at the top of `install/`, not `install/lib/llvm` |
 | `rocgdb`, `rocprofiler`, `rocprofiler_sdk`, `roctracer` | Debugger and profiling tools |
 | `composable_kernel` | Composable Kernel (very slow to build) |
+| `rocjitsu` | rocJITsu, the GPU emulation suite (ROCm 10 configs; needs a host GCC 13 or later) |
 | `hrx_system` | The HRX alternative HIP runtime |
 | `taskgraph` | Experimental OpenMP taskgraph support in libomp |
 | `gpu_libc` | Adds `libc` to the GPU runtimes |

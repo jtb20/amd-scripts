@@ -197,8 +197,8 @@ add_sources ("aqlprofile", aqlprofile_src)
 add_sources ("rocprofiler_sdk", rocprofiler_sdk_src)
 add_sources ("hipify", hipify_src)
 
-# googletest and flatbuffers, which rocJITsu's CMake would otherwise fetch at
-# configure time (at these tags; see emulation/rocjitsu/CMakeLists.txt).
+# googletest and flatbuffers, which rocJITsu's CMake (--add rocjitsu) would
+# otherwise fetch at configure time (at these tags; see emulation/rocjitsu/CMakeLists.txt).
 var googletest_src = {
   "url" : "https://github.com/google/googletest.git",
   "type" : "git",
@@ -222,9 +222,11 @@ add_sources ("flatbuffers", flatbuffers_src)
 # amd-checkout clones it.
 add_components rocm_systems
 
-# As TheRock (and srock) builds: amd-smi alongside rocm_smi_lib, and rocJITsu.
-# (rocm_core and rocm_kpack come in as dependencies of the HIP runtime.)
-add_components amdsmi rocjitsu
+# As TheRock (and srock) builds: amd-smi alongside rocm_smi_lib.  (rocm_core
+# and rocm_kpack come in as dependencies of the HIP runtime.)  TheRock also
+# builds rocJITsu, which is opt-in here (--add rocjitsu): it needs a C++20
+# library with <format>, so GCC 13 or later, and nothing else uses it.
+add_components amdsmi
 
 # The ROCm version rocm-core reports (TheRock's compiler/amd-staging reports
 # 10.1.0; see above).
