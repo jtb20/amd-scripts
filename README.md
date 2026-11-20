@@ -77,7 +77,7 @@ module, these are the relevant upstream references:
 Clone the repository:
 
 ```bash
-git clone <TODO: repository URL> amd-scripts
+git clone https://github.com/jtb20/amd-scripts.git amd-scripts
 ```
 
 Install the YSH interpreter:
